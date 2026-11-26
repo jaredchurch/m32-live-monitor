@@ -34,14 +34,15 @@ class OscDiagnostics:
 
     def snapshot(self, online=False):
         now = time.time()
-        missing = sorted(self.expected - self.cycle_received)
+        cycle_complete = self.last_cycle_at is not None and self.cycle_started_at is not None and self.last_cycle_at >= self.cycle_started_at
+        missing = sorted(self.expected - self.cycle_received) if cycle_complete else []
         stale = [{"address": a, "age_seconds": round(now - t, 1)} for a, t in sorted(self.last_received.items()) if now - t > 45]
         try:
             resolved = socket.gethostbyname(self.console_host)
         except OSError:
             resolved = None
         return {"online": online, "console_host": self.console_host, "resolved_host": resolved,
-                "expected_count": len(self.expected), "received_count": len(self.cycle_received),
+                "expected_count": len(self.expected), "received_count": len(self.cycle_received), "cycle_complete": cycle_complete,
                 "missing_count": len(missing), "missing": missing[:100], "stale_count": len(stale), "stale": stale[:100],
                 "counters": dict(self.counters), "last_cycle_at": self.last_cycle_at,
                 "cycle_started_at": self.cycle_started_at,
