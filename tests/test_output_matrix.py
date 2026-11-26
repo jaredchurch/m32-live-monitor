@@ -103,3 +103,35 @@ def test_hard_mute_setting_controls_channel_mute_on_pre_fader_sends():
     assert channel_cell(state)["muted"] is False
     state.update("/-prefs/hardmute", 1)
     assert "channel_muted" in channel_cell(state)["reasons"]
+
+
+def test_hardware_matrix_does_not_claim_live_before_route_snapshot_arrives():
+    state = ConsoleState()
+    state.mode = "hardware"
+    state.received.clear()
+    state.update("/ch/01/config/source", 1)
+    state.update("/ch/01/config/color", 1)
+
+    cell = channel_cell(state)
+    assert cell["muted"] is False
+    assert cell["uncertain"] is True
+    assert "send_switch_state_unknown" in cell["reasons"]
+
+
+def test_hardware_matrix_marks_path_live_after_required_state_is_received():
+    state = ConsoleState()
+    state.mode = "hardware"
+    state.received.clear()
+    for address, value in (
+        ("/ch/01/config/source", 1), ("/ch/01/config/color", 1),
+        ("/ch/01/mix/on", 1), ("/ch/01/mix/fader", 0.7),
+        ("/ch/01/grp/dca", 0), ("/ch/01/grp/mute", 0),
+        ("/ch/01/mix/01/type", 4), ("/ch/01/mix/01/on", 1),
+        ("/ch/01/mix/01/level", 0.6),
+        ("/bus/01/mix/on", 1), ("/bus/01/mix/fader", 0.7),
+    ):
+        state.update(address, value)
+
+    cell = channel_cell(state)
+    assert cell["muted"] is False
+    assert cell["uncertain"] is False
