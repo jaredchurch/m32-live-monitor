@@ -50,10 +50,19 @@ class HardwareMonitor:
         builder = OscMessageBuilder(address=address)
         self.sock.sendto(builder.build().dgram, (self.host, self.port))
 
+    def _send_meter_subscription(self, meter_id, interval=4):
+        """Subscribe to one documented M32 meter stream (200 ms update interval)."""
+        builder = OscMessageBuilder(address="/meters")
+        builder.add_arg("/meters/%d" % meter_id)
+        builder.add_arg(interval)
+        self.sock.sendto(builder.build().dgram, (self.host, self.port))
+
     async def _keepalive(self):
         while True:
             try:
                 self._send("/xremote")
+                for meter_id in (0, 2, 4, 11):
+                    self._send_meter_subscription(meter_id)
             except OSError:
                 logger.exception("M32 OSC keepalive failed")
             await asyncio.sleep(5)
@@ -163,6 +172,10 @@ class HardwareMonitor:
             for timed_message in packet.messages:
                 message = timed_message.message
                 if message.address == "/info":
+                    self.state.mark_seen()
+                elif message.address.startswith("/meters/") and message.params and self.state.update_meter(
+                    message.address, message.params[0]
+                ):
                     self.state.mark_seen()
                 elif message.params and self.state.update(
                     message.address, message.params[0]
