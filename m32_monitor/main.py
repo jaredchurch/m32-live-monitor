@@ -1,12 +1,13 @@
 """FastAPI application and runtime lifecycle."""
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from m32_monitor.config import get_settings
 from m32_monitor.hardware import HardwareMonitor
 from m32_monitor.simulator import Simulator
 from m32_monitor.state import ConsoleState
+from m32_monitor.scenarios import apply_scenario, list_scenarios
 
 settings=get_settings()
 state=ConsoleState()
@@ -18,6 +19,7 @@ async def lifespan(_app):
     if settings.mode=="simulator":
         state.mode="simulator"
         runtime=Simulator(state,settings.simulator_host,settings.simulator_port)
+        apply_scenario(state, "service")
     else:
         runtime=HardwareMonitor(state,settings.m32_host,settings.m32_port,
                                 settings.osc_listen_host,settings.osc_listen_port)
@@ -87,3 +89,43 @@ def diagnostics():
 def meters():
     """Latest read-only audio meter streams received from the console."""
     return state.meters_snapshot()
+
+
+@app.get("/api/simulator/scenarios")
+def simulator_scenarios():
+    """Available deterministic simulator presets."""
+    if settings.mode != "simulator":
+        raise HTTPException(status_code=409, detail="Scenarios are only available in simulator mode")
+    return {"scenarios": list_scenarios()}
+
+
+@app.post("/api/simulator/scenarios/{scenario_id}")
+def select_simulator_scenario(scenario_id: str):
+    """Reset simulator state to a named scenario."""
+    if settings.mode != "simulator":
+        raise HTTPException(status_code=409, detail="Scenarios are only available in simulator mode")
+    try:
+        selected = apply_scenario(state, scenario_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if runtime is not None:
+        runtime.record("system", "scenario_loaded", detail=selected)
+    return selected
+
+
+@app.get("/api/simulator/logs")
+def simulator_logs(limit: int = 500, direction: str | None = None,
+                   outcome: str | None = None, search: str | None = None):
+    """Recent inbound/outbound OSC traffic, including unsupported requests."""
+    if settings.mode != "simulator" or runtime is None:
+        raise HTTPException(status_code=409, detail="Simulator logs are only available in simulator mode")
+    return runtime.snapshot(limit=limit, direction=direction, outcome=outcome, search=search)
+
+
+@app.delete("/api/simulator/logs")
+def clear_simulator_logs():
+    """Clear the in-memory simulator OSC event log."""
+    if settings.mode != "simulator" or runtime is None:
+        raise HTTPException(status_code=409, detail="Simulator logs are only available in simulator mode")
+    runtime.clear_events()
+    return {"cleared": True}
