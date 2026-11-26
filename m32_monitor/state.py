@@ -264,9 +264,9 @@ class ConsoleState:
                 return True
 
             if (address == "/-prefs/rta/gain" and isinstance(value, (int, float))
-                    and 0.0 <= float(value) <= 60.0
-                    and float(value) % 6.0 == 0.0):
-                self.preferences["rta/gain"] = float(value)
+                    and 0.0 <= float(value) <= 1.0
+                    and abs(float(value) * 10 - round(float(value) * 10)) < 1e-6):
+                self.preferences["rta/gain"] = round(float(value), 3)
                 self.received.add(address)
                 return True
 
@@ -382,7 +382,7 @@ class ConsoleState:
             if address in ("/-prefs/rta/options", "/-prefs/rta/option"):
                 return self.preferences["rta/options"]
             if address in ("/-prefs/rta/det", "/-prefs/rta/decay", "/-prefs/rta/peakhold"):
-                return self.preferences[address.rsplit("/", 1)[-1] if False else "rta/" + address.rsplit("/", 1)[-1]]
+                return self.preferences["rta/" + address.rsplit("/", 1)[-1]]
             if address.startswith("/-stat/") and address.rsplit("/", 1)[-1] in self.rta_status:
                 return self.rta_status[address.rsplit("/", 1)[-1]]
             if address == "/-stat/keysolo":
