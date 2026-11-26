@@ -43,3 +43,24 @@ def test_solo_talkback_direct_routing_and_insert_values_are_retained():
     addresses = {x["address"] for x in state.snapshot()["special"]}
     assert {"/config/solo/source", "/config/talk/enable",
             "/config/userrout/out/01", "/ch/01/insert"} <= addresses
+
+
+def test_meter_blob_decodes_count_and_little_endian_float_values():
+    import struct
+    from m32_monitor.state import ConsoleState
+
+    state = ConsoleState()
+    payload = struct.pack(">I", 12) + struct.pack("<I", 2) + struct.pack("<ff", 0.25, 0.75)
+    assert state.update_meter("/meters/0", payload)
+    stream = state.meters_snapshot()["streams"][0]
+    assert stream["id"] == "0"
+    assert stream["count"] == 2
+    assert stream["values"] == [0.25, 0.75]
+
+
+def test_malformed_meter_blob_is_rejected():
+    from m32_monitor.state import ConsoleState
+
+    state = ConsoleState()
+    assert not state.update_meter("/meters/0", b"bad")
+    assert state.meters_snapshot()["streams"] == []
