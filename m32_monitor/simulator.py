@@ -352,7 +352,7 @@ class Simulator:
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned card preference node (%d values)" % len(names))
             return
-        if header in ("-prefs/rta/visibility", "-prefs/rta/gain", "-prefs/rta/autogain", "-prefs/rta/source", "-prefs/rta/pos", "-stat/keysolo"):
+        if header in ("-prefs/rta/visibility", "-prefs/rta/gain", "-prefs/rta/autogain", "-prefs/rta/source", "-prefs/rta/pos", "-prefs/rta/mode", "-stat/keysolo"):
             address = "/" + header
             value = self.state.get(address)
             if value is None:
@@ -370,6 +370,8 @@ class Simulator:
                     detail = "Returned key solo status X32node"
                 elif header.endswith("/pos"):
                     detail = "Returned RTA pre/post EQ position X32node"
+                elif header.endswith("/mode"):
+                    detail = "Returned RTA bar/spectrograph mode X32node"
                 else:
                     detail = "Returned RTA visibility X32node"
             self.send(client, "/node", response, outcome="node_response")
