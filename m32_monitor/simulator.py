@@ -31,6 +31,8 @@ class Simulator:
         self.sequence = 0
         self.batch_subscriptions = {}
         self.subscription_tasks = {}
+        self.format_subscriptions = {}
+        self.format_tasks = {}
 
     async def start(self):
         loop = asyncio.get_running_loop()
@@ -42,8 +44,12 @@ class Simulator:
     async def stop(self):
         for task in tuple(self.subscription_tasks.values()):
             task.cancel()
+        for task in tuple(self.format_tasks.values()):
+            task.cancel()
+        self.format_tasks.clear()
         self.subscription_tasks.clear()
         self.batch_subscriptions.clear()
+        self.format_subscriptions.clear()
         if self.transport:
             self.transport.close()
             self.transport = None
@@ -227,12 +233,122 @@ class Simulator:
         except RuntimeError:
             pass
 
+    
+    @staticmethod
+    def _format_interval(time_factor):
+        if time_factor <= 0:
+            return 0.05
+        return min(10.0 / 3.0, max(0.05, time_factor / 20.0))
+
+    @staticmethod
+    def _expand_format_pattern(pattern, first, last):
+        if "**" in pattern:
+            if first == 0 and last == 0 and "/solosw/**" in pattern:
+                first, last = 1, 80
+            if first > 0 and last >= first:
+                return [pattern.replace("**", "%02d" % number)
+                        for number in range(first, last + 1)]
+        elif "*" in pattern and first > 0 and last >= first:
+            return [pattern.replace("*", str(number))
+                    for number in range(first, last + 1)]
+        return [pattern]
+
+    def _format_blob(self, subscription):
+        string_paths = {
+            "/-usb/path", "/-usb/path/", "/-usb/title",
+            "/-stat/aes50/A", "/-stat/aes50/B",
+        }
+        body = bytearray()
+        for pattern in subscription["patterns"]:
+            for address in self._expand_format_pattern(
+                    pattern, subscription["first"], subscription["last"]):
+                value = self.state.get(address)
+                if address in string_paths:
+                    encoded = str(value or "").encode("utf-8")[:32]
+                    body.extend(encoded.ljust(32, b"\\x00"))
+                else:
+                    body.extend(struct.pack("<i", int(value or 0)))
+        return struct.pack("<I", len(body)) + bytes(body)
+
+    def _format_response(self, client, subscription):
+        blob = self._format_blob(subscription)
+        alias = subscription["alias"]
+        self.send(client, alias if alias.startswith("/") else "/" + alias,
+                  blob, outcome="format_subscription_response")
+
+    async def _run_format_subscription(self, key, subscription):
+        try:
+            while self.format_subscriptions.get(key) is subscription:
+                await asyncio.sleep(self._format_interval(subscription["time_factor"]))
+                if self.format_subscriptions.get(key) is not subscription:
+                    break
+                if time.monotonic() >= subscription["expires_at"]:
+                    break
+                self._format_response(key[0], subscription)
+        except asyncio.CancelledError:
+            raise
+        finally:
+            if self.format_subscriptions.get(key) is subscription:
+                self.format_subscriptions.pop(key, None)
+            if self.format_tasks.get(key) is asyncio.current_task():
+                self.format_tasks.pop(key, None)
+
+    def _handle_formatsubscribe(self, client, args):
+        groups = []
+        index = 0
+        while index < len(args):
+            if not isinstance(args[index], str):
+                self.record("in", "unhandled_command", "/formatsubscribe", args, client,
+                            "Expected an alias string at the start of each subscription group")
+                return
+            alias = args[index]
+            index += 1
+            patterns = []
+            while index < len(args) and isinstance(args[index], str):
+                patterns.append(args[index])
+                index += 1
+            if not patterns or index + 3 > len(args) or any(type(v) is not int for v in args[index:index + 3]):
+                self.record("in", "unhandled_command", "/formatsubscribe", args, client,
+                            "Each group requires one or more address strings followed by three integers")
+                return
+            first, last, time_factor = args[index:index + 3]
+            index += 3
+            if first < 0 or last < 0 or (last and first > last) or not 0 <= time_factor <= 99:
+                self.record("in", "unhandled_command", "/formatsubscribe", args, client,
+                            "Invalid wildcard range or time factor")
+                return
+            groups.append({"alias": alias, "patterns": patterns, "first": first,
+                           "last": last, "time_factor": time_factor,
+                           "expires_at": time.monotonic() + 10.0})
+        for group in groups:
+            key = (client, group["alias"])
+            previous = self.format_tasks.pop(key, None)
+            if previous:
+                previous.cancel()
+            self.format_subscriptions[key] = group
+            self._format_response(client, group)
+            try:
+                task = asyncio.get_running_loop().create_task(
+                    self._run_format_subscription(key, group))
+                self.format_tasks[key] = task
+            except RuntimeError:
+                pass
+        self.record("in", "handled_format_subscription", "/formatsubscribe", args, client,
+                    "Registered %d formatted subscription group(s)" % len(groups))
+
     def _handle_node(self, client, args):
         if len(args) != 1 or not isinstance(args[0], str):
             self.record("in", "unhandled_command", "/node", args, client,
                         "Expected exactly one X32node header string")
             return
         header = args[0].lstrip("/")
+        if header == "-prefs/card":
+            names = tuple(self.state.card_preferences)
+            values = " ".join(str(self.state.card_preferences[name]) for name in names)
+            self.send(client, "/node", "/-prefs/card " + values + "\\n", outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned card preference node (%d values)" % len(names))
+            return
         if header in ("-prefs/rta/visibility", "-prefs/rta/gain", "-prefs/rta/autogain", "-prefs/rta/source", "-stat/keysolo"):
             address = "/" + header
             value = self.state.get(address)
@@ -275,9 +391,14 @@ class Simulator:
             matching = [key for key in self.batch_subscriptions
                         if key[0] == client and (name is None or
                         name in (key[1], key[1].lstrip("/")))]
+            format_matching = [key for key in self.format_subscriptions
+                               if key[0] == client and (name is None or
+                               name in (key[1], key[1].lstrip("/")))]
             if address == "/renew":
                 for key in matching:
                     self.batch_subscriptions[key]["expires_at"] = time.monotonic() + 10.0
+                for key in format_matching:
+                    self.format_subscriptions[key]["expires_at"] = time.monotonic() + 10.0
             else:
                 if not args:
                     self.clients.discard(client)
@@ -287,9 +408,14 @@ class Simulator:
                     task = self.subscription_tasks.pop(key, None)
                     if task:
                         task.cancel()
+                for key in format_matching:
+                    self.format_subscriptions.pop(key, None)
+                    task = self.format_tasks.pop(key, None)
+                    if task:
+                        task.cancel()
             outcome = "handled_renewal" if address == "/renew" else "handled_unsubscription"
             self.record("in", outcome, address, args, client,
-                        "Subscription maintenance request accepted (%d meter subscription(s) matched)" % len(matching))
+                        "Subscription maintenance request accepted (%d meter and %d formatted subscription(s) matched)" % (len(matching), len(format_matching)))
             return
 
         if address == "/info":
@@ -307,6 +433,9 @@ class Simulator:
 
         if address == "/batchsubscribe":
             self._handle_batchsubscribe(client, args)
+            return
+        if address == "/formatsubscribe":
+            self._handle_formatsubscribe(client, args)
             return
         if address == "/node":
             self._handle_node(client, args)
