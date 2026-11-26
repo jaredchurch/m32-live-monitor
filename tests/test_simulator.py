@@ -451,3 +451,26 @@ def test_exception_filter_can_be_combined_with_search():
 
     assert len(result["events"]) == 1
     assert result["events"][0]["outcome"] == "unhandled_set"
+
+
+def test_node_get_returns_rta_position_x32node_response():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "-prefs/rta/pos"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ["/-prefs/rta/pos 0\\n"]
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+def test_rta_position_preference_can_be_read_and_updated():
+    state = ConsoleState()
+    assert state.get("/-prefs/rta/pos") == 0
+    assert state.update("/-prefs/rta/pos", 1)
+    assert state.get("/-prefs/rta/pos") == 1
+    assert state.update("/-prefs/rta/pos", 0)
+    assert not state.update("/-prefs/rta/pos", 2)
+    assert not state.update("/-prefs/rta/pos", 1.5)
