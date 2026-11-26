@@ -24,6 +24,7 @@ class HardwareMonitor:
         self.sock.bind((self.listen_host, self.listen_port))
         self.state.mode = "hardware"
         self.state.received.clear()
+        self.state.routing.values.clear()
         self.state.last_seen = None
         for collection in (self.state.channels, self.state.auxins, self.state.fx_returns):
             for channel in collection.values():
@@ -62,6 +63,42 @@ class HardwareMonitor:
         while True:
             try:
                 addresses = ["/info"]
+                # Patchbay snapshots: block selections are enum values in the M32 OSC protocol.
+                for path in (
+                    "/config/routing/IN/1-8", "/config/routing/IN/9-16",
+                    "/config/routing/IN/17-24", "/config/routing/IN/25-32",
+                    "/config/routing/IN/AUX", "/config/routing/outswitch",
+                    "/config/routing/routswitch",
+                ):
+                    addresses.append(path)
+                for family in ("AES50A", "AES50B"):
+                    for bank in ("1-8", "9-16", "17-24", "25-32", "33-40", "41-48"):
+                        addresses.append("/config/routing/%s/%s" % (family, bank))
+                for bank in ("1-8", "9-16", "17-24", "25-32"):
+                    addresses.append("/config/routing/CARD/%s" % bank)
+                    addresses.append("/config/routing/PLAY/%s" % bank)
+                addresses.extend("/config/routing/OUT/%s" % bank for bank in ("1-4", "5-8", "9-12", "13-16"))
+                addresses.extend(("/config/routing/PLAY/AUX",))
+                for family, count in (("main", 16), ("aux", 6), ("p16", 16), ("aes", 2)):
+                    addresses.extend("/outputs/%s/%02d" % (family, number) for number in range(1, count + 1))
+                for number in range(1, 9):
+                    addresses.extend(("/fx/%d/type" % number, "/fx/%d/source" % number))
+                addresses.extend(("/config/solo/level", "/config/solo/source", "/config/solo/sourcetrim",
+                                  "/config/solo/chmode", "/config/solo/busmode", "/config/solo/dcamode",
+                                  "/config/solo/exclusive", "/config/solo/followsel", "/config/solo/followsolo",
+                                  "/config/solo/dimatt", "/config/solo/dim", "/config/solo/mono",
+                                  "/config/solo/delay", "/config/solo/delaytime", "/config/solo/masterctrl",
+                                  "/config/solo/mute", "/config/solo/dimpfl",
+                                  "/config/talk/enable", "/config/talk/source",
+                                  "/config/talk/A/level", "/config/talk/B/level",
+                                  "/config/talk/A/dim", "/config/talk/B/dim",
+                                  "/config/talk/A/latch", "/config/talk/B/latch",
+                                  "/config/talk/A/latch", "/config/talk/B/latch",
+                                  "/config/talk/A/destmap", "/config/talk/B/destmap"))
+                addresses.extend("/config/userrout/out/%02d" % number for number in range(1, 49))
+                addresses.extend("/config/userrout/in/%02d" % number for number in range(1, 33))
+                for number in range(1, 33):
+                    addresses.append("/ch/%02d/insert" % number)
                 for family, count in (("ch", 32), ("auxin", 8), ("fxrtn", 8)):
                     for number in range(1, count + 1):
                         prefix = "/%s/%02d" % (family, number)
