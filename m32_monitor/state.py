@@ -382,6 +382,76 @@ class ConsoleState:
         return {"muted": bool(causes), "uncertain": bool(uncertain and not causes),
                 "reasons": causes + uncertain, "send_on": send_on, "send_level": send_level}
 
+    def matrix_input_matrix(self):
+        """Trace each bus/Main output into Matrix 1–6, including both send and output mutes."""
+        sources = []
+        for number, bus in self.buses.items():
+            sources.append({
+                "id": "bus_%02d" % number, "label": bus.get("name") or "Bus %02d" % number,
+                "prefix": "/bus/%02d/" % number, "on": bus["on"], "fader": bus["fader"],
+                "dca_mask": bus["dca_mask"], "mute_mask": bus["mute_mask"],
+                "sends": bus.get("matrix_sends", {}),
+            })
+        for key, label, prefix in (
+            ("main_st", "Main L/R", "/main/st/"),
+            ("main_mono", "Mono/C", "/main/m/"),
+        ):
+            output = self.outputs[key]
+            sources.append({
+                "id": key, "label": label, "prefix": prefix,
+                "on": output["on"], "fader": output["fader"],
+                "dca_mask": output["dca_mask"], "mute_mask": output["mute_mask"],
+                "sends": output["sends"],
+            })
+        destinations = [
+            {"id": "mtx_%02d" % n, "label": self.matrices[n]["name"], "kind": "matrix"}
+            for n in range(1, 7)
+        ]
+        rows = []
+        for source in sources:
+            cells = {}
+            for number in range(1, 7):
+                matrix = self.matrices[number]
+                send = source["sends"].get(number, {"on": True, "level": 0.0})
+                send_prefix = source["prefix"] + "mix/%02d/" % number
+                matrix_prefix = "/mtx/%02d/" % number
+                reasons, uncertain = [], []
+                for suffix, reason in (("mix/on", "source_muted"), ("mix/fader", "source_fader_zero")):
+                    if not self._known(source["prefix"] + suffix):
+                        uncertain.append("matrix_source_state_unknown")
+                    elif suffix == "mix/on" and not source["on"]:
+                        reasons.append(reason)
+                    elif suffix == "mix/fader" and source["fader"] <= 0.000001:
+                        reasons.append(reason)
+                if not self._known(source["prefix"] + "grp/dca") or not self._known(source["prefix"] + "grp/mute"):
+                    uncertain.append("matrix_source_groups_unknown")
+                else:
+                    group_reasons, group_uncertain = self._destination_mutes(
+                        source["prefix"], source["dca_mask"], source["mute_mask"])
+                    reasons.extend(group_reasons)
+                    uncertain.extend(group_uncertain)
+                if not self._known(send_prefix + "on"):
+                    uncertain.append("matrix_send_switch_unknown")
+                if not self._known(send_prefix + "level"):
+                    uncertain.append("matrix_send_level_unknown")
+                if not self._known(matrix_prefix + "mix/on"):
+                    uncertain.append("matrix_output_mute_unknown")
+                if not self._known(matrix_prefix + "mix/fader"):
+                    uncertain.append("matrix_output_fader_unknown")
+                matrix_reasons, matrix_uncertain = self._destination_mutes(
+                    matrix_prefix, matrix["dca_mask"], matrix["mute_mask"])
+                reasons.extend(matrix_reasons)
+                uncertain.extend(matrix_uncertain)
+                cells["mtx_%02d" % number] = self._cell(
+                    reasons, uncertain,
+                    send["on"] if self._known(send_prefix + "on") else True,
+                    send["level"] if self._known(send_prefix + "level") else 1.0,
+                    matrix["on"] if self._known(matrix_prefix + "mix/on") else True,
+                    matrix["fader"] if self._known(matrix_prefix + "mix/fader") else 1.0,
+                )
+            rows.append({"id": source["id"], "name": source["label"], "cells": cells})
+        return {"destinations": destinations, "sources": rows}
+
     def output_matrix(self):
         """Return per-channel signal availability for Main L/R, Mono/C and buses 1–16."""
         destinations = [
