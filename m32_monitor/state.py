@@ -38,7 +38,8 @@ class ConsoleState:
         self.mode = "simulator"
         self.routing = RoutingState()
         self.meters = {}
-        self.preferences = {"rta/visibility": 0, "rta/gain": 0.0, "rta/autogain": 0, "rta/source": 0, "rta/pos": 0, "rta/mode": 0, "rta/options": 0}
+        self.preferences = {"rta/visibility": 0, "rta/gain": 0.0, "rta/autogain": 0, "rta/source": 0, "rta/pos": 0, "rta/mode": 0, "rta/options": 0, "rta/det": 0, "rta/decay": 0.0, "rta/peakhold": 0}
+        self.rta_status = {"rtamodeeq": 0, "rtamodegeq": 0, "rtaeqpre": 0, "rtageqpost": 0, "rtasource": 0}
         self.key_solo = 0
         self.solo_switches = {number: 0 for number in range(1, 81)}
         self.card_preferences = {name: 0 for name in ("UFifc", "UFmode", "USBmode", "ADATwc", "ADATsync", "MADImode", "MADIin", "MADIout", "MADIsrc", "URECtracks", "URECplayb", "URECrout", "URECsdsel")}
@@ -189,6 +190,35 @@ class ConsoleState:
                 self.preferences["rta/visibility"] = int(value)
                 self.received.add(address)
                 return True
+
+            if address in ("/-prefs/rta/options", "/-prefs/rta/option") and isinstance(value, (int, float)) and float(value) == int(value) and 0 <= int(value) <= 63:
+                self.preferences["rta/options"] = int(value)
+                self.received.add(address)
+                return True
+
+            if address == "/-prefs/rta/det" and isinstance(value, (int, float)) and float(value) == int(value) and int(value) in (0, 1):
+                self.preferences["rta/det"] = int(value)
+                self.received.add(address)
+                return True
+
+            if address == "/-prefs/rta/decay" and isinstance(value, (int, float)) and 0.0 <= float(value) <= 1.0 and abs(float(value) * 18 - round(float(value) * 18)) < 1e-6:
+                self.preferences["rta/decay"] = round(float(value), 4)
+                self.received.add(address)
+                return True
+
+            if address == "/-prefs/rta/peakhold" and isinstance(value, (int, float)) and float(value) == int(value) and int(value) in range(9):
+                self.preferences["rta/peakhold"] = int(value)
+                self.received.add(address)
+                return True
+
+            if address.startswith("/-stat/") and address.rsplit("/", 1)[-1] in self.rta_status:
+                key = address.rsplit("/", 1)[-1]
+                maximum = 170 if key == "rtasource" else 1
+                if isinstance(value, (int, float)) and float(value) == int(value) and 0 <= int(value) <= maximum:
+                    self.rta_status[key] = int(value)
+                    self.received.add(address)
+                    return True
+                return False
 
             if len(parts) == 3 and parts[:2] == ["-stat", "solosw"] and parts[2].isdigit():
                 number = int(parts[2])
@@ -349,8 +379,12 @@ class ConsoleState:
                 return self.preferences["rta/pos"]
             if address == "/-prefs/rta/mode":
                 return self.preferences["rta/mode"]
-            if address == "/-prefs/rta/options":
+            if address in ("/-prefs/rta/options", "/-prefs/rta/option"):
                 return self.preferences["rta/options"]
+            if address in ("/-prefs/rta/det", "/-prefs/rta/decay", "/-prefs/rta/peakhold"):
+                return self.preferences[address.rsplit("/", 1)[-1] if False else "rta/" + address.rsplit("/", 1)[-1]]
+            if address.startswith("/-stat/") and address.rsplit("/", 1)[-1] in self.rta_status:
+                return self.rta_status[address.rsplit("/", 1)[-1]]
             if address == "/-stat/keysolo":
                 return self.key_solo
             if len(parts) == 3 and parts[:2] == ["-stat", "solosw"] and parts[2].isdigit():
