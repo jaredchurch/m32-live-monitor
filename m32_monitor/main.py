@@ -73,3 +73,9 @@ def matrix_inputs():
 def routing_map():
     """Return patchbay, FX and monitor routing assignments with freshness markers."""
     return state.routing.snapshot()
+
+
+@app.get("/api/meters")
+def meters():
+    """Latest read-only audio meter streams received from the console."""
+    return state.meters_snapshot()
