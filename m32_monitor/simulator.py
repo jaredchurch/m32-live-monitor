@@ -168,19 +168,22 @@ class Simulator:
                   outcome="batch_meter_response")
 
     async def _run_batch_subscription(self, key, subscription):
+        interval = 0.05 * max(1, min(subscription["time_factor"], 99))
         try:
             while self.batch_subscriptions.get(key) is subscription:
+                await asyncio.sleep(interval)
+                if self.batch_subscriptions.get(key) is not subscription:
+                    break
                 if time.monotonic() >= subscription["expires_at"]:
                     break
                 self._batch_response(key[0], subscription)
-                interval = 0.05 * max(1, min(subscription["time_factor"], 99))
-                await asyncio.sleep(interval)
         except asyncio.CancelledError:
             raise
         finally:
             if self.batch_subscriptions.get(key) is subscription:
                 self.batch_subscriptions.pop(key, None)
-            self.subscription_tasks.pop(key, None)
+            if self.subscription_tasks.get(key) is asyncio.current_task():
+                self.subscription_tasks.pop(key, None)
 
     def _handle_batchsubscribe(self, client, args):
         if (len(args) != 5 or not isinstance(args[0], str)
