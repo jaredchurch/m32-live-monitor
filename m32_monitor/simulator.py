@@ -500,6 +500,30 @@ class Simulator:
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned all ten RTA preference fields")
             return
+        if header.startswith("-urec/") or header.startswith("-stat/urec/"):
+            address = "/" + header
+            value = self.state.get(address)
+            if value is None:
+                self.record("in", "unhandled_command", "/node", args, client,
+                            "No X-Live recorder value is modelled for header %r" % header)
+                return
+            enum_values = {
+                "-urec/batterystate": ("NONE", "GOOD", "LOW"),
+                "-urec/sd1state": ("NONE", "READY", "PROTECT", "ERROR"),
+                "-urec/sd2state": ("NONE", "READY", "PROTECT", "ERROR"),
+                "-stat/urec/state": ("STOP", "PPAUSE", "PLAY", "REC"),
+            }
+            if header in enum_values:
+                rendered = enum_values[header][int(value)]
+            elif isinstance(value, str):
+                rendered = json.dumps(value, ensure_ascii=False)
+            else:
+                rendered = str(int(value))
+            self.send(client, "/node", "%s %s\\n" % (address, rendered),
+                      outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned X-Live recorder value")
+            return
         if header == "-prefs/card":
             names = tuple(self.state.card_preferences)
             values = " ".join(str(self.state.card_preferences[name]) for name in names)
