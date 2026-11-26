@@ -440,10 +440,13 @@ class Simulator:
                 raise ValueError("Unsupported X32node SET header %r" % header)
             old_preferences = dict(self.state.preferences)
             old_status = dict(self.state.rta_status)
+            old_received = set(self.state.received)
             for path, value in zip(paths, parsed):
                 if not self.state.update(path, value):
                     self.state.preferences.update(old_preferences)
                     self.state.rta_status.update(old_status)
+                    self.state.received.clear()
+                    self.state.received.update(old_received)
                     raise ValueError("Invalid value for %s: %r" % (path, value))
         except (ValueError, IndexError, ZeroDivisionError) as exc:
             self.record("in", "unhandled_set", "/", args, client, str(exc))
