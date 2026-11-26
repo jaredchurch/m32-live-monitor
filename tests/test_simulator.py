@@ -49,14 +49,39 @@ def test_simulator_accepts_parameter_set_and_notifies_subscriber():
     assert response.params == ["W1 - Male"]
 
 
-def test_simulator_info_response_has_basic_identity():
+def test_simulator_identity_responses_match_console_protocol():
+    simulator = Simulator(ConsoleState(), name="Test-M32", model="M32",
+                          firmware="4.06", server_version="V2.07")
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/info"))
+    info = OscMessage(simulator.transport.sent[-1][0])
+    assert info.address == "/info"
+    assert info.params == ["V2.07", "osc-server", "M32", "4.06"]
+
+    simulator.handle(client, packet("/xinfo"))
+    xinfo = OscMessage(simulator.transport.sent[-1][0])
+    assert xinfo.address == "/xinfo"
+    assert xinfo.params == ["127.0.0.1", "Test-M32", "M32", "4.06"]
+
+    simulator.handle(client, packet("/status"))
+    status = OscMessage(simulator.transport.sent[-1][0])
+    assert status.address == "/status"
+    assert status.params == ["active", "127.0.0.1", "Test-M32"]
+
+
+def test_simulator_unsubscribe_is_handled():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
     client = ("127.0.0.1", 50123)
-    simulator.handle(client, packet("/info"))
-    response = OscMessage(simulator.transport.sent[0][0])
-    assert response.address == "/info"
-    assert response.params[2] == "M32"
+
+    simulator.handle(client, packet("/xremote"))
+    assert client in simulator.clients
+    simulator.handle(client, packet("/unsubscribe"))
+
+    assert client not in simulator.clients
+    assert simulator.snapshot(outcome="handled_unsubscription")["events"]
 
 
 def test_simulator_udp_round_trip():
