@@ -286,8 +286,16 @@ class ConsoleState:
         return "SRC %d" % source
 
     def visible_channels(self):
-        strips = list(self.channels.values()) + list(self.auxins.values()) + list(self.fx_returns.values())
-        return [c.as_dict() for c in strips if c.connected and c.colour != 0]
+        strips = ([("channel", c) for c in self.channels.values()] +
+                  [("aux", c) for c in self.auxins.values()] +
+                  [("fx_return", c) for c in self.fx_returns.values()])
+        result = []
+        for kind, channel in strips:
+            if channel.connected and channel.colour != 0:
+                item = channel.as_dict()
+                item["stripType"] = kind
+                result.append(item)
+        return result
 
     def _known(self, address):
         return self.mode == "simulator" or address in self.received
@@ -521,7 +529,9 @@ class ConsoleState:
                         self.buses[bus]["on"] if output_on_known else True,
                         self.buses[bus]["fader"] if output_fader_known else 1.0)
             rows.append({"number": channel.number, "name": channel.name,
-                         "source": self.source_label(channel.source), "cells": cells})
+                         "source": "FX RETURN" if prefix.startswith("/fxrtn/") else self.source_label(channel.source),
+                         "strip_type": "fx_return" if prefix.startswith("/fxrtn/") else "aux" if prefix.startswith("/auxin/") else "channel",
+                         "cells": cells})
         return {"destinations": destinations, "channels": rows,
                 "dcas": list(self.dcas.values()),
                 "mute_groups": [{"number": n, "muted": active} for n, active in self.mute_groups.items()],
