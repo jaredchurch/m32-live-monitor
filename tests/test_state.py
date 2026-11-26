@@ -6,8 +6,7 @@ def test_channels_without_source_or_scribble_colour_are_hidden():
     state.update("/ch/01/config/source",0)
     state.update("/ch/02/config/color",0)
     visible=[c["number"] for c in state.visible_channels()]
-    assert 1 not in visible
-    assert 2 not in visible
+    assert 1 not in visible and 2 not in visible
     assert len(visible)==30
 
 def test_channel_parameter_updates():
@@ -25,3 +24,13 @@ def test_source_label_decoding():
     assert ConsoleState.source_label(33)=="AUX1"
     assert ConsoleState.source_label(41)=="FX1L"
     assert ConsoleState.source_label(49)=="BUS01"
+
+def test_hardware_connection_times_out():
+    state=ConsoleState()
+    state.mode="hardware"
+    state.last_seen=None
+    assert state.online is False
+    state.mark_seen()
+    assert state.online is True
+    state.last_seen=0
+    assert state.online is False
