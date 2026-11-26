@@ -233,7 +233,7 @@ class Simulator:
                         "Expected exactly one X32node header string")
             return
         header = args[0].lstrip("/")
-        if header in ("-prefs/rta/visibility", "-prefs/rta/gain", "-prefs/rta/autogain"):
+        if header in ("-prefs/rta/visibility", "-prefs/rta/gain", "-prefs/rta/autogain", "-prefs/rta/source", "-stat/keysolo"):
             address = "/" + header
             value = self.state.get(address)
             if value is None:
@@ -243,8 +243,14 @@ class Simulator:
                 detail = "Returned RTA gain X32node"
             else:
                 response = "%s %d\n" % (address, int(value))
-                detail = ("Returned RTA autogain X32node" if header.endswith("/autogain")
-                          else "Returned RTA visibility X32node")
+                if header.endswith("/autogain"):
+                    detail = "Returned RTA autogain X32node"
+                elif header.endswith("/source"):
+                    detail = "Returned RTA source X32node"
+                elif header.endswith("/keysolo"):
+                    detail = "Returned key solo status X32node"
+                else:
+                    detail = "Returned RTA visibility X32node"
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client, detail)
             return
@@ -304,6 +310,12 @@ class Simulator:
             return
         if address == "/node":
             self._handle_node(client, args)
+            return
+        if address == "/showdump":
+            show_response = '/-show/showfile/show "" 0 0 0 0 0 0 0 0 0 0 "4.06"'
+            self.send(client, "/node", show_response, outcome="showdump_response")
+            self.record("in", "handled_showdump", address, args, client,
+                        "Returned empty show metadata (no stored show data is modelled)")
             return
 
         if args:
