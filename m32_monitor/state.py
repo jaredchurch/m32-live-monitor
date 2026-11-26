@@ -286,15 +286,17 @@ class ConsoleState:
         return "SRC %d" % source
 
     def visible_channels(self):
-        return [c.as_dict() for c in self.channels.values() if c.connected and c.colour != 0]
+        strips = list(self.channels.values()) + list(self.auxins.values()) + list(self.fx_returns.values())
+        return [c.as_dict() for c in strips if c.connected and c.colour != 0]
 
     def _known(self, address):
         return self.mode == "simulator" or address in self.received
 
-    def _upstream_mutes(self, channel, include_channel_fader=True, include_dca_fader=True, include_channel_mute=True):
+    def _upstream_mutes(self, channel, include_channel_fader=True, include_dca_fader=True,
+                        include_channel_mute=True, prefix=None):
         reasons = []
         uncertain = []
-        prefix = "/ch/%02d/" % channel.number
+        prefix = prefix or "/ch/%02d/" % channel.number
         if not self._known(prefix + "mix/on"):
             uncertain.append("channel_mute_unknown")
         elif channel.muted:
@@ -387,16 +389,17 @@ class ConsoleState:
             {"id": "main_mono", "label": "Mono/C", "kind": "main"},
         ] + [{"id": "bus_%02d" % n, "label": "Bus %02d" % n, "kind": "bus"} for n in range(1, 17)]
         rows = []
-        for channel in self.channels.values():
+        sources = [("/ch/%02d/" % c.number, c) for c in self.channels.values()]
+        sources += [("/auxin/%02d/" % c.number, c) for c in self.auxins.values()]
+        sources += [("/fxrtn/%02d/" % c.number, c) for c in self.fx_returns.values()]
+        for prefix, channel in sources:
             if not channel.connected or channel.colour == 0:
-                continue
-            prefix = "/ch/%02d/" % channel.number
             cells = {}
             for destination in destinations:
                 ident = destination["id"]
                 if ident in ("main_st", "main_mono"):
                     suffix = "mix/st" if ident == "main_st" else "mix/mono"
-                    reasons, uncertain = self._upstream_mutes(channel)
+                    reasons, uncertain = self._upstream_mutes(channel, prefix=prefix)
                     if not self._known(prefix + suffix):
                         uncertain.append("main_send_state_unknown")
                     if not self._known("/%s/mix/on" % ("main/st" if ident == "main_st" else "main/m")):
@@ -423,7 +426,7 @@ class ConsoleState:
                     reasons, uncertain = self._upstream_mutes(
                         channel, include_channel_fader=(send_type in (4, 5)),
                         include_dca_fader=(send_type in (4, 5)),
-                        include_channel_mute=(send_type in (4, 5)))
+                        include_channel_mute=(send_type in (4, 5)), prefix=prefix)
                     if not type_known:
                         uncertain.append("send_tap_point_unknown")
                     send_prefix = prefix + "mix/%02d/" % bus
