@@ -438,14 +438,19 @@ class Simulator:
                 paths, parsed = [path], parsed
             else:
                 raise ValueError("Unsupported X32node SET header %r" % header)
+            old_preferences = dict(self.state.preferences)
+            old_status = dict(self.state.rta_status)
             for path, value in zip(paths, parsed):
                 if not self.state.update(path, value):
+                    self.state.preferences.update(old_preferences)
+                    self.state.rta_status.update(old_status)
                     raise ValueError("Invalid value for %s: %r" % (path, value))
         except (ValueError, IndexError, ZeroDivisionError) as exc:
             self.record("in", "unhandled_set", "/", args, client, str(exc))
             return
         self.record("in", "handled_node_set", "/", args, client,
                     "Applied %d RTA preference value(s)" % len(paths))
+        self.send(client, "/", args[0], outcome="node_set_echo")
         for subscriber in tuple(self.clients):
             self.send(subscriber, "/", args[0], outcome="subscription_update")
 
