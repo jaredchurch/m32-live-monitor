@@ -34,3 +34,14 @@ def test_channel_endpoint_has_channel_mapping(client):
     assert response.status_code == 200
     assert response.json()[0]["sourceLabel"] == "IN01"
     assert response.json()[0]["number"] == 1
+
+
+def test_osc_catalogue_endpoint_lists_categories_and_commands(client):
+    response = client.get("/api/osc-catalogue")
+    assert response.status_code == 200
+    data = response.json()
+    names = {category["category"] for category in data["categories"]}
+    assert "Configuration and stereo linking" in names
+    assert "Input channels" in names
+    assert "Meters and subscriptions" in names
+    assert any(command["address"] == "/node" for command in data["commands"])
