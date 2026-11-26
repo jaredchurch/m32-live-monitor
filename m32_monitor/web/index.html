@@ -185,7 +185,7 @@ async function exportSimulatorLog(format){
   const columns=['sequence','timestamp','time_local','direction','outcome','address','args','detail','peer'];
   const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
   const rows=events.map(e=>[e.sequence,e.timestamp,new Date(e.timestamp*1000).toISOString(),e.direction,e.outcome,e.address,JSON.stringify(e.args||[]),e.detail,e.peer]);
-  content=[columns.map(quote).join(','),...rows.map(row=>row.map(quote).join(','))].join('\\r\\n');
+  content=[columns.map(quote).join(','),...rows.map(row=>row.map(quote).join(','))].join('\r\n');
   type='text/csv;charset=utf-8';extension='csv';
  }
  const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),link=document.createElement('a');
