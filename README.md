@@ -7,7 +7,7 @@ A local-first browser dashboard for monitoring a Midas M32. It runs natively on 
 - FastAPI browser dashboard, polling the local API once per second.
 - 32-channel state model with name, input source, fader, mute and scribble-strip colour.
 - Channel-to-output mute matrix covering input channels, Aux inputs and FX returns across Main L/R, Mono/Centre and all 16 mix buses. It distinguishes channel mute, channel and destination mute-group assignments, channel and destination DCA mute/fader effects, send switch-off, send fader at zero, and destination mute/fader at zero.
-- Reads the console's DCA Mutes and Hard Mutes preferences, and accounts for pre/post-fader send tap points when evaluating channel and DCA faders. Unknown mute-system preferences and parameters not yet received from the console are shown as CHECK rather than guessed. OPEN means the routing controls permit a signal path; it does not claim audio is currently present. A second Bus/Main-to-Matrix 1–6 matrix traces the downstream Matrix sends and Matrix output mute paths. A separate Routing map tab inventories input patch banks, AES50/Card/Out/Playback patch selections, output assignments, FX rack source/type, direct-routing user assignments, inserts, solo and talkback configuration.
+- Reads the console's DCA Mutes and Hard Mutes preferences, and accounts for pre/post-fader send tap points when evaluating channel and DCA faders. Unknown mute-system preferences and parameters not yet received from the console are shown as CHECK rather than guessed. OPEN means the routing controls permit a signal path; it does not claim audio is currently present. A second Bus/Main-to-Matrix 1–6 matrix traces the downstream Matrix sends and Matrix output mute paths. A separate Routing map tab inventories input patch banks, AES50/Card/Out/Playback patch selections, output assignments, FX rack source/type/parameter data, direct-routing user assignments, inserts, pan/stereo links, solo and talkback configuration. The Routing map also inventories output source/tap points, polarity, delay and P16 speaker metadata.
 - OSC simulator on UDP 10023. It supports basic parameter GET/SET, /info, /xinfo, /status and /xremote for the subset represented in the dashboard.
 - Hardware mode uses a read-only OSC client. It sends /xremote, parameter enquiries and read-only meter subscriptions but never sends parameter SET messages.
 - Channels are hidden if the input source is OFF or the scribble-strip colour is OFF.
@@ -30,7 +30,7 @@ The default mode is simulator. The native simulator binds to 127.0.0.1:10023 (lo
 
 Copy .env.example to .env, set M32_MODE=hardware, and set M32_HOST to the console's IP address. Run the app on a Mac/Linux/Windows machine on the same LAN as the console. The monitor listens on OSC_LISTEN_PORT (default 10024) and sends read-only enquiries to the console's UDP port 10023.
 
-The hardware transport is deliberately read-only. The UI currently shows fader position as a normalized percentage, not calibrated dB. It does not yet display audio meter levels.
+The hardware transport is deliberately read-only. The UI shows fader position as a normalized percentage, not calibrated dB. Separate meter subscriptions expose input, mix, FX, output and monitor meter streams.
 
 ## Dev Container
 
@@ -60,5 +60,5 @@ GitHub Actions runs compile and pytest on Ubuntu, macOS and Windows using Python
 
 1. Verify hardware OSC responses on the actual M32 and validate source/color values against the console.
 2. Capture M32-Edit startup traffic and extend simulator protocol compatibility from observed requests.
-3. Validate every routing enum and output assignment against the actual console firmware; extend source labels and FX/insert decoding where the console returns structured values.
-4. Add audio meter data, confirm monitor/talkback paths, and improve reconnect/timeout handling and connection configuration.
+3. Validate routing enums, output assignments, FX/insert responses and meter blob decoding against the actual console firmware.
+4. Confirm monitor/talkback paths and improve reconnect/timeout handling and connection configuration.
