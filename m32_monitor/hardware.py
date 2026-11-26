@@ -19,7 +19,7 @@ class HardwareMonitor:
         self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         self.sock.setblocking(False)
         self.sock.bind((self.listen_host,self.listen_port))
-        self.state.mode="hardware"; self.state.online=False
+        self.state.mode="hardware"; self.state.last_seen=None
         for channel in self.state.channels.values():
             channel.source=0; channel.connected=False; channel.colour=0
         self.receiver=asyncio.create_task(self._receive())
@@ -61,7 +61,9 @@ class HardwareMonitor:
             data,_peer=await loop.sock_recvfrom(self.sock,65535)
             try:
                 message=OscMessage(data)
-                if message.address=="/info": self.state.online=True
-                elif message.params and self.state.update(message.address,message.params[0]): self.state.online=True
+                if message.address=="/info":
+                    self.state.mark_seen()
+                elif message.params and self.state.update(message.address,message.params[0]):
+                    self.state.mark_seen()
             except (ValueError,IndexError):
                 logger.debug("Ignoring unrecognised OSC datagram",exc_info=True)
