@@ -67,3 +67,9 @@ def output_matrix():
 def matrix_inputs():
     """Effective Bus/Main-to-Matrix signal paths."""
     return state.matrix_input_matrix()
+
+
+@app.get("/api/routing-map")
+def routing_map():
+    """Return patchbay, FX and monitor routing assignments with freshness markers."""
+    return state.routing.snapshot()
