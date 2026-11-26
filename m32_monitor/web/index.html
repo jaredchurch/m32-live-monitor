@@ -65,7 +65,8 @@ function renderMatrix(data){
  document.querySelector('#matrix-summary').innerHTML='<span class="pill">'+rows.length+' visible channels</span><span class="pill">'+dest.length+' destinations</span><span class="pill">'+live+' available paths</span><span class="pill">'+blocked+' switched/muted paths</span><span class="pill">'+zero+' zero-fader paths</span>';
  const dcas=(data.dcas||[]).map(d=>'<span class="'+(!d.on?'active':'')+'">'+esc(d.name)+': '+(d.on?'ON':'MUTED')+' · '+Math.round(d.fader*100)+'%</span>');
  dcas.push('<span>DCA Mutes: '+(data.dca_mutes_enabled===true?'ENABLED':data.dca_mutes_enabled===false?'DISABLED':'UNKNOWN')+'</span>');
- dcas.push('<span>Hard Mutes: '+(data.hard_mutes_enabled===true?'ENABLED':data.hard_mutes_enabled===false?'DISABLED':'UNKNOWN')+'</span>');\n const groups=(data.mute_groups||[]).map(g=>'<span class="'+(g.muted?'active':'')+'">Mute group '+g.number+': '+(g.muted?'ACTIVE':'off')+'</span>');
+ dcas.push('<span>Hard Mutes: '+(data.hard_mutes_enabled===true?'ENABLED':data.hard_mutes_enabled===false?'DISABLED':'UNKNOWN')+'</span>');
+ const groups=(data.mute_groups||[]).map(g=>'<span class="'+(g.muted?'active':'')+'">Mute group '+g.number+': '+(g.muted?'ACTIVE':'off')+'</span>');
  document.querySelector('#group-state').innerHTML=dcas.concat(groups).join('');
 }
 function renderChannels(channels){
