@@ -40,6 +40,17 @@ class ConsoleState:
         self.meters = {}
         self.preferences = {"rta/visibility": 0, "rta/gain": 0.0, "rta/autogain": 0, "rta/source": 0, "rta/pos": 0, "rta/mode": 0, "rta/options": 0, "rta/det": 0, "rta/decay": 0.0, "rta/peakhold": 0}
         self.rta_status = {"rtamodeeq": 0, "rtamodegeq": 0, "rtaeqpre": 0, "rtageqpost": 0, "rtasource": 0}
+        # X-Live! recorder status. Defaults describe no mounted SD cards and no session.
+        self.urec = {
+            "sessionmax": 0, "markermax": 0, "sessionlen": 0, "sessionpos": 0,
+            "markerpos": 0, "batterystate": 0, "srate": 0, "tracks": 0,
+            "sessionspan": 0, "sessionoffs": 0, "sd1state": 0, "sd2state": 0,
+            "sd1info": "Insert SD Card.", "sd2info": "Insert SD Card.",
+            "errormessage": "", "errorcode": 0,
+        }
+        self.urec_sessions = {}
+        self.urec_markers = {}
+        self.urec_status = {"state": 0, "etime": 0, "rtime": 0}
         self.key_solo = 0
         self.solo_switches = {number: 0 for number in range(1, 81)}
         self.card_preferences = {name: 0 for name in ("UFifc", "UFmode", "USBmode", "ADATwc", "ADATsync", "MADImode", "MADIin", "MADIout", "MADIsrc", "URECtracks", "URECplayb", "URECrout", "URECsdsel")}
@@ -362,6 +373,14 @@ class ConsoleState:
                 if len(parts) == 5 and parts[2] == "mix" and parts[3].isdigit():
                     send = channel.sends.get(int(parts[3]), {"on": True, "level": 0.0})
                     return send.get(parts[4])
+            if parts[:1] == ["-urec"] and len(parts) == 2:
+                return self.urec.get(parts[1])
+            if len(parts) == 4 and parts[0] == "-urec" and parts[1] == "session" and parts[3] == "name":
+                return self.urec_sessions.get(int(parts[2]), "")
+            if len(parts) == 4 and parts[0] == "-urec" and parts[1] == "marker" and parts[3] == "time":
+                return self.urec_markers.get(int(parts[2]), 0)
+            if len(parts) == 3 and parts[:2] == ["-stat", "urec"]:
+                return self.urec_status.get(parts[2])
             if address == "/-prefs/rta/visibility":
                 return self.preferences["rta/visibility"]
             if address == "/-prefs/rta/gain":
