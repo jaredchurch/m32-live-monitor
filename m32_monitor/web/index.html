@@ -165,7 +165,7 @@ async function renderSimulatorLogs(){
   if(exceptionsOnly)q.set('exceptions_only','true');
   const data=await fetch('/api/simulator/logs?'+q.toString()).then(r=>{if(!r.ok)throw new Error('Simulator mode only');return r.json();});
   const counts=data.counts||{};
-  summary.innerHTML='<span class="pill">UDP '+esc(data.host)+':'+data.port+'</span><span class="pill">'+data.clients.length+' M32-Edit/client endpoint(s)</span><span class="pill">'+data.event_count+' total messages</span><span class="pill">'+(counts.in||0)+' inbound</span><span class="pill">'+(counts.out||0)+' outbound</span><span class="pill">'+(counts.unhandled_get||0)+' unhandled GET</span><span class="pill">'+(counts.unhandled_set||0)+' unhandled SET</span><span class="pill">'+(counts.malformed||0)+' malformed</span>';
+  summary.innerHTML='<span class="pill">UDP '+esc(data.host)+':'+data.port+'</span><span class="pill">'+data.clients.length+' M32-Edit/client endpoint(s)</span><span class="pill">'+data.event_count+' total messages</span><span class="pill">Showing '+events.length+' '+(exceptionsOnly?'exceptions':'messages')+'</span><span class="pill">'+(counts.in||0)+' inbound</span><span class="pill">'+(counts.out||0)+' outbound</span><span class="pill">'+(counts.unhandled_get||0)+' unhandled GET</span><span class="pill">'+(counts.unhandled_set||0)+' unhandled SET</span><span class="pill">'+(counts.malformed||0)+' malformed</span>';
   const events=data.events||[];
   root.innerHTML=events.length?'<table><thead><tr><th>#</th><th>Time</th><th>Direction</th><th>Result</th><th>OSC address</th><th>Arguments / detail</th><th>Peer</th></tr></thead><tbody>'+events.slice().reverse().map(e=>{
    const bad=e.outcome.startsWith('unhandled')||e.outcome==='malformed'||e.outcome==='send_error';
