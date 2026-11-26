@@ -462,7 +462,7 @@ def test_node_get_returns_rta_position_x32node_response():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/-prefs/rta/pos 0\\n"]
+    assert response.params == ["/-prefs/rta/pos 0" + chr(10)]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
