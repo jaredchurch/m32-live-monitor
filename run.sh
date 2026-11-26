@@ -3,6 +3,13 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# Load local runtime settings for native macOS/Linux use.
+if [ -f ".env" ]; then
+  set -a
+  . ./.env
+  set +a
+fi
+
 if [ ! -d ".venv" ]; then
   python3 -m venv .venv
 fi
@@ -11,4 +18,4 @@ fi
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 
-exec python -m uvicorn m32_monitor.main:app --host 127.0.0.1 --port 8000 --reload
+exec python -m uvicorn m32_monitor.main:app --host 127.0.0.1 --port 8000
