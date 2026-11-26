@@ -484,6 +484,8 @@ class ConsoleState:
                     reasons, uncertain = self._upstream_mutes(channel, prefix=prefix)
                     if not self._known(prefix + suffix):
                         uncertain.append("main_send_state_unknown")
+                    if ident == "main_mono" and not self._known(prefix + "mix/mlevel"):
+                        uncertain.append("main_mono_send_level_unknown")
                     if not self._known("/%s/mix/on" % ("main/st" if ident == "main_st" else "main/m")):
                         uncertain.append("output_mute_state_unknown")
                     if not self._known("/%s/mix/fader" % ("main/st" if ident == "main_st" else "main/m")):
