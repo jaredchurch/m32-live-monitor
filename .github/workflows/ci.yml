@@ -23,3 +23,12 @@ jobs:
         run: python -m compileall -q m32_monitor tests
       - name: Test
         run: pytest
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Docker Compose
+        run: docker compose config --quiet
+      - name: Build application image
+        run: docker build --tag m32-live-monitor:ci .
