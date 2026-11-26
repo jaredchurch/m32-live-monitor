@@ -78,6 +78,26 @@ OSC_CATALOGUE = [
         {"pattern":"/-stat/*","purpose":"Console status, solo, RTA, AES50 and recorder status","operations":"GET, /node","note":"Selected solo, RTA and UREC status fields are modelled."},
         {"pattern":"/-urec/*, /-stat/urec/*","purpose":"X-Live SD recorder, sessions, markers and transport status","operations":"GET, /node"}
     ]},
+    {"category":"Additional documented node families","support":"known-unsupported","items":[
+        {"pattern":"/config/userout/{in,out}/{01...48}","purpose":"User-defined input/output routing maps","operations":"GET, SET, /node"},
+        {"pattern":"/config/userctrl/{A,B,C}/*","purpose":"User-assignment banks, encoder and button assignments","operations":"GET, SET, /node"},
+        {"pattern":"/config/tape, /config/amixenable","purpose":"Tape and automix enable configuration","operations":"GET, SET, /node"},
+        {"pattern":"/config/dp48/*","purpose":"DP48 personal monitor assignment, links and group names","operations":"GET, SET, /node"},
+        {"pattern":"/ch/{01...32}/gate/filter, /ch/{01...32}/dyn/filter","purpose":"Gate and dynamics side-chain filter parameters","operations":"GET, SET, /node"},
+        {"pattern":"/auxin/{01...08}/eq/{1...4}, /fxrtn/{01...08}/eq/{1...4}","purpose":"Individual EQ band parameters","operations":"GET, SET, /node"},
+        {"pattern":"/bus/{01...16}/{dyn,eq,insert}/*","purpose":"Bus dynamics, EQ and insert processing","operations":"GET, SET, /node"},
+        {"pattern":"/mtx/{01...06}/{preamp,dyn,insert,eq}/*","purpose":"Matrix preamp, dynamics, insert and EQ processing","operations":"GET, SET, /node"},
+        {"pattern":"/dca/{1...8}/config","purpose":"DCA configuration node","operations":"GET, SET, /node"},
+        {"pattern":"/fx/{1...8}/{source,par}/*","purpose":"Effects rack source and up to 64 effect parameters","operations":"GET, SET, /node"},
+        {"pattern":"/outputs/main/{01...16}/*, /outputs/aux/{01...06}/*","purpose":"Main and Aux physical output assignments","operations":"GET, SET, /node"},
+        {"pattern":"/outputs/p16/{01...16}/*, /outputs/aes/{01...02}/*, /outputs/rec/{01...02}/*","purpose":"P16, AES and recording output assignments","operations":"GET, SET, /node"},
+        {"pattern":"/headamp/{000...127}","purpose":"Headamp gain and phantom configuration","operations":"GET, SET, /node"},
+        {"pattern":"/-show/showfile/{inputs,mxsends,mxbuses,console,chan16,chan32,return,buses,effects,cue,scene,snippet}","purpose":"Show file content and cue/scene/snippet indexes","operations":"GET, SET, /node"},
+        {"pattern":"/-libs/{ch,fx,r,mon}/{001...100}/*","purpose":"Channel, FX, routing and monitor preset libraries","operations":"GET, SET, /node"},
+        {"pattern":"/-prefs/{style,bright,lcdcont,ledbright,lamp,clock*,confirm*,scene_advance,safe_masterlevels,autosel,show_control,fastFaders,ip,remote,iQ,key}/*","purpose":"Console preferences, networking, remote control, Turbosound iQ and key assignments","operations":"GET, SET, /node"},
+        {"pattern":"/-usb/{path,title,dir,dirpos,maxpos,dir/{000...999}/*}","purpose":"USB player/recorder file browser and metadata","operations":"GET, SET, /node"},
+        {"pattern":"/-stat/{selidx,chfaderbank,grpfaderbank,sendsonfader,bussenbank,eqband,userbank,autosave,lock,usbmounted,remote,xcardtype,xcardsync,geq*,screen*,aes50*,solosw*,talk*,osc*,tape*}","purpose":"Surface, screen, AES50, solo, talkback, oscillator and tape status","operations":"GET, /node"}
+    ]},
     {"category":"Actions and undo","support":"known-unsupported","items":[
         {"pattern":"/-action/*","purpose":"Console action and surface control events","operations":"COMMAND"},
         {"pattern":"/-undo/*","purpose":"Undo history and action control","operations":"COMMAND"}
@@ -97,6 +117,7 @@ OSC_COMMANDS = [
     {"address":"/node","purpose":"Read an X32node group as a text response"},
     {"address":"/","purpose":"Write X32node text data"},
     {"address":"/showdump","purpose":"Request show metadata"},
+    {"address":"/-action/*, /-undo/*","purpose":"Console action and undo command families"},
     {"address":"/add, /copy, /save, /load, /delete, /rename","purpose":"Dataset and scene/library management"}
 ]
 
