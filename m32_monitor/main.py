@@ -1,10 +1,8 @@
 """FastAPI application and runtime lifecycle."""
 from contextlib import asynccontextmanager
 from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
-
 from m32_monitor.config import get_settings
 from m32_monitor.hardware import HardwareMonitor
 from m32_monitor.simulator import Simulator
@@ -18,15 +16,13 @@ runtime=None
 async def lifespan(_app):
     global runtime
     if settings.mode=="simulator":
-        state.mode="simulator"
-        state.online=True
+        state.mode="simulator"; state.online=True
         runtime=Simulator(state,settings.simulator_host,settings.simulator_port)
     else:
         runtime=HardwareMonitor(state,settings.m32_host,settings.m32_port,
                                 settings.osc_listen_host,settings.osc_listen_port)
     await runtime.start()
-    try:
-        yield
+    try: yield
     finally:
         await runtime.stop()
         runtime=None
@@ -54,6 +50,6 @@ def status():
 def channels():
     result=[]
     for channel in state.visible_channels():
-        channel["sourceLabel"]="IN%02d" % channel["source"]
+        channel["sourceLabel"]=state.source_label(channel["source"])
         result.append(channel)
     return result
