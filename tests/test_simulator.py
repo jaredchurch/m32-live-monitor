@@ -195,3 +195,55 @@ def test_unknown_scenario_is_rejected():
 
     with pytest.raises(ValueError):
         apply_scenario(ConsoleState(), "not-a-scenario")
+
+
+
+def test_batchsubscribe_returns_protocol_meter_blob():
+    import struct
+
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/batchsubscribe", "meters/0", "/meters/0", 0, 0, 1))
+
+    event = simulator.snapshot(outcome="handled_batch_subscription")["events"][0]
+    assert "70 values" in event["detail"]
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/meters/0"
+    blob = response.params[0]
+    assert isinstance(blob, bytes)
+    assert struct.unpack(">I", blob[:4])[0] == len(blob) - 4
+    assert struct.unpack("<I", blob[4:8])[0] == 70
+    assert len(blob) == 8 + 70 * 4
+
+
+def test_batchsubscribe_validates_meter_arguments():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/batchsubscribe", "alias", "/meters/6", 72, 0, 1))
+
+    assert simulator.snapshot(outcome="unhandled_command")["events"][-1]["address"] == "/batchsubscribe"
+    assert simulator.transport.sent == []
+
+
+def test_node_get_returns_x32node_text_response():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "-prefs/rta/visibility"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ["/-prefs/rta/visibility 0\\n"]
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+def test_rta_visibility_preference_can_be_read_and_updated():
+    state = ConsoleState()
+    assert state.get("/-prefs/rta/visibility") == 0
+    assert state.update("/-prefs/rta/visibility", 7)
+    assert state.get("/-prefs/rta/visibility") == 7
