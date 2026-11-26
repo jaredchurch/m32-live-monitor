@@ -30,7 +30,7 @@ class HardwareMonitor:
             channel.colour = 0
         self.receiver = asyncio.create_task(self._receive())
         self.keepalive = asyncio.create_task(self._keepalive())
-        self.query_task = asyncio.create_task(self._query_channels())
+        self.query_task = asyncio.create_task(self._query_console())
         logger.info("Read-only M32 monitor started for %s:%s", self.host, self.port)
 
     async def stop(self):
@@ -55,21 +55,35 @@ class HardwareMonitor:
                 logger.exception("M32 OSC keepalive failed")
             await asyncio.sleep(5)
 
-    async def _query_channels(self):
+    async def _query_console(self):
+        """Refresh the routing/mute snapshot in small UDP bursts."""
         while True:
             try:
-                self._send("/info")
+                addresses = ["/info"]
                 for number in range(1, 33):
                     prefix = "/ch/%02d" % number
-                    for suffix in (
-                        "config/name",
-                        "config/color",
-                        "config/source",
-                        "mix/fader",
-                        "mix/on",
-                    ):
-                        self._send(prefix + "/" + suffix)
-                        await asyncio.sleep(0.012)
+                    addresses.extend(prefix + "/" + suffix for suffix in (
+                        "config/name", "config/color", "config/source",
+                        "mix/fader", "mix/on", "mix/st", "mix/mono",
+                        "grp/dca", "grp/mute",
+                    ))
+                    for bus in range(1, 17):
+                        addresses.extend((
+                            prefix + "/mix/%02d/on" % bus,
+                            prefix + "/mix/%02d/level" % bus,
+                        ))
+                for number in range(1, 9):
+                    addresses.extend(("/dca/%d/on" % number, "/dca/%d/fader" % number))
+                addresses.extend("/config/mute/%d" % number for number in range(1, 7))
+                for number in range(1, 17):
+                    addresses.extend(("/bus/%02d/mix/on" % number, "/bus/%02d/mix/fader" % number))
+                addresses.extend((
+                    "/main/st/mix/on", "/main/st/mix/fader",
+                    "/main/m/mix/on", "/main/m/mix/fader",
+                ))
+                for address in addresses:
+                    self._send(address)
+                    await asyncio.sleep(0.01)
             except OSError:
                 logger.exception("M32 OSC enquiry failed")
             await asyncio.sleep(30)
