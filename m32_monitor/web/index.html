@@ -38,10 +38,22 @@ td.zero-cell{background:#493b20;color:#f4d28b}td.unknown-cell{background:#333b45
 .sim-controls .sim-check{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #46515e;border-radius:7px;background:#202832;min-height:36px}.sim-controls .sim-check input{width:16px;height:16px;margin:0;accent-color:#d66b6b}
 td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;background:#493b20}
 .osc-detail{max-width:500px;white-space:normal;overflow-wrap:anywhere;text-align:left}
+.catalogue-controls{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.catalogue-controls input,.catalogue-controls select{background:#202832;color:#e9edf2;border:1px solid #46515e;border-radius:7px;padding:9px;min-width:220px}
+.catalogue-category{background:#1b222b;border:1px solid #303b48;border-radius:10px;margin:12px 0;overflow:hidden}
+.catalogue-category summary{padding:13px 15px;cursor:pointer;font-weight:650;background:#202832}
+.catalogue-category .catalogue-content{padding:12px 15px}
+.catalogue-item{padding:10px 0;border-bottom:1px solid #303b48;display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,1fr) minmax(130px,auto);gap:12px;align-items:start}
+.catalogue-item:last-child{border-bottom:0}
+.catalogue-path{font-family:ui-monospace,monospace;font-size:12px;overflow-wrap:anywhere;color:#c8d9e8}
+.catalogue-note{font-size:12px;color:#9ca8b6;margin-top:4px}
+.support{font-size:11px;border:1px solid #46515e;border-radius:20px;padding:4px 8px;white-space:nowrap}
+.support.implemented{color:#9ce0b4;border-color:#3d7956}.support.partial{color:#f4d28b;border-color:#8a6b2d}.support.known-unsupported{color:#ffb2b2;border-color:#87434a}
+@media(max-width:800px){.catalogue-item{grid-template-columns:1fr}.catalogue-controls input,.catalogue-controls select{min-width:0;width:100%}}
 @media(max-width:700px){body{padding:14px}th,td{padding:6px 5px}.matrix-wrap{max-height:68vh}}
 </style></head><body>
 <header><div><h1>M32 Live Monitor</h1><div class="muted">Read-only console overview and signal-path mute analysis</div></div><div id="connection">Connecting…</div></header>
-<nav class="tabs"><button class="tab active" data-panel="matrix">Output mute matrix</button><button class="tab" data-panel="channels-panel">Channel strips</button><button class="tab" data-panel="routing-panel">Routing map</button><button class="tab" data-panel="diagnostics-panel">Diagnostics</button><button class="tab" data-panel="simulator-panel">Simulator / OSC log</button></nav>
+<nav class="tabs"><button class="tab active" data-panel="matrix">Output mute matrix</button><button class="tab" data-panel="channels-panel">Channel strips</button><button class="tab" data-panel="routing-panel">Routing map</button><button class="tab" data-panel="diagnostics-panel">Diagnostics</button><button class="tab" data-panel="simulator-panel">Simulator / OSC log</button><button class="tab" data-panel="catalogue-panel">OSC catalogue</button></nav>
 <section id="matrix" class="panel active">
 <h2>Channel → output signal paths</h2>
 <div class="muted">A cell is green only when the channel has an enabled, non-zero path to that destination and no upstream mute is active. OPEN means the routing permits signal, not that audio is present. Matrix feeds are shown in the downstream Matrix view. Physical output patching is shown in the Routing map. Hover a cell for every detected reason.</div>
@@ -73,6 +85,19 @@ td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;ba
 <div id="diagnostic-summary" class="summary"><div class="empty">Waiting for diagnostics…</div></div>
 <h3>Missing and stale parameters</h3><div id="diagnostic-coverage" class="matrix-wrap"></div>
 <h3 style="margin-top:20px">Recent diagnostic events</h3><div id="diagnostic-events" class="matrix-wrap"></div>
+</section>
+<section id="catalogue-panel" class="panel">
+<h2>M32 / X32 OSC protocol catalogue</h2>
+<div class="muted">A categorized index of documented OSC address families and command classes, with current simulator coverage. Braces and ranges are patterns, not literal addresses. A family marked partial may contain both working handlers and unsupported parameters. Firmware and model differences still need hardware verification.</div>
+<div id="catalogue-summary" class="summary"><span class="pill">Loading protocol catalogue…</span></div>
+<div class="catalogue-controls">
+<input id="catalogue-search" placeholder="Search address, function or note">
+<select id="catalogue-status"><option value="">All support levels</option><option value="implemented">Implemented</option><option value="partial">Partially implemented</option><option value="known-unsupported">Known / not implemented</option></select>
+</div>
+<div id="catalogue-categories"></div>
+<h3 style="margin-top:24px">OSC commands and transport operations</h3>
+<div id="catalogue-commands" class="matrix-wrap"></div>
+<div class="muted" style="margin-top:12px">Reference: Unofficial X32/M32 OSC Remote Protocol by Patrick-Gilles Maillot (firmware 4.0+). This is a protocol-family catalogue, not a claim that every individual parameter, scene operation or firmware extension is implemented.</div>
 </section>
 <section id="simulator-panel" class="panel">
 <h2>Simulator control and OSC traffic</h2>
@@ -151,6 +176,40 @@ function renderDiagnostics(data){
  document.querySelector('#diagnostic-events').innerHTML=events.length?'<table><thead><tr><th>Time</th><th>Type</th><th>Address</th><th>Detail</th></tr></thead><tbody>'+events.map(e=>'<tr><td>'+new Date(e.time*1000).toLocaleTimeString()+'</td><td>'+esc(e.kind)+'</td><td>'+esc(e.address||'—')+'</td><td>'+esc(e.message)+' '+esc(typeof e.detail==='object'?JSON.stringify(e.detail):(e.detail||''))+'</td></tr>').join('')+'</tbody></table>':'<div class="empty">No protocol errors recorded.</div>';
 }
 
+
+let oscCatalogue=null;
+async function loadOscCatalogue(){
+ const root=document.querySelector('#catalogue-categories');
+ try{
+  oscCatalogue=await fetch('/api/osc-catalogue').then(r=>{if(!r.ok)throw new Error('Catalogue unavailable');return r.json();});
+  renderOscCatalogue();
+ }catch(e){root.innerHTML='<div class="empty">Unable to load the OSC catalogue.</div>';}
+}
+function renderOscCatalogue(){
+ if(!oscCatalogue)return;
+ const term=document.querySelector('#catalogue-search').value.trim().toLowerCase();
+ const status=document.querySelector('#catalogue-status').value;
+ const categories=oscCatalogue.categories||[];
+ let total=0,shown=0;
+ const html=categories.map((cat,index)=>{
+  const items=(cat.items||[]).filter(item=>{
+   const matchesStatus=!status||cat.support===status;
+   const hay=[item.pattern,item.purpose,item.operations,item.note,cat.category].join(' ').toLowerCase();
+   return matchesStatus&&(!term||hay.includes(term));
+  });
+  total+=(cat.items||[]).length;shown+=items.length;
+  if(!items.length)return '';
+  const label={implemented:'Implemented',partial:'Partially implemented','known-unsupported':'Known / not implemented'}[cat.support]||cat.support;
+  return '<details class="catalogue-category" '+(term||status?'open':'')+'><summary>'+esc(cat.category)+' · '+items.length+' entries <span class="support '+esc(cat.support)+'">'+esc(label)+'</span></summary><div class="catalogue-content">'+items.map(item=>'<div class="catalogue-item"><div><div class="catalogue-path">'+esc(item.pattern)+'</div><div class="catalogue-note">'+esc(item.operations||'')+'</div></div><div>'+esc(item.purpose)+(item.note?'<div class="catalogue-note">'+esc(item.note)+'</div>':'')+'</div><div><span class="support '+esc(cat.support)+'">'+esc(label)+'</span></div></div>').join('')+'</div></details>';
+ }).join('');
+ document.querySelector('#catalogue-summary').innerHTML='<span class="pill">'+total+' address-family entries</span><span class="pill">'+shown+' matching entries</span><span class="pill">'+categories.length+' categories</span><span class="pill">'+(oscCatalogue.protocol_reference||'')+'</span>';
+ document.querySelector('#catalogue-categories').innerHTML=html||'<div class="empty">No catalogue entries match this filter.</div>';
+ const commands=oscCatalogue.commands||[];
+ document.querySelector('#catalogue-commands').innerHTML='<table><thead><tr><th>OSC command</th><th>Purpose</th></tr></thead><tbody>'+commands.map(c=>'<tr><td class="catalogue-path">'+esc(c.address)+'</td><td>'+esc(c.purpose)+'</td></tr>').join('')+'</tbody></table>';
+}
+document.querySelector('#catalogue-search').addEventListener('input',renderOscCatalogue);
+document.querySelector('#catalogue-status').addEventListener('change',renderOscCatalogue);
+loadOscCatalogue();
 
 async function loadSimulatorControls(){
  const select=document.querySelector('#sim-scenario');
