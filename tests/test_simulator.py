@@ -238,7 +238,7 @@ def test_node_get_returns_x32node_text_response():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/-prefs/rta/visibility 0\n"]
+    assert response.params == ["/-prefs/rta/visibility OFF\n"]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
@@ -287,7 +287,7 @@ def test_node_get_returns_rta_gain_x32node_response():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/-prefs/rta/gain 0.0\n"]
+    assert response.params == ["/-prefs/rta/gain 0.000000\n"]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
@@ -309,7 +309,7 @@ def test_node_get_returns_rta_autogain_x32node_response():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/-prefs/rta/autogain 0\n"]
+    assert response.params == ["/-prefs/rta/autogain OFF\n"]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
@@ -462,7 +462,7 @@ def test_node_get_returns_rta_position_x32node_response():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/-prefs/rta/pos 0" + chr(10)]
+    assert response.params == ["/-prefs/rta/pos PRE" + chr(10)]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
@@ -485,7 +485,7 @@ def test_node_get_returns_rta_mode_x32node_response():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/-prefs/rta/mode 0" + chr(10)]
+    assert response.params == ["/-prefs/rta/mode BAR" + chr(10)]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
@@ -518,7 +518,7 @@ def test_node_get_returns_rta_options_x32node_response():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/-prefs/rta/options 0" + chr(10)]
+    assert response.params == ["/-prefs/rta/options %000000" + chr(10)]
 
 
 @pytest.mark.parametrize("path,value", [
@@ -545,7 +545,7 @@ def test_rta_integer_preferences_and_status_are_node_readable(path, value):
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
     expected_value = {"/-stat/rtamodeeq": "SPEC", "/-stat/rtamodegeq": "SPEC", "/-stat/rtaeqpre": "ON", "/-stat/rtageqpost": "ON"}.get(path, str(value))
-    assert response.params == [f"{path} {expected_value}\\n"]
+    assert response.params == [f"{path} {expected_value}\n"]
 
 
 @pytest.mark.parametrize("path,value", [
@@ -584,7 +584,7 @@ def test_node_get_returns_rta_decay_as_float():
     client = ("127.0.0.1", 50123)
     simulator.handle(client, packet("/node", "-prefs/rta/decay"))
     response = OscMessage(simulator.transport.sent[-1][0])
-    assert response.params == ["/-prefs/rta/decay 0.000000\\n"]
+    assert response.params == ["/-prefs/rta/decay 0.000000\n"]
 
 
 def test_rta_group_node_returns_all_ten_fields_in_console_format():
@@ -594,19 +594,19 @@ def test_rta_group_node_returns_all_ten_fields_in_console_format():
     simulator.handle(client, packet("/node", "-prefs/rta"))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/-prefs/rta OFF 0 OFF 0 PRE BAR %000000 RMS 0.25 OFF\\n"]
+    assert response.params == ["/-prefs/rta OFF 0 OFF 0 PRE BAR %000000 RMS 0.25 OFF\n"]
 
 
 @pytest.mark.parametrize("header,value,expected", [
-    ("-prefs/rta/visibility", 3, "/-prefs/rta/visibility 35%\\n"),
-    ("-prefs/rta/autogain", 1, "/-prefs/rta/autogain ON\\n"),
-    ("-prefs/rta/pos", 1, "/-prefs/rta/pos POST\\n"),
-    ("-prefs/rta/mode", 1, "/-prefs/rta/mode SPEC\\n"),
-    ("-prefs/rta/det", 1, "/-prefs/rta/det PEAK\\n"),
-    ("-prefs/rta/peakhold", 8, "/-prefs/rta/peakhold 8\\n"),
-    ("-prefs/rta/options", 33, "/-prefs/rta/options %100001\\n"),
-    ("-stat/rtamodeeq", 1, "/-stat/rtamodeeq SPEC\\n"),
-    ("-stat/rtaeqpre", 1, "/-stat/rtaeqpre ON\\n"),
+    ("-prefs/rta/visibility", 3, "/-prefs/rta/visibility 35%\n"),
+    ("-prefs/rta/autogain", 1, "/-prefs/rta/autogain ON\n"),
+    ("-prefs/rta/pos", 1, "/-prefs/rta/pos POST\n"),
+    ("-prefs/rta/mode", 1, "/-prefs/rta/mode SPEC\n"),
+    ("-prefs/rta/det", 1, "/-prefs/rta/det PEAK\n"),
+    ("-prefs/rta/peakhold", 8, "/-prefs/rta/peakhold 8\n"),
+    ("-prefs/rta/options", 33, "/-prefs/rta/options %100001\n"),
+    ("-stat/rtamodeeq", 1, "/-stat/rtamodeeq SPEC\n"),
+    ("-stat/rtaeqpre", 1, "/-stat/rtaeqpre ON\n"),
 ])
 def test_rta_node_enum_and_bitmap_responses_match_console_format(header, value, expected):
     state = ConsoleState()
