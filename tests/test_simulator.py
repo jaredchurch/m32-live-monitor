@@ -298,3 +298,25 @@ def test_rta_gain_preference_can_be_read_and_updated():
     assert state.get("/-prefs/rta/gain") == 18.0
     assert not state.update("/-prefs/rta/gain", 17.0)
     assert not state.update("/-prefs/rta/gain", 66.0)
+
+
+def test_node_get_returns_rta_autogain_x32node_response():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "-prefs/rta/autogain"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ["/-prefs/rta/autogain 0\\n"]
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+def test_rta_autogain_preference_can_be_read_and_updated():
+    state = ConsoleState()
+    assert state.get("/-prefs/rta/autogain") == 0
+    assert state.update("/-prefs/rta/autogain", 1)
+    assert state.get("/-prefs/rta/autogain") == 1
+    assert state.update("/-prefs/rta/autogain", 0)
+    assert not state.update("/-prefs/rta/autogain", 2)
