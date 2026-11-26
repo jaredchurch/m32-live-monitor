@@ -105,7 +105,7 @@ function renderMatrixInputs(data){
 function renderMeters(data){
  const root=document.querySelector('#meter-streams'),streams=data.streams||[];
  if(!streams.length){root.innerHTML='<div class="empty">Waiting for audio meter data…</div>';return;}
- const names={0:'Inputs, Aux/FX returns, buses and matrices',2:'Mix buses, matrices and Main outputs',4:'Physical outputs, P16, Aux and AES outputs',11:'Monitor and talkback'};
+ const names={0:'Inputs, Aux/FX returns, buses and matrices',2:'Mix buses, matrices and Main outputs',4:'Physical outputs, P16, Aux and AES outputs',9:'FX send and return meters',11:'Monitor and talkback'};
  root.innerHTML=streams.map(s=>{
   const vals=s.values||[],max=Math.max(0,...vals);
   const bars=vals.map((v,i)=>'<span class="pill" title="Meter '+i+' · '+Number(v).toFixed(3)+'"><i class="dot" style="background:#6ac18a"></i>'+i+': '+Number(v).toFixed(2)+'</span>').join('');
