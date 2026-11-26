@@ -584,3 +584,72 @@ def test_node_get_returns_rta_decay_as_float():
     simulator.handle(client, packet("/node", "-prefs/rta/decay"))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.params == ["/-prefs/rta/decay 0.0000\\n"]
+
+
+def test_rta_group_node_returns_all_ten_fields_in_console_format():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/node", "-prefs/rta"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ["/-prefs/rta OFF 0 OFF 0 PRE BAR %000000 RMS 0.25 OFF\\n"]
+
+
+@pytest.mark.parametrize("header,value,expected", [
+    ("-prefs/rta/visibility", 3, "/-prefs/rta/visibility 35%\\n"),
+    ("-prefs/rta/autogain", 1, "/-prefs/rta/autogain ON\\n"),
+    ("-prefs/rta/pos", 1, "/-prefs/rta/pos POST\\n"),
+    ("-prefs/rta/mode", 1, "/-prefs/rta/mode SPEC\\n"),
+    ("-prefs/rta/det", 1, "/-prefs/rta/det PEAK\\n"),
+    ("-prefs/rta/peakhold", 8, "/-prefs/rta/peakhold 8\\n"),
+    ("-prefs/rta/options", 33, "/-prefs/rta/options %100001\\n"),
+    ("-stat/rtamodeeq", 1, "/-stat/rtamodeeq SPEC\\n"),
+    ("-stat/rtaeqpre", 1, "/-stat/rtaeqpre ON\\n"),
+])
+def test_rta_node_enum_and_bitmap_responses_match_console_format(header, value, expected):
+    state = ConsoleState()
+    address = "/" + header
+    assert state.update(address, value)
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    simulator.handle(("127.0.0.1", 50123), packet("/node", header))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == [expected]
+
+
+def test_rta_node_group_set_updates_all_ten_preferences():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", "-prefs/rta 35% 18 ON 12 POST SPEC %100001 PEAK 2.00 4"))
+    p = simulator.state.preferences
+    assert p["rta/visibility"] == 3
+    assert p["rta/gain"] == pytest.approx(0.3)
+    assert p["rta/autogain"] == 1
+    assert p["rta/source"] == 12
+    assert p["rta/pos"] == 1
+    assert p["rta/mode"] == 1
+    assert p["rta/options"] == 33
+    assert p["rta/det"] == 1
+    assert p["rta/decay"] == pytest.approx(0.5)
+    assert p["rta/peakhold"] == 4
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+def test_rta_single_node_set_updates_enum_and_decay_values():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", "-prefs/rta/mode SPEC"))
+    simulator.handle(client, packet("/", "-prefs/rta/decay 2.00"))
+    assert simulator.state.get("/-prefs/rta/mode") == 1
+    assert simulator.state.get("/-prefs/rta/decay") == pytest.approx(0.5)
+
+
+def test_rta_gain_uses_normalized_osc_float_steps():
+    state = ConsoleState()
+    assert state.update("/-prefs/rta/gain", 0.3)
+    assert state.get("/-prefs/rta/gain") == pytest.approx(0.3)
+    assert not state.update("/-prefs/rta/gain", 0.31)
+    assert not state.update("/-prefs/rta/gain", 1.1)
