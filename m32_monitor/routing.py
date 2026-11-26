@@ -79,7 +79,7 @@ class RoutingState:
                                   "/fx/", "/config/solo/", "/config/talk/",
                                   "/config/chlink/", "/config/auxlink/", "/config/fxlink/",
                                   "/config/buslink/", "/config/mtxlink/", "/main/st/mix/pan",
-                                  "/main/m/mix/pan")) or
+                                  "/main/m/mix/pan", "/main/st/insert", "/main/m/insert")) or
                 (address.startswith(("/ch/", "/auxin/", "/fxrtn/", "/bus/", "/mtx/")) and
                  ("/insert" in address or address.endswith("/mix/pan")))):
             self.values[address] = value
