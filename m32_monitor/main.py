@@ -16,7 +16,7 @@ runtime=None
 async def lifespan(_app):
     global runtime
     if settings.mode=="simulator":
-        state.mode="simulator"; state.online=True
+        state.mode="simulator"
         runtime=Simulator(state,settings.simulator_host,settings.simulator_port)
     else:
         runtime=HardwareMonitor(state,settings.m32_host,settings.m32_port,
@@ -40,11 +40,12 @@ def health():
 
 @app.get("/api/status")
 def status():
+    online=state.online
     return {"application":"M32 Live Monitor","mode":state.mode,
             "m32_host":settings.m32_host if settings.mode=="hardware" else None,
             "m32_port":settings.m32_port,"osc_listen_port":settings.osc_listen_port,
-            "connection":"connected" if state.online else "waiting for console",
-            "online":state.online,"read_only":settings.mode=="hardware"}
+            "connection":"connected" if online else "waiting for console",
+            "online":online,"read_only":settings.mode=="hardware"}
 
 @app.get("/api/channels")
 def channels():
