@@ -711,12 +711,12 @@ def test_xlive_urec_status_values_are_readable():
 
 
 @pytest.mark.parametrize("header,expected", [
-    ("-urec/batterystate", "/-urec/batterystate NONE\\n"),
-    ("-urec/sd1state", "/-urec/sd1state NONE\\n"),
-    ("-urec/sd2info", '/-urec/sd2info "Insert SD Card."\\n'),
-    ("-urec/session/001/name", '/-urec/session/001/name ""\\n'),
-    ("-urec/marker/001/time", "/-urec/marker/001/time 0\\n"),
-    ("-stat/urec/state", "/-stat/urec/state STOP\\n"),
+    ("-urec/batterystate", "/-urec/batterystate NONE\n"),
+    ("-urec/sd1state", "/-urec/sd1state NONE\n"),
+    ("-urec/sd2info", '/-urec/sd2info "Insert SD Card."\n'),
+    ("-urec/session/001/name", '/-urec/session/001/name ""\n'),
+    ("-urec/marker/001/time", "/-urec/marker/001/time 0\n"),
+    ("-stat/urec/state", "/-stat/urec/state STOP\n"),
 ])
 def test_xlive_urec_individual_node_values(header, expected):
     simulator = Simulator(ConsoleState())
