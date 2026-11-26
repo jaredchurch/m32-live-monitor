@@ -128,7 +128,8 @@ def test_hardware_matrix_marks_path_live_after_required_state_is_received():
         ("/ch/01/grp/dca", 0), ("/ch/01/grp/mute", 0),
         ("/ch/01/mix/01/type", 4), ("/ch/01/mix/01/on", 1),
         ("/ch/01/mix/01/level", 0.6),
-        ("/bus/01/mix/on", 1), ("/bus/01/mix/fader", 0.7),\n        ("/bus/01/grp/dca", 0), ("/bus/01/grp/mute", 0),
+        ("/bus/01/mix/on", 1), ("/bus/01/mix/fader", 0.7),
+        ("/bus/01/grp/dca", 0), ("/bus/01/grp/mute", 0),
     ):
         state.update(address, value)
 
