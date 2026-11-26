@@ -381,7 +381,7 @@ class Simulator:
         detector = ("RMS", "PEAK")[int(p["rta/det"])]
         decay = "%.2f" % (0.25 * math.exp(float(p["rta/decay"]) * math.log(16.0 / 0.25)))
         peakhold = ("OFF", "1", "2", "3", "4", "5", "6", "7", "8")[int(p["rta/peakhold"])]
-        return "/-prefs/rta %s %s %s %s %s %s %s %s %s %s\\n" % (
+        return "/-prefs/rta %s %s %s %s %s %s %s %s %s %s\n" % (
             visibility, gain, autogain, source, pos, mode, options, detector, decay, peakhold)
 
     def _handle_node_set(self, client, args):
