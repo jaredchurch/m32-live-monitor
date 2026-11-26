@@ -474,3 +474,26 @@ def test_rta_position_preference_can_be_read_and_updated():
     assert state.update("/-prefs/rta/pos", 0)
     assert not state.update("/-prefs/rta/pos", 2)
     assert not state.update("/-prefs/rta/pos", 1.5)
+
+
+def test_node_get_returns_rta_mode_x32node_response():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "-prefs/rta/mode"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ["/-prefs/rta/mode 0" + chr(10)]
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+def test_rta_mode_preference_can_be_read_and_updated():
+    state = ConsoleState()
+    assert state.get("/-prefs/rta/mode") == 0
+    assert state.update("/-prefs/rta/mode", 1)
+    assert state.get("/-prefs/rta/mode") == 1
+    assert state.update("/-prefs/rta/mode", 0)
+    assert not state.update("/-prefs/rta/mode", 2)
+    assert not state.update("/-prefs/rta/mode", 1.5)
