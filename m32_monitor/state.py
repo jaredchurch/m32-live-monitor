@@ -1,5 +1,6 @@
 """Shared channel-state model used by the simulator and dashboard."""
 from dataclasses import asdict,dataclass
+import time
 
 @dataclass
 class ChannelState:
@@ -16,8 +17,16 @@ class ChannelState:
 class ConsoleState:
     def __init__(self):
         self.channels={n:ChannelState(n,"CH %02d"%n,0.72,False,((n-1)%15)+1,n,True) for n in range(1,33)}
-        self.online=True
         self.mode="simulator"
+        self.last_seen=time.monotonic()
+
+    @property
+    def online(self):
+        if self.mode=="simulator": return True
+        return self.last_seen is not None and time.monotonic()-self.last_seen<15
+
+    def mark_seen(self):
+        self.last_seen=time.monotonic()
 
     def update(self,address,value):
         parts=address.strip("/").split("/")
