@@ -284,26 +284,53 @@ class ConsoleState:
         for channel in self.channels.values():
             if not channel.connected or channel.colour == 0:
                 continue
-            upstream, upstream_uncertain = self._upstream_mutes(channel)
+            prefix = "/ch/%02d/" % channel.number
             cells = {}
             for destination in destinations:
                 ident = destination["id"]
-                if ident == "main_st":
-                    cells[ident] = self._cell(upstream, upstream_uncertain, channel.main_st, 1.0,
-                        self.outputs[ident]["on"], self.outputs[ident]["fader"])
-                elif ident == "main_mono":
-                    cells[ident] = self._cell(upstream, upstream_uncertain, channel.main_mono, 1.0,
-                        self.outputs[ident]["on"], self.outputs[ident]["fader"])
+                if ident in ("main_st", "main_mono"):
+                    suffix = "mix/st" if ident == "main_st" else "mix/mono"
+                    reasons, uncertain = self._upstream_mutes(channel)
+                    if not self._known(prefix + suffix):
+                        uncertain.append("main_send_state_unknown")
+                    if not self._known("/%s/mix/on" % ("main/st" if ident == "main_st" else "main/m")):
+                        uncertain.append("output_mute_state_unknown")
+                    if not self._known("/%s/mix/fader" % ("main/st" if ident == "main_st" else "main/m")):
+                        uncertain.append("output_fader_state_unknown")
+                    send_on = getattr(channel, "main_st" if ident == "main_st" else "main_mono") if self._known(prefix + suffix) else True
+                    output = self.outputs[ident]
+                    output_on = output["on"] if self._known("/%s/mix/on" % ("main/st" if ident == "main_st" else "main/m")) else True
+                    output_fader = output["fader"] if self._known("/%s/mix/fader" % ("main/st" if ident == "main_st" else "main/m")) else 1.0
+                    cells[ident] = self._cell(reasons, uncertain, send_on, 1.0, output_on, output_fader)
                 else:
                     bus = int(ident[-2:])
                     send = channel.sends.get(bus, {"on": True, "level": 0.0})
-                    send_type = channel.send_types.get(bus if bus % 2 else bus - 1, 4)
-                    bus_reasons, bus_uncertain = self._upstream_mutes(
+                    type_bus = bus if bus % 2 else bus - 1
+                    type_address = prefix + "mix/%02d/type" % type_bus
+                    type_known = self._known(type_address)
+                    send_type = channel.send_types.get(type_bus, 4) if type_known else 3
+                    reasons, uncertain = self._upstream_mutes(
                         channel, include_channel_fader=(send_type in (4, 5)),
                         include_dca_fader=(send_type in (4, 5)),
                         include_channel_mute=(send_type in (4, 5)))
-                    cells[ident] = self._cell(bus_reasons, bus_uncertain, send["on"], send["level"],
-                        self.buses[bus]["on"], self.buses[bus]["fader"])
+                    if not type_known:
+                        uncertain.append("send_tap_point_unknown")
+                    send_prefix = prefix + "mix/%02d/" % bus
+                    on_known = self._known(send_prefix + "on")
+                    level_known = self._known(send_prefix + "level")
+                    if not on_known: uncertain.append("send_switch_state_unknown")
+                    if not level_known: uncertain.append("send_level_state_unknown")
+                    output_prefix = "/bus/%02d/mix/" % bus
+                    output_on_known = self._known(output_prefix + "on")
+                    output_fader_known = self._known(output_prefix + "fader")
+                    if not output_on_known: uncertain.append("output_mute_state_unknown")
+                    if not output_fader_known: uncertain.append("output_fader_state_unknown")
+                    cells[ident] = self._cell(
+                        reasons, uncertain,
+                        send["on"] if on_known else True,
+                        send["level"] if level_known else 1.0,
+                        self.buses[bus]["on"] if output_on_known else True,
+                        self.buses[bus]["fader"] if output_fader_known else 1.0)
             rows.append({"number": channel.number, "name": channel.name,
                          "source": self.source_label(channel.source), "cells": cells})
         return {"destinations": destinations, "channels": rows,
@@ -311,3 +338,4 @@ class ConsoleState:
                 "mute_groups": [{"number": n, "muted": active} for n, active in self.mute_groups.items()],
                 "dca_mutes_enabled": self.dca_mutes_enabled,
                 "hard_mutes_enabled": self.hard_mutes_enabled}
+
