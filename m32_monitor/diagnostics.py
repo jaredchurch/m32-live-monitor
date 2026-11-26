@@ -27,7 +27,8 @@ class OscDiagnostics:
         self.cycle_started_at = time.time()
 
     def received(self, address):
-        self.cycle_received.add(address)
+        if address in self.expected:
+            self.cycle_received.add(address)
         self.last_received[address] = time.time()
         self.counters["valid_responses"] += 1
 
