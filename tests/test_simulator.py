@@ -654,3 +654,13 @@ def test_rta_gain_uses_normalized_osc_float_steps():
     assert state.get("/-prefs/rta/gain") == pytest.approx(0.3)
     assert not state.update("/-prefs/rta/gain", 0.31)
     assert not state.update("/-prefs/rta/gain", 1.1)
+
+
+def test_invalid_rta_group_node_set_is_atomic():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    before = dict(simulator.state.preferences)
+    simulator.handle(client, packet("/", "-prefs/rta 35% 18 ON 12 POST SPEC %100001 PEAK 0.20 4"))
+    assert simulator.state.preferences == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
