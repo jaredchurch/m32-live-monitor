@@ -1,0 +1,115 @@
+"""Protocol-family catalogue for the M32/X32 OSC simulator.
+
+Patterns describe address families, not a claim that every parameter in each
+family is implemented. The support field is intentionally conservative.
+"""
+
+OSC_CATALOGUE = [
+    {"category":"Connection and discovery","support":"implemented","items":[
+        {"pattern":"/info","purpose":"Server version and model identity","operations":"GET"},
+        {"pattern":"/xinfo","purpose":"Discovery identity and local IP","operations":"GET"},
+        {"pattern":"/status","purpose":"Server availability and identity","operations":"GET"},
+        {"pattern":"/xremote","purpose":"Register for unsolicited parameter updates","operations":"COMMAND"},
+        {"pattern":"/subscribe","purpose":"Subscribe to individual parameter updates","operations":"COMMAND","note":"Basic client registration is supported; full per-address subscription scheduling is not yet modelled."},
+        {"pattern":"/renew","purpose":"Renew active subscriptions","operations":"COMMAND"},
+        {"pattern":"/unsubscribe","purpose":"Cancel subscriptions","operations":"COMMAND"}
+    ]},
+    {"category":"Configuration and stereo linking","support":"partial","items":[
+        {"pattern":"/config/chlink/{1-2...31-32}","purpose":"Link/unlink adjacent input-channel pairs","operations":"GET, SET, /node"},
+        {"pattern":"/config/auxlink/{1-2...7-8}","purpose":"Link/unlink Aux input pairs","operations":"GET, SET, /node"},
+        {"pattern":"/config/fxlink/{1-2...7-8}","purpose":"Link/unlink FX return pairs","operations":"GET, SET, /node"},
+        {"pattern":"/config/buslink/{1-2...15-16}","purpose":"Link/unlink mix-bus pairs","operations":"GET, SET, /node"},
+        {"pattern":"/config/mtxlink/{1-2...5-6}","purpose":"Link/unlink Matrix pairs","operations":"GET, SET, /node"},
+        {"pattern":"/config/mute/{1...6}","purpose":"Mute group state","operations":"GET, SET"},
+        {"pattern":"/config/linkcfg/{hadly,eq,dyn,fdrmute}","purpose":"Linked-channel parameter coupling preferences","operations":"GET, SET","note":"Known protocol family; not yet fully simulated."},
+        {"pattern":"/config/solo/*, /config/mono/*, /config/talk/*, /config/osc/*","purpose":"Solo, mono, talkback and oscillator configuration","operations":"GET, SET","note":"Known protocol families; not yet fully simulated."},
+        {"pattern":"/config/routing/*","purpose":"Input, AES50, Card, output and playback routing banks","operations":"GET, SET, /node","note":"Routing snapshot covers selected assignments; complete node read/write coverage is outstanding."},
+        {"pattern":"/config/userctrl/*, /config/dp48/*","purpose":"User controls and DP48 configuration","operations":"GET, SET, /node","note":"Known protocol families; not yet fully simulated."}
+    ]},
+    {"category":"Input channels","support":"partial","items":[
+        {"pattern":"/ch/{01...32}/config/*","purpose":"Channel name, source, colour and configuration","operations":"GET, SET, /node"},
+        {"pattern":"/ch/{01...32}/preamp/*, /ch/{01...32}/delay/*","purpose":"Preamp, phantom/trim and channel delay","operations":"GET, SET, /node","note":"Most processing parameters are not yet modelled."},
+        {"pattern":"/ch/{01...32}/gate/*, /ch/{01...32}/dyn/*","purpose":"Gate and dynamics processing","operations":"GET, SET, /node","note":"Not yet fully modelled."},
+        {"pattern":"/ch/{01...32}/eq/*","purpose":"Four-band channel equaliser","operations":"GET, SET, /node","note":"Not yet fully modelled."},
+        {"pattern":"/ch/{01...32}/insert/*","purpose":"Channel insert assignment","operations":"GET, SET, /node","note":"Not yet fully modelled."},
+        {"pattern":"/ch/{01...32}/mix/*","purpose":"Main assignments, fader, mute, pan and 16 bus sends","operations":"GET, SET, /node","note":"Core mute/fader/main-send/bus-send parameters are modelled; others remain gaps."},
+        {"pattern":"/ch/{01...32}/grp/*","purpose":"DCA and mute-group assignments","operations":"GET, SET, /node"},
+        {"pattern":"/ch/{01...32}/automix/*","purpose":"Automix group and weight","operations":"GET, SET, /node","note":"Known protocol family; not yet simulated."}
+    ]},
+    {"category":"Aux inputs and FX returns","support":"partial","items":[
+        {"pattern":"/auxin/{01...08}/config/*, /auxin/{01...08}/preamp/*","purpose":"Aux input identity and preamp","operations":"GET, SET, /node","note":"Basic strip config is modelled; preamp coverage is incomplete."},
+        {"pattern":"/auxin/{01...08}/eq/*, /auxin/{01...08}/mix/*, /auxin/{01...08}/grp/*","purpose":"Aux EQ, sends, main assignment and groups","operations":"GET, SET, /node","note":"Core mute/fader/send/group fields are modelled; remaining fields are gaps."},
+        {"pattern":"/fxrtn/{01...08}/config/*, /fxrtn/{01...08}/eq/*","purpose":"FX return identity and equalisation","operations":"GET, SET, /node","note":"Basic strip state is modelled; EQ is not yet fully modelled."},
+        {"pattern":"/fxrtn/{01...08}/mix/*, /fxrtn/{01...08}/grp/*","purpose":"FX return fader, mute, sends and groups","operations":"GET, SET, /node","note":"Core mute/fader/send/group fields are modelled."}
+    ]},
+    {"category":"Buses, matrices and main outputs","support":"partial","items":[
+        {"pattern":"/bus/{01...16}/config/*, /bus/{01...16}/mix/*","purpose":"Bus name, processing, fader, mute and sends to matrices","operations":"GET, SET, /node","note":"Core output mute/fader/name and Matrix sends are modelled."},
+        {"pattern":"/mtx/{01...06}/config/*, /mtx/{01...06}/mix/*, /mtx/{01...06}/grp/*","purpose":"Matrix output processing, fader, mute and group assignments","operations":"GET, SET, /node","note":"Core name/fader/mute/group fields are modelled."},
+        {"pattern":"/main/st/{config,mix,eq,dyn,insert}/*","purpose":"Main stereo output","operations":"GET, SET, /node","note":"Core fader/mute/group/send fields are modelled."},
+        {"pattern":"/main/m/{config,mix,eq,dyn,insert}/*","purpose":"Main mono/centre output","operations":"GET, SET, /node","note":"Core fader/mute/group/send fields are modelled."}
+    ]},
+    {"category":"DCA and mute groups","support":"partial","items":[
+        {"pattern":"/dca/{1...8}/{config,mix}/*","purpose":"DCA name, fader and mute","operations":"GET, SET, /node","note":"Core name/fader/mute are modelled."},
+        {"pattern":"/config/mute/{1...6}","purpose":"Mute group active state","operations":"GET, SET"},
+        {"pattern":"/-prefs/dcamute, /-prefs/hardmute","purpose":"DCA mute and hard-mute behaviour preferences","operations":"GET"}
+    ]},
+    {"category":"Effects, outputs and headamps","support":"known-unsupported","items":[
+        {"pattern":"/fx/{1...8}/*","purpose":"FX rack type, routing and effect parameters","operations":"GET, SET, /node"},
+        {"pattern":"/outputs/*","purpose":"Output patching and physical output configuration","operations":"GET, SET, /node"},
+        {"pattern":"/headamp/{1...N}","purpose":"Remote headamp gain and phantom state","operations":"GET, SET, /node"},
+        {"pattern":"/-insert/*","purpose":"Insert routing and insert device configuration","operations":"GET, SET, /node"}
+    ]},
+    {"category":"Meters and subscriptions","support":"partial","items":[
+        {"pattern":"/meters/{0...16}","purpose":"Meter streams as binary OSC blobs","operations":"SUBSCRIBE","note":"Stream shapes are modelled; values are currently synthetic zeroes."},
+        {"pattern":"/batchsubscribe","purpose":"Subscribe to batches of meter values","operations":"COMMAND"},
+        {"pattern":"/formatsubscribe","purpose":"Subscribe to packed groups of parameter values","operations":"COMMAND"},
+        {"pattern":"/renew, /unsubscribe","purpose":"Maintain or cancel meter/format subscriptions","operations":"COMMAND"}
+    ]},
+    {"category":"Scenes, shows, snippets and libraries","support":"known-unsupported","items":[
+        {"pattern":"/-show, /showdump, /-showfile/*","purpose":"Show metadata and show-file transfer","operations":"COMMAND, /node","note":"Only the empty-show response is currently stubbed; no show data is stored."},
+        {"pattern":"/-libs/*","purpose":"Preset/library browsing and management","operations":"GET, SET, /node"},
+        {"pattern":"/add, /copy, /save, /load, /delete, /rename","purpose":"Scene, snippet, preset and dataset operations","operations":"COMMAND"}
+    ]},
+    {"category":"Preferences, USB and status","support":"partial","items":[
+        {"pattern":"/-prefs/rta/*","purpose":"RTA visibility, gain, source, mode, detector, decay and options","operations":"GET, SET, /node"},
+        {"pattern":"/-prefs/card/*","purpose":"Card, USB, ADAT, MADI and X-Live recorder preferences","operations":"GET, /node"},
+        {"pattern":"/-prefs/*","purpose":"Other console preferences","operations":"GET, SET, /node","note":"Only selected RTA, card, DCA-mute and hard-mute fields are modelled."},
+        {"pattern":"/-usb/*","purpose":"USB recorder/player state and metadata","operations":"GET, SET, /node","note":"Known protocol family; not yet simulated."},
+        {"pattern":"/-stat/*","purpose":"Console status, solo, RTA, AES50 and recorder status","operations":"GET, /node","note":"Selected solo, RTA and UREC status fields are modelled."},
+        {"pattern":"/-urec/*, /-stat/urec/*","purpose":"X-Live SD recorder, sessions, markers and transport status","operations":"GET, /node"}
+    ]},
+    {"category":"Actions and undo","support":"known-unsupported","items":[
+        {"pattern":"/-action/*","purpose":"Console action and surface control events","operations":"COMMAND"},
+        {"pattern":"/-undo/*","purpose":"Undo history and action control","operations":"COMMAND"}
+    ]}
+]
+
+OSC_COMMANDS = [
+    {"address":"/info","purpose":"Identify server version/model"},
+    {"address":"/xinfo","purpose":"Discovery identity response"},
+    {"address":"/status","purpose":"Server status response"},
+    {"address":"/xremote","purpose":"Register for parameter change notifications"},
+    {"address":"/subscribe","purpose":"Subscribe to individual parameter updates"},
+    {"address":"/formatsubscribe","purpose":"Subscribe to packed parameter groups"},
+    {"address":"/batchsubscribe","purpose":"Subscribe to meter or packed data streams"},
+    {"address":"/renew","purpose":"Renew active subscriptions"},
+    {"address":"/unsubscribe","purpose":"Cancel active subscriptions"},
+    {"address":"/node","purpose":"Read an X32node group as a text response"},
+    {"address":"/","purpose":"Write X32node text data"},
+    {"address":"/showdump","purpose":"Request show metadata"},
+    {"address":"/add, /copy, /save, /load, /delete, /rename","purpose":"Dataset and scene/library management"}
+]
+
+
+def catalogue_snapshot():
+    categories = []
+    for category in OSC_CATALOGUE:
+        categories.append({**category, "items": [dict(item) for item in category["items"]]})
+    return {"protocol_reference":"Unofficial X32/M32 OSC Remote Protocol, firmware 4.0+ (community-maintained)",
+            "catalogue_scope":"Address families and client/server command classes; patterns expand to many individual addresses.",
+            "categories":categories, "commands":[dict(item) for item in OSC_COMMANDS],
+            "support_levels":[
+                {"id":"implemented","label":"Implemented","description":"Simulator has a response/state handler for this operation or family."},
+                {"id":"partial","label":"Partially implemented","description":"Some addresses or behaviours are supported; inspect the notes and test with M32-Edit."},
+                {"id":"known-unsupported","label":"Known / not implemented","description":"Documented protocol family, but simulator support has not yet been built."}
+            ]}
