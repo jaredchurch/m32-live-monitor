@@ -22,7 +22,7 @@ Requirements: Python 3.11+.
 
 Open http://localhost:8000. The first run creates a local virtual environment and installs dependencies. Stop with Ctrl+C. The application reads an optional .env file automatically.
 
-The default mode is simulator. The app binds UDP 10023 for the virtual console. In M32-Edit, create a connection to the computer's LAN IP address and port 10023. Do not point M32-Edit at the physical console while testing the simulator. If UDP 10023 is already in use, stop the other service or change SIMULATOR_PORT.
+The default mode is simulator. The native simulator binds to 127.0.0.1:10023 (loopback only). In M32-Edit on the same computer, connect to 127.0.0.1 on UDP port 10023. If M32-Edit runs on another computer, change SIMULATOR_HOST to 0.0.0.0 and connect to the host computer's LAN IP. Do not point M32-Edit at the physical console while testing the simulator.
 
 ## Use a physical M32
 
@@ -36,7 +36,7 @@ The hardware transport is deliberately read-only. The UI currently shows fader p
 2. Open the repository in VS Code and select **Reopen in Container**.
 3. Open forwarded HTTP port 8000.
 
-The local Compose configuration publishes UDP 10023 for M32-Edit to reach the simulator through the host. This UDP mapping is useful for a local container; GitHub Codespaces port forwarding is not a substitute for LAN UDP access to a physical M32.
+The local Compose configuration publishes the simulator's UDP 10023 only on the host loopback interface, so M32-Edit on the same computer can connect without exposing the simulator to the LAN. Hardware OSC port 10024 is published for local container testing. GitHub Codespaces port forwarding is not a substitute for LAN UDP access to a physical M32.
 
 ## Configuration
 
@@ -52,7 +52,7 @@ The local Compose configuration publishes UDP 10023 for M32-Edit to reach the si
     python -m compileall -q m32_monitor tests
     pytest
 
-GitHub Actions runs compile and pytest on Ubuntu, macOS and Windows using Python 3.12. Node.js is not required by the project.
+GitHub Actions runs compile and pytest on Ubuntu, macOS and Windows using Python 3.12, plus Docker Compose validation and an image build. Node.js is not required by the project.
 
 ## Next work
 
