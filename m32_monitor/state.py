@@ -169,6 +169,8 @@ class ConsoleState:
                 if len(parts) == 5 and parts[2] == "mix" and parts[3].isdigit():
                     send = channel.sends.get(int(parts[3]), {"on": True, "level": 0.0})
                     return send.get(parts[4])
+            if address == "/-prefs/dcamute":
+                return int(self.dca_mutes_enabled) if self.dca_mutes_enabled is not None else None
             if len(parts) == 3 and parts[0] == "dca":
                 dca = self.dcas[int(parts[1])]
                 return dca.get(parts[2])
