@@ -25,6 +25,7 @@ class HardwareMonitor:
         self.state.mode = "hardware"
         self.state.received.clear()
         self.state.routing.values.clear()
+        self.state.meters.clear()
         self.state.last_seen = None
         for collection in (self.state.channels, self.state.auxins, self.state.fx_returns):
             for channel in collection.values():
