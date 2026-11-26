@@ -483,12 +483,29 @@ class Simulator:
             rendered.append(value)
         return "/-urec " + " ".join(rendered) + "\n"
 
+    def _config_link_node_group(self, family):
+        """Render a complete stereo-link configuration node."""
+        links = self.state.config_links[family]
+        return "".join("/config/%s/%s %s\\n" % (
+            family, pair, "ON" if enabled else "OFF")
+            for pair, enabled in links.items())
+
     def _handle_node(self, client, args):
         if len(args) != 1 or not isinstance(args[0], str):
             self.record("in", "unhandled_command", "/node", args, client,
                         "Expected exactly one X32node header string")
             return
         header = args[0].lstrip("/")
+        if header in ("config/chlink", "config/auxlink", "config/fxlink",
+                      "config/buslink", "config/mtxlink"):
+            family = header.split("/", 1)[1]
+            response = self._config_link_node_group(family)
+            self.send(client, "/node", response, outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned %s stereo-link configuration (%d pairs)" % (
+                            family, len(self.state.config_links[family])))
+            return
+
         if header == "-urec":
             self.send(client, "/node", self._urec_node_group(), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
