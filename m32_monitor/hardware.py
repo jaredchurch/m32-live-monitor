@@ -81,7 +81,7 @@ class HardwareMonitor:
                 addresses.extend(("/-prefs/dcamute", "/-prefs/hardmute"))
                 for number in range(1, 17):
                     prefix = "/bus/%02d" % number
-                    addresses.extend((prefix + "/mix/on", prefix + "/mix/fader",
+                    addresses.extend((prefix + "/config/name", prefix + "/mix/on", prefix + "/mix/fader",
                                       prefix + "/grp/dca", prefix + "/grp/mute"))
                     for matrix in range(1, 7):
                         addresses.extend((prefix + "/mix/%02d/on" % matrix,
