@@ -238,7 +238,7 @@ def test_node_get_returns_x32node_text_response():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/-prefs/rta/visibility 0\\n"]
+    assert response.params == ["/-prefs/rta/visibility 0\n"]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
