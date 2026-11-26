@@ -11,4 +11,4 @@ fi
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 
-exec python -m uvicorn m32_monitor.main:app --host 127.0.0.1 --port 8000
+exec python -m uvicorn m32_monitor.main:app --host "${WEB_HOST:-127.0.0.1}" --port 8000
