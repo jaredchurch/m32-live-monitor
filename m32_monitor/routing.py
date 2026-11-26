@@ -3,8 +3,6 @@
 Values are retained exactly as returned by OSC. Unknown enum values remain visible
 as raw values rather than being guessed.
 """
-from dataclasses import dataclass
-
 INPUT_BANKS = ("AN 1-8", "AN 9-16", "AN 17-24", "AN 25-32",
                "AES50-A 1-8", "AES50-A 9-16", "AES50-A 17-24", "AES50-A 25-32",
                "AES50-A 33-40", "AES50-A 41-48", "AES50-B 1-8", "AES50-B 9-16",
@@ -128,7 +126,7 @@ class RoutingState:
                                         "display": str(value) if known else "Not received"})
         fx = []
         for number in range(1, 9):
-            for suffix in ("type", "source"):
+            for suffix in ("type", "source", "par"):
                 address = f"/fx/{number}/{suffix}"
                 fx.append({"address": address, "label": f"FX {number} {suffix}",
                            "known": address in self.values, "value": self.values.get(address),
