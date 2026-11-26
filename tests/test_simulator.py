@@ -676,7 +676,7 @@ def test_node_get_returns_xlive_urec_group():
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
     assert response.params == [
-        '/-urec 0 0 0 0 0 NONE 0 0 0 0 NONE NONE "Insert SD Card." "Insert SD Card." "" 0\\n'
+        '/-urec 0 0 0 0 0 NONE 0 0 0 0 NONE NONE "Insert SD Card." "Insert SD Card." "" 0\n'
     ]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
