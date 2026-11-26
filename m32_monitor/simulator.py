@@ -243,7 +243,8 @@ class Simulator:
                 detail = "Returned RTA gain X32node"
             else:
                 response = "%s %d\n" % (address, int(value))
-                detail = "Returned RTA visibility X32node"
+                detail = ("Returned RTA autogain X32node" if header.endswith("/autogain")
+                          else "Returned RTA visibility X32node")
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client, detail)
             return
