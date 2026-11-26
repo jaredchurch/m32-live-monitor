@@ -114,6 +114,18 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if len(parts) == 4 and parts[0] == "mtx":
+                matrix = self.matrices[int(parts[1])]
+                if parts[2:] == ["mix", "on"]: return matrix["on"]
+                if parts[2:] == ["mix", "fader"]: return matrix["fader"]
+                if parts[2:] == ["grp", "dca"]: return matrix["dca_mask"]
+                if parts[2:] == ["grp", "mute"]: return matrix["mute_mask"]
+                if parts[2:] == ["config", "name"]: return matrix["name"]
+            if len(parts) == 5 and parts[0] == "bus" and parts[2] == "mix":
+                return self.buses[int(parts[1])].get("matrix_sends", {}).get(int(parts[3]), {}).get(parts[4])
+            if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
+                key = "main_st" if address.startswith("/main/st/") else "main_mono"
+                return self.outputs[key]["sends"].get(int(parts[3]), {}).get(parts[4])
             if len(parts) == 3 and parts[0] == "dca":
                 number = int(parts[1])
                 if number not in self.dcas:
@@ -124,6 +136,25 @@ class ConsoleState:
                     self.dcas[number]["fader"] = max(0.0, min(1.0, float(value)))
                 elif parts[2] == "config/name" and isinstance(value, str):
                     self.dcas[number]["name"] = value
+                else:
+                    return False
+                self.received.add(address)
+                return True
+
+            if len(parts) == 4 and parts[0] == "mtx":
+                number = int(parts[1])
+                if number not in self.matrices:
+                    return False
+                if parts[2:] == ["mix", "on"]:
+                    self.matrices[number]["on"] = self._bool(value)
+                elif parts[2:] == ["mix", "fader"]:
+                    self.matrices[number]["fader"] = max(0.0, min(1.0, float(value)))
+                elif parts[2:] == ["grp", "dca"]:
+                    self.matrices[number]["dca_mask"] = int(value) & 255
+                elif parts[2:] == ["grp", "mute"]:
+                    self.matrices[number]["mute_mask"] = int(value) & 63
+                elif parts[2:] == ["config", "name"] and isinstance(value, str):
+                    self.matrices[number]["name"] = value
                 else:
                     return False
                 self.received.add(address)
@@ -145,6 +176,15 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if len(parts) == 5 and parts[0] == "bus" and parts[2] == "mix":
+                number, matrix = int(parts[1]), int(parts[3])
+                if number not in self.buses or not 1 <= matrix <= 6 or parts[4] not in ("on", "level"):
+                    return False
+                send = self.buses[number].setdefault("matrix_sends", {}).setdefault(matrix, {"on": True, "level": 0.0})
+                send[parts[4]] = self._bool(value) if parts[4] == "on" else max(0.0, min(1.0, float(value)))
+                self.received.add(address)
+                return True
+
             if len(parts) == 4 and parts[0] == "bus":
                 number = int(parts[1])
                 if number not in self.buses:
@@ -159,6 +199,16 @@ class ConsoleState:
                     self.buses[number]["mute_mask"] = int(value) & 63
                 else:
                     return False
+                self.received.add(address)
+                return True
+
+            if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
+                key = "main_st" if address.startswith("/main/st/") else "main_mono"
+                matrix = int(parts[3])
+                if not 1 <= matrix <= 6 or parts[4] not in ("on", "level"):
+                    return False
+                send = self.outputs[key]["sends"].setdefault(matrix, {"on": True, "level": 0.0})
+                send[parts[4]] = self._bool(value) if parts[4] == "on" else max(0.0, min(1.0, float(value)))
                 self.received.add(address)
                 return True
 
@@ -183,8 +233,9 @@ class ConsoleState:
     def get(self, address):
         parts = address.strip("/").split("/")
         try:
-            if len(parts) >= 4 and parts[0] == "ch":
-                channel = self.channels[int(parts[1])]
+            if len(parts) >= 4 and parts[0] in ("ch", "auxin", "fxrtn"):
+                collection = {"ch": self.channels, "auxin": self.auxins, "fxrtn": self.fx_returns}[parts[0]]
+                channel = collection[int(parts[1])]
                 path = "/".join(parts[2:])
                 basic = {
                     "config/name": channel.name, "config/color": channel.colour,
