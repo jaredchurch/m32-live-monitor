@@ -1,4 +1,4 @@
-import time
+import pytest
 
 from pythonosc.osc_bundle_builder import IMMEDIATELY, OscBundleBuilder
 from pythonosc.osc_message import OscMessage
@@ -47,7 +47,7 @@ def test_hardware_monitor_applies_messages_inside_osc_bundle():
     assert channel.colour == 2
     assert channel.source == 7
     assert channel.connected is True
-    assert channel.fader == 0.2913
+    assert channel.fader == pytest.approx(0.2913)
     assert channel.muted is True
     assert state.visible_channels()[0]["number"] == 1
 
