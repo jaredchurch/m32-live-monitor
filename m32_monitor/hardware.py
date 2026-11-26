@@ -3,7 +3,7 @@ import asyncio
 import logging
 import socket
 
-from pythonosc.osc_packet import OscPacket
+from pythonosc.osc_packet import OscPacket, ParseError
 from pythonosc.osc_message_builder import OscMessageBuilder
 
 logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ class HardwareMonitor:
                     message.address, message.params[0]
                 ):
                     self.state.mark_seen()
-        except (ValueError, IndexError):
+        except (ValueError, IndexError, ParseError):
             logger.debug("Ignoring unrecognised OSC datagram", exc_info=True)
 
     async def _receive(self):
