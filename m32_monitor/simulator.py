@@ -458,17 +458,6 @@ class Simulator:
         for subscriber in tuple(self.clients):
             self.send(subscriber, "/", args[0], outcome="subscription_update")
 
-    def _handle_node(self, client, args):
-        if len(args) != 1 or not isinstance(args[0], str):
-            self.record("in", "unhandled_command", "/node", args, client,
-                        "Expected exactly one X32node header string")
-            return
-        header = args[0].lstrip("/")
-        if header == "-prefs/rta":
-            self.send(client, "/node", self._rta_node_group(), outcome="node_response")
-            self.record("in", "handled_node_get", "/node", args, client,
-                        "Returned all ten RTA preference fields")
-            return
     def _urec_node_group(self):
         """Return the scalar X-Live recorder status node in documented field order."""
         values = self.state.urec
@@ -494,10 +483,22 @@ class Simulator:
             rendered.append(value)
         return "/-urec " + " ".join(rendered) + "\\n"
 
+    def _handle_node(self, client, args):
+        if len(args) != 1 or not isinstance(args[0], str):
+            self.record("in", "unhandled_command", "/node", args, client,
+                        "Expected exactly one X32node header string")
+            return
+        header = args[0].lstrip("/")
         if header == "-urec":
             self.send(client, "/node", self._urec_node_group(), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned X-Live recorder status node (16 fields)")
+            return
+
+        if header == "-prefs/rta":
+            self.send(client, "/node", self._rta_node_group(), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned all ten RTA preference fields")
             return
         if header == "-prefs/card":
             names = tuple(self.state.card_preferences)
