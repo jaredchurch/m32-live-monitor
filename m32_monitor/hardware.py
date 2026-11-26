@@ -121,8 +121,10 @@ class HardwareMonitor:
                     for number in range(1, maximum, 2):
                         addresses.append("/config/%s/%d-%d" % (path, number, number + 1))
                 addresses.extend(("/config/mono/mode", "/config/mono/link"))
-                for number in range(1, 33):
-                    addresses.append("/ch/%02d/insert" % number)
+                for family, count in (("ch", 32), ("auxin", 8), ("fxrtn", 8), ("bus", 16), ("mtx", 6)):
+                    for number in range(1, count + 1):
+                        addresses.append("/%s/%02d/insert" % (family, number))
+                addresses.extend(("/main/st/insert", "/main/m/insert"))
                 for family, count in (("ch", 32), ("auxin", 8), ("fxrtn", 8)):
                     for number in range(1, count + 1):
                         prefix = "/%s/%02d" % (family, number)
