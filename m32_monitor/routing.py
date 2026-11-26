@@ -75,7 +75,13 @@ class RoutingState:
         self.values = {}
 
     def update(self, address, value):
-        if address.startswith("/config/routing/") or address.startswith("/outputs/") or address.startswith("/config/userrout/") or address.startswith("/fx/") or address.startswith("/config/solo/") or address.startswith("/config/talk/") or address.startswith("/ch/") and "/insert" in address:
+        if (address.startswith(("/config/routing/", "/outputs/", "/config/userrout/",
+                                  "/fx/", "/config/solo/", "/config/talk/",
+                                  "/config/chlink/", "/config/auxlink/", "/config/fxlink/",
+                                  "/config/buslink/", "/config/mtxlink/", "/main/st/mix/pan",
+                                  "/main/m/mix/pan")) or
+                (address.startswith(("/ch/", "/auxin/", "/fxrtn/", "/bus/", "/mtx/")) and
+                 ("/insert" in address or address.endswith("/mix/pan")))):
             self.values[address] = value
             return True
         return False
