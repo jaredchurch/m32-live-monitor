@@ -56,7 +56,7 @@ function renderMatrix(data){
  const rows=data.channels||[],dest=data.destinations||[];
  let live=0,blocked=0,zero=0,unknown=0;
  const head='<thead><tr><th>Input channel</th>'+dest.map(d=>'<th>'+esc(d.label)+'</th>').join('')+'</tr></thead>';
- const body=rows.map(row=>'<tr><td><strong>'+String(row.number).padStart(2,'0')+' · '+esc(row.name)+'</strong><div class="muted">'+esc(row.source)+'</div></td>'+dest.map(d=>{
+ const body=rows.map(row=>'<tr><td><strong>'+({channel:'CH',aux:'AUX',fx_return:'FX RTN'}[row.strip_type]||'CH')+' '+String(row.number).padStart(2,'0')+' · '+esc(row.name)+'</strong><div class="muted">'+esc(row.source)+'</div></td>'+dest.map(d=>{
   const c=row.cells[d.id];if(!c){unknown++;return '<td class="signal unknown-cell" title="No state received">?</td>';}
   if(!c.muted&&c.uncertain){unknown++;return '<td class="signal unknown-cell" title="'+esc((c.reasons||[]).map(describeReason).join('\\n'))+'">CHECK</td>'; }if(!c.muted){live++;return '<td class="signal live" title="Signal path available">OPEN</td>';}
   const reasons=c.reasons||[],isZero=reasons.some(x=>x.endsWith('zero'));if(isZero)zero++;else blocked++;
