@@ -177,6 +177,8 @@ class ConsoleState:
                     return send.get(parts[4])
             if address == "/-prefs/dcamute":
                 return int(self.dca_mutes_enabled) if self.dca_mutes_enabled is not None else None
+            if address == "/-prefs/hardmute":
+                return int(self.hard_mutes_enabled) if self.hard_mutes_enabled is not None else None
             if len(parts) == 3 and parts[0] == "dca":
                 dca = self.dcas[int(parts[1])]
                 return dca.get(parts[2])
@@ -256,10 +258,10 @@ class ConsoleState:
             for destination in destinations:
                 ident = destination["id"]
                 if ident == "main_st":
-                    cells[ident] = self._cell(upstream, upstream_uncertain, channel.main_st, channel.fader,
+                    cells[ident] = self._cell(upstream, upstream_uncertain, channel.main_st, 1.0,
                         self.outputs[ident]["on"], self.outputs[ident]["fader"])
                 elif ident == "main_mono":
-                    cells[ident] = self._cell(upstream, upstream_uncertain, channel.main_mono, channel.fader,
+                    cells[ident] = self._cell(upstream, upstream_uncertain, channel.main_mono, 1.0,
                         self.outputs[ident]["on"], self.outputs[ident]["fader"])
                 else:
                     bus = int(ident[-2:])
