@@ -359,7 +359,7 @@ def test_showdump_returns_documented_empty_show_node():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ['/-show/showfile/show "" 0 0 0 0 0 0 0 0 0 0 "4.06"']
+    assert response.params == ['/-showfile/show "" 0 0 0 0 0 0 0 0 0 "4.06"']
     assert simulator.snapshot(outcome="handled_showdump")["events"]
 
 
