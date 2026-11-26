@@ -87,12 +87,15 @@ class Simulator:
                         direction, outcome, address, event["peer"])
         return event
 
-    def snapshot(self, limit=500, direction=None, outcome=None, search=None):
+    def snapshot(self, limit=500, direction=None, outcome=None, search=None, exceptions_only=False):
         events = list(self.events)
         if direction:
             events = [event for event in events if event["direction"] == direction]
         if outcome:
             events = [event for event in events if event["outcome"] == outcome]
+        if exceptions_only:
+            events = [event for event in events if event["outcome"].startswith("unhandled") or
+                      event["outcome"] in ("malformed", "send_error")]
         if search:
             needle = search.lower()
             events = [event for event in events if needle in
