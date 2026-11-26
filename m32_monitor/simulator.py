@@ -352,14 +352,14 @@ class Simulator:
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned card preference node (%d values)" % len(names))
             return
-        if header in ("-prefs/rta/visibility", "-prefs/rta/gain", "-prefs/rta/autogain", "-prefs/rta/source", "-prefs/rta/pos", "-prefs/rta/mode", "-prefs/rta/options", "-stat/keysolo"):
+        if header in ("-prefs/rta/visibility", "-prefs/rta/gain", "-prefs/rta/autogain", "-prefs/rta/source", "-prefs/rta/pos", "-prefs/rta/mode", "-prefs/rta/options", "-prefs/rta/option", "-prefs/rta/det", "-prefs/rta/decay", "-prefs/rta/peakhold", "-stat/keysolo", "-stat/rtamodeeq", "-stat/rtamodegeq", "-stat/rtaeqpre", "-stat/rtageqpost", "-stat/rtasource"):
             address = "/" + header
             value = self.state.get(address)
             if value is None:
                 value = 0
-            if header.endswith("/gain"):
-                response = "%s %.1f\n" % (address, float(value))
-                detail = "Returned RTA gain X32node"
+            if header.endswith(("/gain", "/decay")):
+                response = "%s %.4f\n" % (address, float(value))
+                detail = "Returned RTA floating-point preference X32node"
             else:
                 response = "%s %d\n" % (address, int(value))
                 if header.endswith("/autogain"):
@@ -372,8 +372,22 @@ class Simulator:
                     detail = "Returned RTA pre/post EQ position X32node"
                 elif header.endswith("/mode"):
                     detail = "Returned RTA bar/spectrograph mode X32node"
-                elif header.endswith("/options"):
+                elif header.endswith(("/options", "/option")):
                     detail = "Returned RTA options bitmask X32node"
+                elif header.endswith("/det"):
+                    detail = "Returned RTA detector selection X32node"
+                elif header.endswith("/peakhold"):
+                    detail = "Returned RTA peak-hold selection X32node"
+                elif header.endswith("/rtamodeeq"):
+                    detail = "Returned RTA EQ display mode status X32node"
+                elif header.endswith("/rtamodegeq"):
+                    detail = "Returned RTA GEQ display mode status X32node"
+                elif header.endswith("/rtaeqpre"):
+                    detail = "Returned RTA pre-EQ status X32node"
+                elif header.endswith("/rtageqpost"):
+                    detail = "Returned RTA post-GEQ status X32node"
+                elif header.endswith("/rtasource"):
+                    detail = "Returned active RTA source status X32node"
                 else:
                     detail = "Returned RTA visibility X32node"
             self.send(client, "/node", response, outcome="node_response")
