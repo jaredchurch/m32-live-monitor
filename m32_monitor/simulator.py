@@ -7,6 +7,7 @@ import asyncio
 import logging
 import socket
 import math
+import json
 import shlex
 import struct
 import time
@@ -467,6 +468,36 @@ class Simulator:
             self.send(client, "/node", self._rta_node_group(), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned all ten RTA preference fields")
+            return
+    def _urec_node_group(self):
+        """Return the scalar X-Live recorder status node in documented field order."""
+        values = self.state.urec
+        fields = (
+            "sessionmax", "markermax", "sessionlen", "sessionpos", "markerpos",
+            "batterystate", "srate", "tracks", "sessionspan", "sessionoffs",
+            "sd1state", "sd2state", "sd1info", "sd2info", "errormessage", "errorcode",
+        )
+        enums = {
+            "batterystate": ("NONE", "GOOD", "LOW"),
+            "sd1state": ("NONE", "READY", "PROTECT", "ERROR"),
+            "sd2state": ("NONE", "READY", "PROTECT", "ERROR"),
+        }
+        rendered = []
+        for field in fields:
+            value = values[field]
+            if field in enums:
+                value = enums[field][int(value)]
+            elif field in ("sd1info", "sd2info", "errormessage"):
+                value = json.dumps(value, ensure_ascii=False)
+            else:
+                value = str(int(value))
+            rendered.append(value)
+        return "/-urec " + " ".join(rendered) + "\\n"
+
+        if header == "-urec":
+            self.send(client, "/node", self._urec_node_group(), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned X-Live recorder status node (16 fields)")
             return
         if header == "-prefs/card":
             names = tuple(self.state.card_preferences)
