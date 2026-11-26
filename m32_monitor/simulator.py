@@ -6,6 +6,8 @@ makes unsupported requests visible instead of silently dropping them.
 import asyncio
 import logging
 import socket
+import math
+import shlex
 import struct
 import time
 from collections import Counter, deque
@@ -339,12 +341,125 @@ class Simulator:
         self.record("in", "handled_format_subscription", "/formatsubscribe", args, client,
                     "Registered %d formatted subscription group(s)" % len(groups))
 
+    @staticmethod
+    def _rta_node_value(header, value):
+        """Format a single RTA X32node field using the console's text enum conventions."""
+        enums = {
+            "-prefs/rta/visibility": ("OFF", "25%", "30%", "35%", "40%", "45%", "50%", "55%", "60%", "65%", "70%", "75%", "80%"),
+            "-prefs/rta/autogain": ("OFF", "ON"),
+            "-prefs/rta/pos": ("PRE", "POST"),
+            "-prefs/rta/mode": ("BAR", "SPEC"),
+            "-prefs/rta/det": ("RMS", "PEAK"),
+            "-prefs/rta/peakhold": ("OFF", "1", "2", "3", "4", "5", "6", "7", "8"),
+            "-stat/rtamodeeq": ("BAR", "SPEC"),
+            "-stat/rtamodegeq": ("BAR", "SPEC"),
+            "-stat/rtaeqpre": ("OFF", "ON"),
+            "-stat/rtageqpost": ("OFF", "ON"),
+        }
+        if header in enums:
+            index = int(value)
+            return enums[header][index]
+        if header in ("-prefs/rta/options", "-prefs/rta/option"):
+            return "%" + format(int(value), "06b")
+        if header == "-prefs/rta/gain":
+            return "%.6f" % float(value)
+        if header == "-prefs/rta/decay":
+            return "%.6f" % float(value)
+        return str(int(value))
+
+    def _rta_node_group(self):
+        """Build the documented ten-field /-prefs/rta node payload."""
+        p = self.state.preferences
+        visibility = ("OFF", "25%", "30%", "35%", "40%", "45%", "50%", "55%",
+                      "60%", "65%", "70%", "75%", "80%")[int(p["rta/visibility"])]
+        gain = "%.0f" % (float(p["rta/gain"]) * 60.0)
+        autogain = ("OFF", "ON")[int(p["rta/autogain"])]
+        source = str(int(p["rta/source"]))
+        pos = ("PRE", "POST")[int(p["rta/pos"])]
+        mode = ("BAR", "SPEC")[int(p["rta/mode"])]
+        options = "%" + format(int(p["rta/options"]), "06b")
+        detector = ("RMS", "PEAK")[int(p["rta/det"])]
+        decay = "%.2f" % (0.25 * math.exp(float(p["rta/decay"]) * math.log(16.0 / 0.25)))
+        peakhold = ("OFF", "1", "2", "3", "4", "5", "6", "7", "8")[int(p["rta/peakhold"])]
+        return "/-prefs/rta %s %s %s %s %s %s %s %s %s %s\\n" % (
+            visibility, gain, autogain, source, pos, mode, options, detector, decay, peakhold)
+
+    def _handle_node_set(self, client, args):
+        """Apply X32node text writes for the RTA preference group and individual fields."""
+        if len(args) != 1 or not isinstance(args[0], str):
+            self.record("in", "unhandled_set", "/", args, client,
+                        "Expected one X32node text string")
+            return
+        try:
+            tokens = shlex.split(args[0])
+            if not tokens:
+                raise ValueError("Empty X32node text")
+            header = tokens[0].lstrip("/")
+            values = tokens[1:]
+            if header == "-prefs/rta":
+                if len(values) != 10:
+                    raise ValueError("RTA group requires 10 ordered values")
+                paths = ["/-prefs/rta/" + key for key in (
+                    "visibility", "gain", "autogain", "source", "pos", "mode",
+                    "options", "det", "decay", "peakhold")]
+                parsed = [
+                    int(("OFF", "25%", "30%", "35%", "40%", "45%", "50%", "55%", "60%", "65%", "70%", "75%", "80%").index(values[0])),
+                    float(values[1]) / 60.0,
+                    ("OFF", "ON").index(values[2]),
+                    int(values[3]),
+                    ("PRE", "POST").index(values[4]),
+                    ("BAR", "SPEC").index(values[5]),
+                    int(values[6].lstrip("%"), 2),
+                    ("RMS", "PEAK").index(values[7]),
+                    math.log(float(values[8]) / 0.25) / math.log(16.0 / 0.25),
+                    ("OFF", "1", "2", "3", "4", "5", "6", "7", "8").index(values[9]),
+                ]
+            elif header.startswith("-prefs/rta/") and len(values) == 1:
+                key = header.rsplit("/", 1)[-1]
+                path = "/" + header
+                enum_values = {
+                    "visibility": ("OFF", "25%", "30%", "35%", "40%", "45%", "50%", "55%", "60%", "65%", "70%", "75%", "80%"),
+                    "autogain": ("OFF", "ON"), "pos": ("PRE", "POST"),
+                    "mode": ("BAR", "SPEC"), "det": ("RMS", "PEAK"),
+                    "peakhold": ("OFF", "1", "2", "3", "4", "5", "6", "7", "8"),
+                }
+                if key in enum_values:
+                    parsed = [enum_values[key].index(values[0])]
+                elif key == "gain":
+                    parsed = [float(values[0]) / 60.0]
+                elif key == "decay":
+                    parsed = [math.log(float(values[0]) / 0.25) / math.log(16.0 / 0.25)]
+                elif key == "source":
+                    parsed = [int(values[0])]
+                elif key in ("options", "option"):
+                    parsed = [int(values[0].lstrip("%"), 2) if values[0].startswith("%") else int(values[0], 0)]
+                else:
+                    raise ValueError("Unknown RTA preference")
+                paths, parsed = [path], parsed
+            else:
+                raise ValueError("Unsupported X32node SET header %r" % header)
+            for path, value in zip(paths, parsed):
+                if not self.state.update(path, value):
+                    raise ValueError("Invalid value for %s: %r" % (path, value))
+        except (ValueError, IndexError, ZeroDivisionError) as exc:
+            self.record("in", "unhandled_set", "/", args, client, str(exc))
+            return
+        self.record("in", "handled_node_set", "/", args, client,
+                    "Applied %d RTA preference value(s)" % len(paths))
+        for subscriber in tuple(self.clients):
+            self.send(subscriber, "/", args[0], outcome="subscription_update")
+
     def _handle_node(self, client, args):
         if len(args) != 1 or not isinstance(args[0], str):
             self.record("in", "unhandled_command", "/node", args, client,
                         "Expected exactly one X32node header string")
             return
         header = args[0].lstrip("/")
+        if header == "-prefs/rta":
+            self.send(client, "/node", self._rta_node_group(), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned all ten RTA preference fields")
+            return
         if header == "-prefs/card":
             names = tuple(self.state.card_preferences)
             values = " ".join(str(self.state.card_preferences[name]) for name in names)
@@ -462,6 +577,9 @@ class Simulator:
             return
         if address == "/node":
             self._handle_node(client, args)
+            return
+        if address == "/":
+            self._handle_node_set(client, args)
             return
         if address == "/showdump":
             show_response = '/-showfile/show "" 0 0 0 0 0 0 0 0 0 "4.06"'
