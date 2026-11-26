@@ -260,3 +260,11 @@ def test_simulator_get_supports_matrix_and_matrix_send_parameters():
     assert state.get("/bus/01/mix/02/on") == 0
     assert state.get("/bus/01/mix/02/level") == 0.4
     assert state.get("/mtx/02/mix/on") == 0
+
+
+def test_mono_c_send_level_at_zero_is_distinguished():
+    state = ConsoleState()
+    state.update("/ch/01/mix/mono", 1)
+    state.update("/ch/01/mix/mlevel", 0.0)
+    cell = next(row for row in state.output_matrix()["channels"] if row["number"] == 1)["cells"]["main_mono"]
+    assert "send_level_zero" in cell["reasons"]
