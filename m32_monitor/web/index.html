@@ -39,13 +39,13 @@ td.zero-cell{background:#493b20;color:#f4d28b}td.unknown-cell{background:#333b45
 <h2>Channel → output signal paths</h2>
 <div class="muted">A cell is green only when the channel has an enabled, non-zero path to that destination and no upstream mute is active. Hover a cell for every detected reason.</div>
 <div id="matrix-summary" class="summary"></div><div id="group-state" class="group-state"></div>
-<div class="legend"><span><i class="dot" style="background:#286543"></i>Signal path available</span><span><i class="dot" style="background:#87434a"></i>Muted / switched off</span><span><i class="dot" style="background:#8a6b2d"></i>Fader at zero</span><span><i class="dot" style="background:#59636e"></i>No send / not available</span></div>
+<div class="legend"><span><i class="dot" style="background:#286543"></i>Signal path available</span><span><i class="dot" style="background:#87434a"></i>Muted / switched off</span><span><i class="dot" style="background:#8a6b2d"></i>Fader at zero</span><span><i class="dot" style="background:#59636e"></i>CHECK / state not received</span></div>
 <div id="matrix-table" class="matrix-wrap"><div class="empty">Waiting for console routing data…</div></div>
 </section>
 <section id="channels-panel" class="panel"><div id="channels"><div class="empty">Waiting for console data…</div></div></section>
 <script>
 const colours=['#59616b','#d66b6b','#64b77b','#d9bd5a','#5b9fd0','#bb78b5','#55b9b0','#e2e8f0','#7d4141','#36784b','#918132','#315e8c','#754d80','#327d79','#9aa4b0','#f4f6f8'];
-const reasonNames={channel_muted:'Channel mute',channel_fader_zero:'Channel fader at zero',send_off:'Send switched off',send_level_zero:'Send fader at zero',output_muted:'Destination muted',output_fader_zero:'Destination fader at zero'};
+const reasonNames={channel_muted:'Channel mute',channel_fader_zero:'Channel fader at zero',channel_mute_unknown:'Channel mute state not received',channel_fader_unknown:'Channel fader state not received',mute_group_assignments_unknown:'Mute group assignments not received',dca_assignments_unknown:'DCA assignments not received',dca_mute_setting_unknown:'DCA Mutes preference not received',hard_mute_setting_unknown:'Hard Mutes preference not received',send_tap_point_unknown:'Send tap point not received',send_switch_state_unknown:'Send switch state not received',send_level_state_unknown:'Send level not received',output_mute_state_unknown:'Output mute state not received',output_fader_state_unknown:'Output fader not received',main_send_state_unknown:'Main send state not received',send_off:'Send switched off',send_level_zero:'Send fader at zero',output_muted:'Destination muted',output_fader_zero:'Destination fader at zero'};
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function describeReason(reason){if(reasonNames[reason])return reasonNames[reason];let m=reason.match(/^dca_(\d+)_(muted|fader_zero)$/);if(m)return 'DCA '+m[1]+(m[2]==='muted'?' muted':' fader at zero');m=reason.match(/^mute_group_(\d+)$/);if(m)return 'Mute group '+m[1]+' active';return reason;}
 function renderMatrix(data){
