@@ -54,3 +54,9 @@ def channels():
         channel["sourceLabel"]=state.source_label(channel["source"])
         result.append(channel)
     return result
+
+
+@app.get("/api/output-matrix")
+def output_matrix():
+    """Effective per-channel signal paths, including the reason for each mute."""
+    return state.output_matrix()
