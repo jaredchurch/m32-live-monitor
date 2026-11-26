@@ -38,8 +38,22 @@ for family in ("AES50A", "AES50B", "CARD"):
         if family == "CARD" and bank in ("33-40", "41-48"):
             continue
         ROUTING_PATHS[f"/config/routing/{family}/{bank}"] = (family + " output patch", OUTPUT_BANKS)
+OUT_PATCH_CHOICES = {
+    "1-4": ("Local 1-4","Local 9-12","Local 17-20","Local 25-28",
+            "AES50-A 1-4","AES50-A 9-12","AES50-A 17-20","AES50-A 25-28","AES50-A 33-36","AES50-A 41-44",
+            "AES50-B 1-4","AES50-B 9-12","AES50-B 17-20","AES50-B 25-28","AES50-B 33-36","AES50-B 41-44",
+            "Card 1-4","Card 9-12","Card 17-20","Card 25-28","Out 1-4","Out 9-12","P16 1-4","P16 9-12",
+            "Aux / Control Room","Aux / Talkback","Ultranet 1-4","Ultranet 9-12","Ultranet 17-20","Ultranet 25-28",
+            "Ultranet 33-36","Ultranet 41-44","USB 1-4","USB 9-12","USB 17-20","USB 25-28"),
+    "5-8": ("Local 5-8","Local 13-16","Local 21-24","Local 29-32",
+            "AES50-A 5-8","AES50-A 13-16","AES50-A 21-24","AES50-A 29-32","AES50-A 37-40","AES50-A 45-48",
+            "AES50-B 5-8","AES50-B 13-16","AES50-B 21-24","AES50-B 29-32","AES50-B 37-40","AES50-B 45-48",
+            "Card 5-8","Card 13-16","Card 21-24","Card 29-32","Out 5-8","Out 13-16","P16 5-8","P16 13-16",
+            "Aux / Control Room","Aux / Talkback","Ultranet 5-8","Ultranet 13-16","Ultranet 21-24","Ultranet 29-32",
+            "Ultranet 37-40","Ultranet 45-48","USB 5-8","USB 13-16","USB 21-24","USB 29-32"),
+}
 for bank in OUTPUT_BLOCKS:
-    ROUTING_PATHS[f"/config/routing/OUT/{bank}"] = ("Output patch " + bank, OUTPUT_BANKS)
+    ROUTING_PATHS[f"/config/routing/OUT/{bank}"] = ("Output patch " + bank, OUT_PATCH_CHOICES[bank])
 for bank in ("1-8", "9-16", "17-24", "25-32"):
     ROUTING_PATHS[f"/config/routing/PLAY/{bank}"] = ("Playback patch", INPUT_BANKS)
 ROUTING_PATHS["/config/routing/PLAY/AUX"] = ("Playback Aux patch", AUX_INPUT_BANKS)
