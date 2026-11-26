@@ -1,9 +1,13 @@
-"""Read-only OSC client for a physical M32."""
+"""Read-only OSC client for a physical M32.
+
+A single UDP socket is used for both sending and receiving so the console's
+replies return to the port on which this client is listening.
+"""
 import asyncio
 import logging
-from pythonosc.dispatcher import Dispatcher
-from pythonosc.osc_server import AsyncIOOSCUDPServer
-from pythonosc.udp_client import SimpleUDPClient
+import socket
+from pythonosc.osc_message import OscMessage
+from pythonosc.osc_message_builder import OscMessageBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -12,39 +16,55 @@ class HardwareMonitor:
     def __init__(self,state,host,port,listen_host,listen_port):
         self.state,self.host,self.port=state,host,port
         self.listen_host,self.listen_port=listen_host,listen_port
-        self.transport=None
-        self.client=SimpleUDPClient(host,port)
+        self.sock=None
+        self.receiver=None
         self.keepalive=None
 
     async def start(self):
-        dispatcher=Dispatcher()
-        dispatcher.set_default_handler(self._handle)
-        server=AsyncIOOSCUDPServer((self.listen_host,self.listen_port),dispatcher,asyncio.get_running_loop())
-        self.transport,_=await server.create_serve_endpoint()
-        self.state.mode="hardware"; self.state.online=False
+        self.sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        self.sock.setblocking(False)
+        self.sock.bind((self.listen_host,self.listen_port))
+        self.state.mode="hardware"
+        self.state.online=False
+        self.receiver=asyncio.create_task(self._receive())
         self.keepalive=asyncio.create_task(self._refresh())
         logger.info("Read-only M32 monitor started for %s:%s",self.host,self.port)
 
     async def stop(self):
-        if self.keepalive:
-            self.keepalive.cancel(); self.keepalive=None
-        if self.transport:
-            self.transport.close(); self.transport=None
+        for task in (self.keepalive,self.receiver):
+            if task: task.cancel()
+        self.keepalive=self.receiver=None
+        if self.sock:
+            self.sock.close()
+            self.sock=None
+
+    def _send(self,address):
+        builder=OscMessageBuilder(address=address)
+        self.sock.sendto(builder.build().dgram,(self.host,self.port))
 
     async def _refresh(self):
         while True:
             try:
-                self.client.send_message("/xremote",[])
-                self.client.send_message("/info",[])
+                self._send("/xremote")
+                self._send("/info")
                 for number in range(1,33):
                     prefix="/ch/%02d" % number
                     for suffix in ("config/name","config/color","config/source","mix/fader","mix/on"):
-                        self.client.send_message(prefix+"/"+suffix,[])
+                        self._send(prefix+"/"+suffix)
                         await asyncio.sleep(0.012)
             except OSError:
                 logger.exception("M32 OSC enquiry failed")
             await asyncio.sleep(8)
 
-    def _handle(self,address,*args):
-        if address=="/info": self.state.online=True; return
-        if args and self.state.update(address,args[0]): self.state.online=True
+    async def _receive(self):
+        loop=asyncio.get_running_loop()
+        while True:
+            data,_peer=await loop.sock_recvfrom(self.sock,65535)
+            try:
+                message=OscMessage(data)
+                if message.address=="/info":
+                    self.state.online=True
+                elif message.params and self.state.update(message.address,message.params[0]):
+                    self.state.online=True
+            except (ValueError, IndexError):
+                logger.debug("Ignoring unrecognised OSC datagram",exc_info=True)
