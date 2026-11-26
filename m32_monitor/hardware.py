@@ -23,6 +23,7 @@ class HardwareMonitor:
         self.sock.setblocking(False)
         self.sock.bind((self.listen_host, self.listen_port))
         self.state.mode = "hardware"
+        self.state.received.clear()
         self.state.last_seen = None
         for channel in self.state.channels.values():
             channel.source = 0
