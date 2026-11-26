@@ -38,7 +38,8 @@ class ConsoleState:
         self.mode = "simulator"
         self.routing = RoutingState()
         self.meters = {}
-        self.preferences = {"rta/visibility": 0, "rta/gain": 0.0, "rta/autogain": 0}
+        self.preferences = {"rta/visibility": 0, "rta/gain": 0.0, "rta/autogain": 0, "rta/source": 0}
+        self.key_solo = 0
         self.received = set()
         self.last_seen = time.monotonic()
         self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 32 + n, False) for n in range(1, 9)}
@@ -187,6 +188,16 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if address == "/-stat/keysolo" and isinstance(value, (int, float)) and int(value) in (0, 1) and float(value) == int(value):
+                self.key_solo = int(value)
+                self.received.add(address)
+                return True
+
+            if address == "/-prefs/rta/source" and isinstance(value, (int, float)) and float(value) == int(value) and 0 <= int(value) <= 73:
+                self.preferences["rta/source"] = int(value)
+                self.received.add(address)
+                return True
+
             if address == "/-prefs/rta/autogain" and isinstance(value, (int, float)) and int(value) in (0, 1) and float(value) == int(value):
                 self.preferences["rta/autogain"] = int(value)
                 self.received.add(address)
@@ -302,6 +313,10 @@ class ConsoleState:
                 return self.preferences["rta/gain"]
             if address == "/-prefs/rta/autogain":
                 return self.preferences["rta/autogain"]
+            if address == "/-prefs/rta/source":
+                return self.preferences["rta/source"]
+            if address == "/-stat/keysolo":
+                return self.key_solo
             if address == "/-prefs/dcamute":
                 return int(self.dca_mutes_enabled) if self.dca_mutes_enabled is not None else None
             if address == "/-prefs/hardmute":
