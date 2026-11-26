@@ -294,10 +294,10 @@ def test_node_get_returns_rta_gain_x32node_response():
 def test_rta_gain_preference_can_be_read_and_updated():
     state = ConsoleState()
     assert state.get("/-prefs/rta/gain") == 0.0
-    assert state.update("/-prefs/rta/gain", 18.0)
-    assert state.get("/-prefs/rta/gain") == 18.0
-    assert not state.update("/-prefs/rta/gain", 17.0)
-    assert not state.update("/-prefs/rta/gain", 66.0)
+    assert state.update("/-prefs/rta/gain", 0.3)
+    assert state.get("/-prefs/rta/gain") == pytest.approx(0.3)
+    assert not state.update("/-prefs/rta/gain", 0.31)
+    assert not state.update("/-prefs/rta/gain", 1.1)
 
 
 def test_node_get_returns_rta_autogain_x32node_response():
@@ -544,7 +544,8 @@ def test_rta_integer_preferences_and_status_are_node_readable(path, value):
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == [f"{path} {value}\\n"]
+    expected_value = {"/-stat/rtamodeeq": "SPEC", "/-stat/rtamodegeq": "SPEC", "/-stat/rtaeqpre": "ON", "/-stat/rtageqpost": "ON"}.get(path, str(value))
+    assert response.params == [f"{path} {expected_value}\\n"]
 
 
 @pytest.mark.parametrize("path,value", [
@@ -583,7 +584,7 @@ def test_node_get_returns_rta_decay_as_float():
     client = ("127.0.0.1", 50123)
     simulator.handle(client, packet("/node", "-prefs/rta/decay"))
     response = OscMessage(simulator.transport.sent[-1][0])
-    assert response.params == ["/-prefs/rta/decay 0.0000\\n"]
+    assert response.params == ["/-prefs/rta/decay 0.000000\\n"]
 
 
 def test_rta_group_node_returns_all_ten_fields_in_console_format():
