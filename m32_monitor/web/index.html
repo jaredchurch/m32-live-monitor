@@ -34,10 +34,10 @@ td.zero-cell{background:#493b20;color:#f4d28b}td.unknown-cell{background:#333b45
 @media(max-width:700px){body{padding:14px}th,td{padding:6px 5px}.matrix-wrap{max-height:68vh}}
 </style></head><body>
 <header><div><h1>M32 Live Monitor</h1><div class="muted">Read-only console overview and signal-path mute analysis</div></div><div id="connection">Connecting…</div></header>
-<nav class="tabs"><button class="tab active" data-panel="matrix">Output mute matrix</button><button class="tab" data-panel="channels-panel">Channel strips</button></nav>
+<nav class="tabs"><button class="tab active" data-panel="matrix">Output mute matrix</button><button class="tab" data-panel="channels-panel">Channel strips</button><button class="tab" data-panel="routing-panel">Routing map</button></nav>
 <section id="matrix" class="panel active">
 <h2>Channel → output signal paths</h2>
-<div class="muted">A cell is green only when the channel has an enabled, non-zero path to that destination and no upstream mute is active. OPEN means the routing permits signal, not that audio is present. Matrix 1–6 feeds are downstream and are not included yet. Hover a cell for every detected reason.</div>
+<div class="muted">A cell is green only when the channel has an enabled, non-zero path to that destination and no upstream mute is active. OPEN means the routing permits signal, not that audio is present. Matrix feeds are shown in the downstream Matrix view. Physical output patching is shown in the Routing map. Hover a cell for every detected reason.</div>
 <div id="matrix-summary" class="summary"></div><div id="group-state" class="group-state"></div>
 <div class="legend"><span><i class="dot" style="background:#286543"></i>Signal path available</span><span><i class="dot" style="background:#87434a"></i>Muted / switched off</span><span><i class="dot" style="background:#8a6b2d"></i>Fader at zero</span><span><i class="dot" style="background:#59636e"></i>CHECK / state not received</span></div>
 <div id="matrix-table" class="matrix-wrap"><div class="empty">Waiting for console routing data…</div></div>
@@ -46,7 +46,20 @@ td.zero-cell{background:#493b20;color:#f4d28b}td.unknown-cell{background:#333b45
 <div id="matrix-input-summary" class="summary"></div>
 <div id="matrix-input-table" class="matrix-wrap"><div class="empty">Waiting for Matrix routing data…</div></div>
 </section>
-<section id="channels-panel" class="panel"><div id="channels"><div class="empty">Waiting for console data…</div></div></section>
+
+<section id="routing-panel" class="panel">
+<h2>Console patchbay and routing assignments</h2>
+<div class="muted">Read-only snapshot of the M32 routing configuration. CHECK means the console has not returned that parameter; enum values outside the documented range remain visible as raw values.</div>
+<div id="routing-summary" class="summary"></div>
+<div id="routing-sections"></div>
+<h2 style="margin-top:24px">Output processing assignments</h2>
+<div id="routing-outputs" class="matrix-wrap"></div>
+<h2 style="margin-top:24px">FX rack</h2>
+<div id="routing-effects" class="matrix-wrap"></div>
+<h2 style="margin-top:24px">Direct routing, inserts, solo and talkback</h2>
+<div id="routing-special" class="matrix-wrap"></div>
+</section>
+\n<section id="channels-panel" class="panel"><div id="channels"><div class="empty">Waiting for console data…</div></div></section>
 <script>
 const colours=['#59616b','#d66b6b','#64b77b','#d9bd5a','#5b9fd0','#bb78b5','#55b9b0','#e2e8f0','#7d4141','#36784b','#918132','#315e8c','#754d80','#327d79','#9aa4b0','#f4f6f8'];
 const reasonNames={source_muted:'Source strip muted',source_fader_zero:'Source fader at zero',matrix_source_state_unknown:'Matrix source state not received',matrix_source_groups_unknown:'Matrix source DCA/mute groups not received',matrix_send_switch_unknown:'Matrix send switch not received',matrix_send_level_unknown:'Matrix send level not received',matrix_output_mute_unknown:'Matrix output mute not received',matrix_output_fader_unknown:'Matrix output fader not received',channel_muted:'Channel mute',channel_fader_zero:'Channel fader at zero',channel_mute_unknown:'Channel mute state not received',channel_fader_unknown:'Channel fader state not received',mute_group_assignments_unknown:'Mute group assignments not received',dca_assignments_unknown:'DCA assignments not received',dca_mute_setting_unknown:'DCA Mutes preference not received',output_mute_group_assignments_unknown:'Output mute-group assignments not received',output_dca_assignments_unknown:'Output DCA assignments not received',hard_mute_setting_unknown:'Hard Mutes preference not received',send_tap_point_unknown:'Send tap point not received',send_switch_state_unknown:'Send switch state not received',send_level_state_unknown:'Send level not received',output_mute_state_unknown:'Output mute state not received',output_fader_state_unknown:'Output fader not received',main_send_state_unknown:'Main send state not received',main_mono_send_level_unknown:'Mono/C send level not received',send_off:'Send switched off',send_level_zero:'Send fader at zero',output_muted:'Destination muted',output_fader_zero:'Destination fader at zero'};
@@ -88,15 +101,25 @@ function renderMatrixInputs(data){
  document.querySelector('#matrix-input-table').innerHTML='<table>'+head+'<tbody>'+body+'</tbody></table>';
  document.querySelector('#matrix-input-summary').innerHTML='<span class="pill">'+rows.length+' Matrix sources</span><span class="pill">'+dest.length+' Matrix outputs</span><span class="pill">'+live+' open paths</span><span class="pill">'+blocked+' blocked paths</span><span class="pill">'+zero+' zero-fader paths</span><span class="pill">'+unknown+' awaiting state</span>';
 }
-function renderChannels(channels){
+
+function renderRouting(data){
+ const itemTable=items=>'<div class="matrix-wrap"><table><thead><tr><th>Assignment</th><th>Console value</th><th>Decoded / status</th></tr></thead><tbody>'+items.map(x=>'<tr><td>'+esc(x.label||x.address)+'</td><td>'+esc(x.known?x.value:'—')+'</td><td class="'+(x.known?'':'unknown-cell')+'">'+esc(x.display|| (x.known?String(x.value):'CHECK · not received'))+'</td></tr>').join('')+'</tbody></table></div>';
+ document.querySelector('#routing-summary').innerHTML='<span class="pill">'+data.known+' of '+data.total+' core routing parameters received</span><span class="pill">'+(data.complete?'Core routing snapshot complete':'Snapshot incomplete · CHECK unknowns')+'</span><span class="pill">'+data.special.length+' additional routing parameters</span>';
+ document.querySelector('#routing-sections').innerHTML=(data.sections||[]).map(s=>'<h3>'+esc(s.name)+'</h3>'+itemTable(s.items)).join('');
+ document.querySelector('#routing-outputs').innerHTML=itemTable(data.outputs||[]);
+ document.querySelector('#routing-effects').innerHTML=itemTable(data.effects||[]);
+ const special=(data.special||[]).map(x=>({label:x.address,value:x.value,known:true,display:String(x.value)}));
+ document.querySelector('#routing-special').innerHTML=special.length?itemTable(special):'<div class="empty">No direct-route, insert, solo or talkback values received yet.</div>';
+}
+\nfunction renderChannels(channels){
  const root=document.querySelector('#channels');if(!channels.length){root.innerHTML='<div class="empty">No connected channels with an enabled scribble strip reported.</div>';return;}
  root.innerHTML=channels.map(c=>'<article class="channel" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name">'+esc(c.name)+'</div><div class="number">'+(c.stripType==='fx_return'?'FX return':c.stripType==='aux'?'Aux input':'Channel')+' '+String(c.number).padStart(2,'0')+'</div></div></div><div class="source">'+(c.stripType==='fx_return'?'FX return':c.stripType==='aux'?'Aux input':'Input')+': '+c.sourceLabel+'</div><div class="fader-track"><span style="--level:'+Math.round(c.fader*100)+'%"></span></div><div class="footer"><span>Fader '+Math.round(c.fader*100)+'%</span><strong class="'+(c.muted?'mute':'open')+'">'+(c.muted?'MUTED':'OPEN')+'</strong></div></article>').join('');
 }
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
 async function refresh(){try{
- const pair=await Promise.all([fetch('/api/status').then(r=>r.json()),fetch('/api/channels').then(r=>r.json()),fetch('/api/output-matrix').then(r=>r.json()),fetch('/api/matrix-inputs').then(r=>r.json())]);
+ const pair=await Promise.all([fetch('/api/status').then(r=>r.json()),fetch('/api/channels').then(r=>r.json()),fetch('/api/output-matrix').then(r=>r.json()),fetch('/api/matrix-inputs').then(r=>r.json()),fetch('/api/routing-map').then(r=>r.json())]);
  const status=pair[0],badge=document.querySelector('#connection');badge.textContent=status.mode.toUpperCase()+' · '+status.connection;badge.style.borderColor=status.online?'#4b9b70':'#a66b55';
- renderChannels(pair[1]);renderMatrix(pair[2]);renderMatrixInputs(pair[3]);
+ renderChannels(pair[1]);renderMatrix(pair[2]);renderMatrixInputs(pair[3]);renderRouting(pair[4]);
  }catch(e){document.querySelector('#connection').textContent='API unavailable';}}
 refresh();setInterval(refresh,1500);
 </script></body></html>
