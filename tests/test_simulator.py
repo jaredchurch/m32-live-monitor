@@ -664,3 +664,47 @@ def test_invalid_rta_group_node_set_is_atomic():
     simulator.handle(client, packet("/", "-prefs/rta 35% 18 ON 12 POST SPEC %100001 PEAK 0.20 4"))
     assert simulator.state.preferences == before
     assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+def test_node_get_returns_xlive_urec_group():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "-urec"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == [
+        '/-urec 0 0 0 0 0 NONE 0 0 0 0 NONE NONE "Insert SD Card." "Insert SD Card." "" 0\\n'
+    ]
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+@pytest.mark.parametrize("header,value", [
+    ("-urec/sessionmax", 3),
+    ("-urec/markermax", 2),
+    ("-urec/sessionlen", 3600000),
+    ("-urec/sessionpos", 1),
+    ("-urec/markerpos", 2),
+    ("-urec/batterystate", 1),
+    ("-urec/srate", 1),
+    ("-urec/tracks", 32),
+    ("-urec/sessionspan", 1),
+    ("-urec/sessionoffs", 120000),
+    ("-urec/sd1state", 1),
+    ("-urec/sd2state", 3),
+    ("-urec/errorcode", 12),
+])
+def test_xlive_urec_scalar_state_is_readable(header, value):
+    state = ConsoleState()
+    state.urec[header.rsplit("/", 1)[-1]] = value
+    assert state.get("/" + header) == value
+
+
+def test_xlive_urec_status_values_are_readable():
+    state = ConsoleState()
+    state.urec_status.update({"state": 3, "etime": 1500, "rtime": 2500})
+    assert state.get("/-stat/urec/state") == 3
+    assert state.get("/-stat/urec/etime") == 1500
+    assert state.get("/-stat/urec/rtime") == 2500
