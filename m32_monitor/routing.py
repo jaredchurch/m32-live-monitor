@@ -111,7 +111,10 @@ class RoutingState:
                     outputs.append({"address": address, "label": f"{family.upper()} {number:02d} {title}",
                                     "known": known, "value": value,
                                     "display": _enum_label(value, choices) if known else "Not received"})
-                for suffix in ("invert", "delay/on", "delay/time"):
+                output_suffixes = ["invert"]
+                if family == "main":
+                    output_suffixes.extend(("delay/on", "delay/time"))
+                for suffix in output_suffixes:
                     address = prefix + "/" + suffix
                     known = address in self.values
                     value = self.values.get(address)
