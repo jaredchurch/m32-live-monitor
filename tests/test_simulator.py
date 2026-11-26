@@ -708,3 +708,20 @@ def test_xlive_urec_status_values_are_readable():
     assert state.get("/-stat/urec/state") == 3
     assert state.get("/-stat/urec/etime") == 1500
     assert state.get("/-stat/urec/rtime") == 2500
+
+
+@pytest.mark.parametrize("header,expected", [
+    ("-urec/batterystate", "/-urec/batterystate NONE\\n"),
+    ("-urec/sd1state", "/-urec/sd1state NONE\\n"),
+    ("-urec/sd2info", '/-urec/sd2info "Insert SD Card."\\n'),
+    ("-urec/session/001/name", '/-urec/session/001/name ""\\n'),
+    ("-urec/marker/001/time", "/-urec/marker/001/time 0\\n"),
+    ("-stat/urec/state", "/-stat/urec/state STOP\\n"),
+])
+def test_xlive_urec_individual_node_values(header, expected):
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    simulator.handle(("127.0.0.1", 50123), packet("/node", header))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == [expected]
