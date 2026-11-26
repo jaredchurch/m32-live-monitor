@@ -78,7 +78,7 @@ class RoutingState:
         if (address.startswith(("/config/routing/", "/outputs/", "/config/userrout/",
                                   "/fx/", "/config/solo/", "/config/talk/",
                                   "/config/chlink/", "/config/auxlink/", "/config/fxlink/",
-                                  "/config/buslink/", "/config/mtxlink/", "/main/st/mix/pan",
+                                  "/config/buslink/", "/config/mtxlink/", "/config/mono/", "/main/st/mix/pan",
                                   "/main/m/mix/pan", "/main/st/insert", "/main/m/insert")) or
                 (address.startswith(("/ch/", "/auxin/", "/fxrtn/", "/bus/", "/mtx/")) and
                  ("/insert" in address or address.endswith("/mix/pan")))):
@@ -135,7 +135,7 @@ class RoutingState:
                            "display": str(self.values[address]) if address in self.values else "Not received"})
         special = []
         for address, value in sorted(self.values.items()):
-            if address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/")) or "/insert" in address:
+            if address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/config/chlink/", "/config/auxlink/", "/config/fxlink/", "/config/buslink/", "/config/mtxlink/", "/config/mono/")) or "/insert" in address or address.endswith("/mix/pan"):
                 special.append({"address": address, "value": value})
         total = len(ROUTING_PATHS) + len(outputs) + len(fx)
         known = sum(1 for a in ROUTING_PATHS if a in self.values) + sum(1 for x in outputs if x["known"]) + sum(1 for x in fx if x["known"])
