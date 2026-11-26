@@ -24,13 +24,15 @@ Requirements: Python 3.11+.
 
 Open http://localhost:8000. The first run creates a local virtual environment and installs dependencies. Stop with Ctrl+C. The application reads an optional .env file automatically.
 
+By default the dashboard listens on this computer only. To open it from a phone, tablet or another computer on the same LAN, start it with `WEB_HOST=0.0.0.0 ./run.sh` (macOS/Linux) or set `$env:WEB_HOST="0.0.0.0"` before running `./run.ps1` (PowerShell). Then browse to `http://<computer-LAN-IP>:8000`. Keep this LAN exposure on a trusted network; the dashboard currently has no login. For a memorable address, create a local DNS record such as `m32-monitor.home.arpa` pointing to the computer running the app.
+
 The default mode is simulator. The native simulator binds to 127.0.0.1:10023 (loopback only). In M32-Edit on the same computer, connect to 127.0.0.1 on UDP port 10023. If M32-Edit runs on another computer, change SIMULATOR_HOST to 0.0.0.0 and connect to the host computer's LAN IP. Do not point M32-Edit at the physical console while testing the simulator.
 
 ## Use a physical M32
 
 Copy .env.example to .env, set M32_MODE=hardware, and set M32_HOST to the console's IP address. Run the app on a Mac/Linux/Windows machine on the same LAN as the console. The monitor listens on OSC_LISTEN_PORT (default 10024) and sends read-only enquiries to the console's UDP port 10023.
 
-The hardware transport is deliberately read-only. The UI shows fader position as a normalized percentage, not calibrated dB. Separate meter subscriptions expose input, mix, FX, output and monitor meter streams.
+The hardware transport is deliberately read-only. Set `M32_HOST` to the console IP address (or a local DNS name resolving to it); this is not a web URL. The dashboard URL belongs to the computer running the app. The UI shows fader position as a normalized percentage, not calibrated dB. Separate meter subscriptions expose input, mix, FX, output and monitor meter streams.
 
 ## Dev Container
 
