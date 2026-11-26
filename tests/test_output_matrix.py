@@ -152,3 +152,80 @@ def test_destination_dca_and_mute_group_can_mute_bus_output():
     state.update("/config/mute/1", 1)
     cell = channel_cell(state)
     assert "output_mute_group_1" in cell["reasons"]
+
+
+def strip_cell(state, strip_type, number=1, output="bus_01"):
+    row = next(row for row in state.output_matrix()["channels"]
+               if row["strip_type"] == strip_type and row["number"] == number)
+    return row["cells"][output]
+
+
+def test_aux_input_and_fx_return_appear_as_independent_sources():
+    state = ConsoleState()
+    state.update("/auxin/01/config/name", "Playback")
+    state.update("/auxin/01/config/source", 33)
+    state.update("/auxin/01/config/color", 2)
+    state.update("/auxin/01/mix/01/level", 0.6)
+    state.update("/auxin/01/mix/01/on", 1)
+    state.update("/fxrtn/01/config/name", "Hall Return")
+    state.update("/fxrtn/01/config/color", 3)
+    state.update("/fxrtn/01/mix/01/level", 0.6)
+    state.update("/fxrtn/01/mix/01/on", 1)
+
+    assert strip_cell(state, "aux")["muted"] is False
+    assert strip_cell(state, "fx_return")["muted"] is False
+    visible = state.visible_channels()
+    assert any(item["stripType"] == "aux" for item in visible)
+    assert any(item["stripType"] == "fx_return" for item in visible)
+
+
+def test_aux_and_fx_return_mute_and_dca_are_applied_to_sends():
+    state = ConsoleState()
+    state.update("/auxin/01/mix/01/level", 0.6)
+    state.update("/auxin/01/mix/01/on", 1)
+    state.update("/auxin/01/mix/on", 0)
+    assert "channel_muted" in strip_cell(state, "aux")["reasons"]
+
+    state.update("/fxrtn/01/mix/01/level", 0.6)
+    state.update("/fxrtn/01/mix/01/on", 1)
+    state.update("/fxrtn/01/grp/dca", 1)
+    state.update("/dca/1/fader", 0.0)
+    assert "dca_1_fader_zero" in strip_cell(state, "fx_return")["reasons"]
+
+
+def test_bus_and_main_matrix_sends_have_distinct_switch_and_zero_states():
+    state = ConsoleState()
+    state.update("/bus/01/mix/01/on", 1)
+    state.update("/bus/01/mix/01/level", 0.0)
+    cell = state.matrix_input_matrix()["sources"][0]["cells"]["mtx_01"]
+    assert "send_level_zero" in cell["reasons"]
+
+    state.update("/bus/01/mix/01/level", 0.6)
+    state.update("/bus/01/mix/01/on", 0)
+    cell = state.matrix_input_matrix()["sources"][0]["cells"]["mtx_01"]
+    assert "send_off" in cell["reasons"]
+
+    state.update("/main/st/mix/01/on", 1)
+    state.update("/main/st/mix/01/level", 0.6)
+    row = next(r for r in state.matrix_input_matrix()["sources"] if r["id"] == "main_st")
+    assert row["cells"]["mtx_01"]["muted"] is False
+
+
+def test_matrix_output_mute_fader_dca_and_mute_group_are_applied():
+    state = ConsoleState()
+    state.update("/bus/01/mix/01/on", 1)
+    state.update("/bus/01/mix/01/level", 0.6)
+    state.update("/mtx/01/mix/on", 0)
+    cell = state.matrix_input_matrix()["sources"][0]["cells"]["mtx_01"]
+    assert "output_muted" in cell["reasons"]
+
+    state.update("/mtx/01/mix/on", 1)
+    state.update("/mtx/01/mix/fader", 0.0)
+    cell = state.matrix_input_matrix()["sources"][0]["cells"]["mtx_01"]
+    assert "output_fader_zero" in cell["reasons"]
+
+    state.update("/mtx/01/mix/fader", 0.6)
+    state.update("/mtx/01/grp/dca", 1)
+    state.update("/dca/1/fader", 0.0)
+    cell = state.matrix_input_matrix()["sources"][0]["cells"]["mtx_01"]
+    assert "dca_1_fader_zero" in cell["reasons"]
