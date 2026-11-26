@@ -26,6 +26,8 @@ OUTPUT_BANKS = (
     "Ultranet 33-40", "Ultranet 41-48", "USB 1-8", "USB 9-16", "USB 17-24", "USB 25-32"
 )
 OUTPUT_BLOCKS = ("1-4", "5-8", "9-12", "13-16")
+OUTPUT_SOURCES = ("OFF", "Main L", "Main R", "Mono/C") + tuple("Mix Bus %02d" % n for n in range(1, 17)) + tuple("Matrix %d" % n for n in range(1, 7)) + tuple("Direct Out CH %02d" % n for n in range(1, 33)) + tuple("Direct Out Aux %d" % n for n in range(1, 9)) + tuple("Direct Out FX %d%s" % (n, side) for n in range(1, 5) for side in ("L", "R")) + ("Monitor L", "Monitor R", "Talkback")
+OUTPUT_TAPS = ("IN/LC", "IN/LC + Mute", "Pre EQ", "Pre EQ + Mute", "Post EQ", "Post EQ + Mute", "Pre Fader", "Pre Fader + Mute", "Post Fader")
 ROUTING_PATHS = {
     "/config/routing/IN/1-8": ("Input patch", INPUT_BANKS),
     "/config/routing/IN/9-16": ("Input patch", INPUT_BANKS),
@@ -92,13 +94,32 @@ class RoutingState:
                         "value": value, "display": _enum_label(value, choices)}
             sections.setdefault(section, []).append(item)
         outputs = []
-        for family, count in (("main", 16), ("aux", 6), ("p16", 16)):
+        for family, count in (("main", 16), ("aux", 6), ("p16", 16), ("aes", 2)):
             for number in range(1, count + 1):
-                address = f"/outputs/{family}/{number:02d}"
-                value = self.values.get(address)
-                outputs.append({"address": address, "label": f"{family.upper()} {number:02d}",
-                                "known": address in self.values, "value": value,
-                                "display": str(value) if address in self.values else "Not received"})
+                prefix = f"/outputs/{family}/{number:02d}"
+                for suffix, title, choices in (("src", "source", OUTPUT_SOURCES),
+                                               ("pos", "tap", OUTPUT_TAPS)):
+                    address = prefix + "/" + suffix
+                    known = address in self.values
+                    value = self.values.get(address)
+                    outputs.append({"address": address, "label": f"{family.upper()} {number:02d} {title}",
+                                    "known": known, "value": value,
+                                    "display": _enum_label(value, choices) if known else "Not received"})
+                for suffix in ("invert", "delay/on", "delay/time"):
+                    address = prefix + "/" + suffix
+                    known = address in self.values
+                    value = self.values.get(address)
+                    outputs.append({"address": address, "label": f"{family.upper()} {number:02d} {suffix}",
+                                    "known": known, "value": value,
+                                    "display": str(value) if known else "Not received"})
+                if family == "p16":
+                    for suffix in ("iQ/group", "iQ/speaker", "iQ/eq"):
+                        address = prefix + "/" + suffix
+                        known = address in self.values
+                        value = self.values.get(address)
+                        outputs.append({"address": address, "label": f"P16 {number:02d} {suffix}",
+                                        "known": known, "value": value,
+                                        "display": str(value) if known else "Not received"})
         fx = []
         for number in range(1, 9):
             for suffix in ("type", "source"):
