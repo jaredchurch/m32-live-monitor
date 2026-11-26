@@ -181,6 +181,9 @@ def test_aux_input_and_fx_return_appear_as_independent_sources():
 
 def test_aux_and_fx_return_mute_and_dca_are_applied_to_sends():
     state = ConsoleState()
+    state.update("/auxin/01/config/source", 33)
+    state.update("/auxin/01/config/color", 1)
+    state.update("/fxrtn/01/config/color", 1)
     state.update("/auxin/01/mix/01/level", 0.6)
     state.update("/auxin/01/mix/01/on", 1)
     state.update("/auxin/01/mix/on", 0)
