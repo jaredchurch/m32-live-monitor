@@ -60,3 +60,9 @@ def channels():
 def output_matrix():
     """Effective per-channel signal paths, including the reason for each mute."""
     return state.output_matrix()
+
+
+@app.get("/api/matrix-inputs")
+def matrix_inputs():
+    """Effective Bus/Main-to-Matrix signal paths."""
+    return state.matrix_input_matrix()
