@@ -128,10 +128,26 @@ def test_hardware_matrix_marks_path_live_after_required_state_is_received():
         ("/ch/01/grp/dca", 0), ("/ch/01/grp/mute", 0),
         ("/ch/01/mix/01/type", 4), ("/ch/01/mix/01/on", 1),
         ("/ch/01/mix/01/level", 0.6),
-        ("/bus/01/mix/on", 1), ("/bus/01/mix/fader", 0.7),
+        ("/bus/01/mix/on", 1), ("/bus/01/mix/fader", 0.7),\n        ("/bus/01/grp/dca", 0), ("/bus/01/grp/mute", 0),
     ):
         state.update(address, value)
 
     cell = channel_cell(state)
     assert cell["muted"] is False
     assert cell["uncertain"] is False
+
+
+def test_destination_dca_and_mute_group_can_mute_bus_output():
+    state = ConsoleState()
+    state.update("/ch/01/mix/01/level", 0.6)
+    state.update("/bus/01/grp/dca", 1)
+    state.update("/dca/1/on", 0)
+    state.update("/-prefs/dcamute", 1)
+    cell = channel_cell(state)
+    assert "dca_1_muted" in cell["reasons"]
+
+    state.update("/bus/01/grp/dca", 0)
+    state.update("/bus/01/grp/mute", 1)
+    state.update("/config/mute/1", 1)
+    cell = channel_cell(state)
+    assert "output_mute_group_1" in cell["reasons"]
