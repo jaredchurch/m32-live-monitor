@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M32 Live Monitor</title><style>
+:root{font-family:system-ui,sans-serif;color:#e9edf2;background:#11151b}body{margin:0;padding:28px;max-width:1400px;margin-inline:auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}h1{font-size:24px;margin:0}
+.muted{color:#9ca8b6;font-size:13px}#connection{padding:7px 11px;border:1px solid #46515e;border-radius:99px;font-size:12px}
+#channels{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.channel{background:#1b222b;border:1px solid #303b48;border-radius:12px;padding:14px;min-height:150px}
+.channel-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}.swatch{width:10px;height:30px;border-radius:4px;background:var(--strip)}
+.name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.number{font-size:11px;color:#9ca8b6;margin-top:3px}
+.source{font-size:12px;color:#9ca8b6;margin-bottom:12px}.meter{height:7px;background:#303b48;border-radius:99px;overflow:hidden}
+.meter span{display:block;height:100%;width:var(--level);background:#6ac18a}.footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px}
+.mute{color:#e8a0a0}.open{color:#8bd5a5}.empty{padding:28px;border:1px dashed #46515e;border-radius:12px;color:#9ca8b6}
+</style></head><body><header><div><h1>M32 Live Monitor</h1><div class="muted">Read-only channel overview</div></div><div id="connection">Connecting…</div></header>
+<main id="channels"><div class="empty">Waiting for console data…</div></main>
+<script>
+const colours=['#89939e','#d66b6b','#df9257','#d9bd5a','#83b875','#56b5a0','#5b9fd0','#a58bd1'];
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+async function refresh(){try{
+ const pair=await Promise.all([fetch('/api/status').then(r=>r.json()),fetch('/api/channels').then(r=>r.json())]);
+ const status=pair[0],channels=pair[1],badge=document.querySelector('#connection');
+ badge.textContent=status.mode.toUpperCase()+' · '+status.connection;badge.style.borderColor=status.online?'#4b9b70':'#a66b55';
+ const root=document.querySelector('#channels');if(!channels.length){root.innerHTML='<div class="empty">No connected input channels reported.</div>';return;}
+ root.innerHTML=channels.map(c=>'<article class="channel" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name">'+esc(c.name)+'</div><div class="number">Channel '+String(c.number).padStart(2,'0')+'</div></div></div><div class="source">Input: '+c.sourceLabel+'</div><div class="meter"><span style="--level:'+Math.round(c.fader*100)+'%"></span></div><div class="footer"><span>Fader '+Math.round(c.fader*100)+'%</span><strong class="'+(c.muted?'mute':'open')+'">'+(c.muted?'MUTED':'OPEN')+'</strong></div></article>').join('');
+ }catch(e){document.querySelector('#connection').textContent='API unavailable';}}
+refresh();setInterval(refresh,1000);
+</script></body></html>
