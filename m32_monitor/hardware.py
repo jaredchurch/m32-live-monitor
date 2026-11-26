@@ -61,7 +61,7 @@ class HardwareMonitor:
         while True:
             try:
                 self._send("/xremote")
-                for meter_id in (0, 2, 4, 11):
+                for meter_id in (0, 2, 4, 9, 11):
                     self._send_meter_subscription(meter_id)
             except OSError:
                 logger.exception("M32 OSC keepalive failed")
@@ -97,7 +97,7 @@ class HardwareMonitor:
                         if family == "p16":
                             addresses.extend((prefix + "/iQ/group", prefix + "/iQ/speaker", prefix + "/iQ/eq"))
                 for number in range(1, 9):
-                    addresses.extend(("/fx/%d/type" % number, "/fx/%d/source" % number))
+                    addresses.extend(("/fx/%d/type" % number, "/fx/%d/source" % number, "/fx/%d/par" % number))
                 addresses.extend(("/config/solo/level", "/config/solo/source", "/config/solo/sourcetrim",
                                   "/config/solo/chmode", "/config/solo/busmode", "/config/solo/dcamode",
                                   "/config/solo/exclusive", "/config/solo/followsel", "/config/solo/followsolo",
@@ -179,10 +179,10 @@ class HardwareMonitor:
                     message.address, message.params[0]
                 ):
                     self.state.mark_seen()
-                elif message.params and self.state.update(
-                    message.address, message.params[0]
-                ):
-                    self.state.mark_seen()
+                elif message.params:
+                    value = message.params if message.address.startswith("/fx/") or "/insert" in message.address else message.params[0]
+                    if self.state.update(message.address, value):
+                        self.state.mark_seen()
         except (ValueError, IndexError, ParseError):
             logger.debug("Ignoring unrecognised OSC datagram", exc_info=True)
 
