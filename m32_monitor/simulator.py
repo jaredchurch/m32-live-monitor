@@ -481,7 +481,7 @@ class Simulator:
             else:
                 value = str(int(value))
             rendered.append(value)
-        return "/-urec " + " ".join(rendered) + "\\n"
+        return "/-urec " + " ".join(rendered) + "\n"
 
     def _handle_node(self, client, args):
         if len(args) != 1 or not isinstance(args[0], str):
