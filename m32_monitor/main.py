@@ -51,7 +51,8 @@ def status():
 def channels():
     result=[]
     for channel in state.visible_channels():
-        channel["sourceLabel"]=state.source_label(channel["source"])
+        channel["sourceLabel"] = ("FX RETURN" if channel.get("stripType") == "fx_return"
+                                else state.source_label(channel["source"]))
         result.append(channel)
     return result
 
