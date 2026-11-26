@@ -80,10 +80,13 @@ class HardwareMonitor:
                 addresses.extend("/config/mute/%d" % number for number in range(1, 7))
                 addresses.extend(("/-prefs/dcamute", "/-prefs/hardmute"))
                 for number in range(1, 17):
-                    addresses.extend(("/bus/%02d/mix/on" % number, "/bus/%02d/mix/fader" % number))
+                    addresses.extend(("/bus/%02d/mix/on" % number, "/bus/%02d/mix/fader" % number,
+                                      "/bus/%02d/grp/dca" % number, "/bus/%02d/grp/mute" % number))
                 addresses.extend((
                     "/main/st/mix/on", "/main/st/mix/fader",
                     "/main/m/mix/on", "/main/m/mix/fader",
+                    "/main/st/grp/dca", "/main/st/grp/mute",
+                    "/main/m/grp/dca", "/main/m/grp/mute",
                 ))
                 for address in addresses:
                     self._send(address)
