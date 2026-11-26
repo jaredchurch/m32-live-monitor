@@ -51,6 +51,13 @@ class ConsoleState:
         self.urec_sessions = {}
         self.urec_markers = {}
         self.urec_status = {"state": 0, "etime": 0, "rtime": 0}
+        self.config_links = {
+            "chlink": {f"{n}-{n+1}": 0 for n in range(1, 32, 2)},
+            "auxlink": {f"{n}-{n+1}": 0 for n in range(1, 8, 2)},
+            "fxlink": {f"{n}-{n+1}": 0 for n in range(1, 8, 2)},
+            "buslink": {f"{n}-{n+1}": 0 for n in range(1, 16, 2)},
+            "mtxlink": {f"{n}-{n+1}": 0 for n in range(1, 6, 2)},
+        }
         self.key_solo = 0
         self.solo_switches = {number: 0 for number in range(1, 81)}
         self.card_preferences = {name: 0 for name in ("UFifc", "UFmode", "USBmode", "ADATwc", "ADATsync", "MADImode", "MADIin", "MADIout", "MADIsrc", "URECtracks", "URECplayb", "URECrout", "URECsdsel")}
@@ -194,6 +201,14 @@ class ConsoleState:
                     self.matrices[number]["name"] = value
                 else:
                     return False
+                self.received.add(address)
+                return True
+
+            if len(parts) == 3 and parts[0] == "config" and parts[1] in self.config_links:
+                family, pair = parts[1], parts[2]
+                if pair not in self.config_links[family] or not isinstance(value, (int, float)) or int(value) not in (0, 1) or float(value) != int(value):
+                    return False
+                self.config_links[family][pair] = int(value)
                 self.received.add(address)
                 return True
 
@@ -381,6 +396,8 @@ class ConsoleState:
                 return self.urec_markers.get(int(parts[2]), 0)
             if len(parts) == 3 and parts[:2] == ["-stat", "urec"]:
                 return self.urec_status.get(parts[2])
+            if len(parts) == 3 and parts[0] == "config" and parts[1] in self.config_links:
+                return self.config_links[parts[1]].get(parts[2])
             if address == "/-prefs/rta/visibility":
                 return self.preferences["rta/visibility"]
             if address == "/-prefs/rta/gain":
