@@ -233,14 +233,19 @@ class Simulator:
                         "Expected exactly one X32node header string")
             return
         header = args[0].lstrip("/")
-        if header == "-prefs/rta/visibility":
-            value = self.state.get("/-prefs/rta/visibility")
+        if header in ("-prefs/rta/visibility", "-prefs/rta/gain"):
+            address = "/" + header
+            value = self.state.get(address)
             if value is None:
                 value = 0
-            response = "/-prefs/rta/visibility %d\n" % int(value)
+            if header.endswith("/gain"):
+                response = "%s %.1f\n" % (address, float(value))
+                detail = "Returned RTA gain X32node"
+            else:
+                response = "%s %d\n" % (address, int(value))
+                detail = "Returned RTA visibility X32node"
             self.send(client, "/node", response, outcome="node_response")
-            self.record("in", "handled_node_get", "/node", args, client,
-                        "Returned RTA visibility X32node")
+            self.record("in", "handled_node_get", "/node", args, client, detail)
             return
         self.record("in", "unhandled_command", "/node", args, client,
                     "No X32node response is defined for header %r" % header)
