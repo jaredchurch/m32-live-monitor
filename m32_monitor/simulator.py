@@ -478,10 +478,10 @@ class Simulator:
             if value is None:
                 value = 0
             if header.endswith(("/gain", "/decay")):
-                response = "%s %.4f\n" % (address, float(value))
+                response = "%s %.6f\n" % (address, float(value))
                 detail = "Returned RTA floating-point preference X32node"
             else:
-                response = "%s %d\n" % (address, int(value))
+                response = "%s %s\n" % (address, self._rta_node_value(header, value))
                 if header.endswith("/autogain"):
                     detail = "Returned RTA autogain X32node"
                 elif header.endswith("/source"):
