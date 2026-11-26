@@ -14,6 +14,10 @@ class Settings:
     osc_listen_port: int
     simulator_host: str
     simulator_port: int
+    simulator_name: str
+    simulator_model: str
+    simulator_firmware: str
+    simulator_server_version: str
 
 def get_settings() -> Settings:
     mode=os.getenv("M32_MODE","simulator").lower()
@@ -25,6 +29,10 @@ def get_settings() -> Settings:
         m32_port=int(os.getenv("M32_PORT","10023")),
         osc_listen_host=os.getenv("OSC_LISTEN_HOST","0.0.0.0"),
         osc_listen_port=int(os.getenv("OSC_LISTEN_PORT","10024")),
-        simulator_host=os.getenv("SIMULATOR_HOST","127.0.0.1"),
+        simulator_host=os.getenv("SIMULATOR_HOST","0.0.0.0"),
         simulator_port=int(os.getenv("SIMULATOR_PORT","10023")),
+        simulator_name=os.getenv("SIMULATOR_NAME","M32-Live-Monitor"),
+        simulator_model=os.getenv("SIMULATOR_MODEL","M32"),
+        simulator_firmware=os.getenv("SIMULATOR_FIRMWARE","4.06"),
+        simulator_server_version=os.getenv("SIMULATOR_SERVER_VERSION","V2.07"),
     )
