@@ -247,3 +247,31 @@ def test_rta_visibility_preference_can_be_read_and_updated():
     assert state.get("/-prefs/rta/visibility") == 0
     assert state.update("/-prefs/rta/visibility", 7)
     assert state.get("/-prefs/rta/visibility") == 7
+
+
+@pytest.mark.parametrize("path,first,second,count", [
+    ("/meters/0", 0, 0, 70),
+    ("/meters/2", 0, 0, 49),
+    ("/meters/5", 3, 0, 27),
+    ("/meters/6", 0, 0, 4),
+    ("/meters/9", 0, 0, 32),
+    ("/meters/10", 0, 0, 32),
+    ("/meters/14", 0, 0, 80),
+    ("/meters/16", 0, 0, 48),
+])
+def test_m32_edit_batchsubscribe_meter_stream_shapes(path, first, second, count):
+    import struct
+
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/batchsubscribe", path.lstrip("/"), path,
+                                    first, second, 1))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == path
+    blob = response.params[0]
+    assert struct.unpack(">I", blob[:4])[0] == len(blob) - 4
+    assert struct.unpack("<I", blob[4:8])[0] == count
+    assert len(blob) == 8 + count * 4
