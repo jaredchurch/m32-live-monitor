@@ -43,12 +43,12 @@ class ConsoleState:
         self.dca_mutes_enabled = None
         self.hard_mutes_enabled = None
         self.buses = {
-            n: {"number": n, "on": True, "fader": 0.75}
+            n: {"number": n, "on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0}
             for n in range(1, 17)
         }
         self.outputs = {
-            "main_st": {"on": True, "fader": 0.75},
-            "main_mono": {"on": True, "fader": 0.75},
+            "main_st": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0},
+            "main_mono": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0},
         }
 
     @property
@@ -138,20 +138,35 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) == 4 and parts[0] == "bus" and parts[2:] in (["mix", "on"], ["mix", "fader"]):
+            if len(parts) == 4 and parts[0] == "bus":
                 number = int(parts[1])
                 if number not in self.buses:
                     return False
-                key = "on" if parts[3] == "on" else "fader"
-                self.buses[number][key] = self._bool(value) if key == "on" else max(0.0, min(1.0, float(value)))
+                if parts[2:] == ["mix", "on"]:
+                    self.buses[number]["on"] = self._bool(value)
+                elif parts[2:] == ["mix", "fader"]:
+                    self.buses[number]["fader"] = max(0.0, min(1.0, float(value)))
+                elif parts[2:] == ["grp", "dca"]:
+                    self.buses[number]["dca_mask"] = int(value) & 255
+                elif parts[2:] == ["grp", "mute"]:
+                    self.buses[number]["mute_mask"] = int(value) & 63
+                else:
+                    return False
                 self.received.add(address)
                 return True
 
-            if address in ("/main/st/mix/on", "/main/m/mix/on",
-                           "/main/st/mix/fader", "/main/m/mix/fader"):
-                key = "main_st" if "/st/" in address else "main_mono"
-                field_name = "on" if address.endswith("/on") else "fader"
-                self.outputs[key][field_name] = self._bool(value) if field_name == "on" else max(0.0, min(1.0, float(value)))
+            if address.startswith(("/main/st/", "/main/m/")):
+                key = "main_st" if address.startswith("/main/st/") else "main_mono"
+                if address.endswith("/mix/on"):
+                    self.outputs[key]["on"] = self._bool(value)
+                elif address.endswith("/mix/fader"):
+                    self.outputs[key]["fader"] = max(0.0, min(1.0, float(value)))
+                elif address.endswith("/grp/dca"):
+                    self.outputs[key]["dca_mask"] = int(value) & 255
+                elif address.endswith("/grp/mute"):
+                    self.outputs[key]["mute_mask"] = int(value) & 63
+                else:
+                    return False
                 self.received.add(address)
                 return True
         except (ValueError, KeyError, TypeError):
@@ -188,11 +203,15 @@ class ConsoleState:
             if len(parts) == 3 and parts[:2] == ["config", "mute"]:
                 return int(self.mute_groups[int(parts[2])])
             if len(parts) == 4 and parts[0] == "bus":
+                if parts[2:] == ["grp", "dca"]: return self.buses[int(parts[1])]["dca_mask"]
+                if parts[2:] == ["grp", "mute"]: return self.buses[int(parts[1])]["mute_mask"]
                 return self.buses[int(parts[1])].get(parts[3]) if parts[2] == "mix" else None
-            if address in ("/main/st/mix/on", "/main/m/mix/on",
-                           "/main/st/mix/fader", "/main/m/mix/fader"):
-                key = "main_st" if "/st/" in address else "main_mono"
-                return self.outputs[key]["on" if address.endswith("/on") else "fader"]
+            if address.startswith(("/main/st/", "/main/m/")):
+                key = "main_st" if address.startswith("/main/st/") else "main_mono"
+                if address.endswith("/grp/dca"): return self.outputs[key]["dca_mask"]
+                if address.endswith("/grp/mute"): return self.outputs[key]["mute_mask"]
+                if address.endswith("/mix/on"): return self.outputs[key]["on"]
+                if address.endswith("/mix/fader"): return self.outputs[key]["fader"]
         except (ValueError, KeyError):
             return None
         return None
@@ -260,6 +279,38 @@ class ConsoleState:
                             reasons.append("dca_%d_fader_zero" % dca)
         return reasons, uncertain
 
+    def _destination_mutes(self, prefix, dca_mask, mute_mask):
+        reasons = []
+        uncertain = []
+        if not self._known(prefix + "grp/mute"):
+            uncertain.append("output_mute_group_assignments_unknown")
+        else:
+            for group in range(1, 7):
+                if mute_mask & (1 << (group - 1)):
+                    address = "/config/mute/%d" % group
+                    if not self._known(address):
+                        uncertain.append("mute_group_%d_state_unknown" % group)
+                    elif self.mute_groups[group]:
+                        reasons.append("output_mute_group_%d" % group)
+        if not self._known(prefix + "grp/dca"):
+            uncertain.append("output_dca_assignments_unknown")
+        else:
+            for dca in range(1, 9):
+                if dca_mask & (1 << (dca - 1)):
+                    if self.dca_mutes_enabled is not False:
+                        if not self._known("/dca/%d/on" % dca):
+                            uncertain.append("dca_%d_state_unknown" % dca)
+                        elif not self.dcas[dca]["on"]:
+                            if self.dca_mutes_enabled is True:
+                                reasons.append("dca_%d_muted" % dca)
+                            else:
+                                uncertain.append("dca_mute_setting_unknown")
+                    if not self._known("/dca/%d/fader" % dca):
+                        uncertain.append("dca_%d_fader_unknown" % dca)
+                    elif self.dcas[dca]["fader"] <= 0.000001:
+                        reasons.append("dca_%d_fader_zero" % dca)
+        return reasons, uncertain
+
     @staticmethod
     def _cell(reasons, uncertain=None, send_on=True, send_level=1.0, output_on=True, output_fader=1.0):
         causes = list(reasons)
@@ -296,8 +347,13 @@ class ConsoleState:
                         uncertain.append("output_fader_state_unknown")
                     send_on = getattr(channel, "main_st" if ident == "main_st" else "main_mono") if self._known(prefix + suffix) else True
                     output = self.outputs[ident]
-                    output_on = output["on"] if self._known("/%s/mix/on" % ("main/st" if ident == "main_st" else "main/m")) else True
-                    output_fader = output["fader"] if self._known("/%s/mix/fader" % ("main/st" if ident == "main_st" else "main/m")) else 1.0
+                    output_prefix = "/main/st/" if ident == "main_st" else "/main/m/"
+                    destination_reasons, destination_uncertain = self._destination_mutes(
+                        output_prefix, output["dca_mask"], output["mute_mask"])
+                    reasons.extend(destination_reasons)
+                    uncertain.extend(destination_uncertain)
+                    output_on = output["on"] if self._known(output_prefix + "mix/on") else True
+                    output_fader = output["fader"] if self._known(output_prefix + "mix/fader") else 1.0
                     cells[ident] = self._cell(reasons, uncertain, send_on, 1.0, output_on, output_fader)
                 else:
                     bus = int(ident[-2:])
@@ -322,6 +378,11 @@ class ConsoleState:
                     output_fader_known = self._known(output_prefix + "fader")
                     if not output_on_known: uncertain.append("output_mute_state_unknown")
                     if not output_fader_known: uncertain.append("output_fader_state_unknown")
+                    destination_prefix = "/bus/%02d/" % bus
+                    destination_reasons, destination_uncertain = self._destination_mutes(
+                        destination_prefix, self.buses[bus]["dca_mask"], self.buses[bus]["mute_mask"])
+                    reasons.extend(destination_reasons)
+                    uncertain.extend(destination_uncertain)
                     cells[ident] = self._cell(
                         reasons, uncertain,
                         send["on"] if on_known else True,
