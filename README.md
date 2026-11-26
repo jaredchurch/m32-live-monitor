@@ -11,7 +11,7 @@ A local-first browser dashboard for monitoring a Midas M32. It runs natively on 
 - OSC simulator on UDP 10023. It supports basic parameter GET/SET, /info, /xinfo, /status and /xremote for the subset represented in the dashboard.
 - Hardware mode uses a read-only OSC client. It sends /xremote and parameter enquiries but never sends parameter SET messages.
 - Channels are hidden if the input source is OFF or the scribble-strip colour is OFF.
-- Tests cover state updates, input-source decoding, channel visibility, and output mute-path calculations.
+- Tests cover state updates, input-source decoding, channel visibility, Aux/FX return paths, Matrix sends and output mute-path calculations.
 
 **M32-Edit compatibility is experimental and incomplete.** The simulator is not a full console emulator. It is an early protocol subset intended to establish the transport and state model; further protocol capture and iterative compatibility testing will be required before relying on it with M32-Edit.
 
@@ -60,5 +60,5 @@ GitHub Actions runs compile and pytest on Ubuntu, macOS and Windows using Python
 
 1. Verify hardware OSC responses on the actual M32 and validate source/color values against the console.
 2. Capture M32-Edit startup traffic and extend simulator protocol compatibility from observed requests.
-3. Extend the output-path view to downstream matrix feeds and add audio meter data.
+3. Add audio meter data and trace any additional downstream output routing needed.
 4. Add reconnect/timeout handling and a small connection configuration page.
