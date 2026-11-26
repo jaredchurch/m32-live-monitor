@@ -16,6 +16,7 @@ class ChannelState:
     mute_mask: int = 0
     main_st: bool = True
     main_mono: bool = False
+    main_mono_level: float = 1.0
     sends: dict = field(default_factory=dict)
     send_types: dict = field(default_factory=dict)
 
@@ -90,6 +91,8 @@ class ConsoleState:
                     channel.main_st = self._bool(value)
                 elif path == "mix/mono" and isinstance(value, (int, float)):
                     channel.main_mono = self._bool(value)
+                elif path == "mix/mlevel" and isinstance(value, (int, float)):
+                    channel.main_mono_level = max(0.0, min(1.0, float(value)))
                 elif path == "grp/dca" and isinstance(value, (int, float)):
                     channel.dca_mask = int(value) & 255
                 elif path == "grp/mute" and isinstance(value, (int, float)):
@@ -230,6 +233,7 @@ class ConsoleState:
                     "config/source": channel.source, "mix/fader": channel.fader,
                     "mix/on": 0 if channel.muted else 1,
                     "mix/st": int(channel.main_st), "mix/mono": int(channel.main_mono),
+                    "mix/mlevel": channel.main_mono_level,
                     "grp/dca": channel.dca_mask, "grp/mute": channel.mute_mask,
                 }
                 if path in basic:
@@ -493,7 +497,8 @@ class ConsoleState:
                     uncertain.extend(destination_uncertain)
                     output_on = output["on"] if self._known(output_prefix + "mix/on") else True
                     output_fader = output["fader"] if self._known(output_prefix + "mix/fader") else 1.0
-                    cells[ident] = self._cell(reasons, uncertain, send_on, 1.0, output_on, output_fader)
+                    send_level = channel.main_mono_level if ident == "main_mono" else 1.0
+                    cells[ident] = self._cell(reasons, uncertain, send_on, send_level, output_on, output_fader)
                 else:
                     bus = int(ident[-2:])
                     send = channel.sends.get(bus, {"on": True, "level": 0.0})
