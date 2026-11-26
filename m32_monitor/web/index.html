@@ -14,13 +14,13 @@ header{display:flex;align-items:center;justify-content:space-between;gap:16px;fl
 </style></head><body><header><div><h1>M32 Live Monitor</h1><div class="muted">Read-only channel overview</div></div><div id="connection">Connecting…</div></header>
 <main id="channels"><div class="empty">Waiting for console data…</div></main>
 <script>
-const colours=['#89939e','#d66b6b','#df9257','#d9bd5a','#83b875','#56b5a0','#5b9fd0','#a58bd1'];
+const colours=['#59616b','#d66b6b','#64b77b','#d9bd5a','#5b9fd0','#bb78b5','#55b9b0','#e2e8f0','#7d4141','#36784b','#918132','#315e8c','#754d80','#327d79','#9aa4b0','#f4f6f8'];
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 async function refresh(){try{
  const pair=await Promise.all([fetch('/api/status').then(r=>r.json()),fetch('/api/channels').then(r=>r.json())]);
  const status=pair[0],channels=pair[1],badge=document.querySelector('#connection');
  badge.textContent=status.mode.toUpperCase()+' · '+status.connection;badge.style.borderColor=status.online?'#4b9b70':'#a66b55';
- const root=document.querySelector('#channels');if(!channels.length){root.innerHTML='<div class="empty">No connected input channels reported.</div>';return;}
+ const root=document.querySelector('#channels');if(!channels.length){root.innerHTML='<div class="empty">No connected channels with an enabled scribble strip reported.</div>';return;}
  root.innerHTML=channels.map(c=>'<article class="channel" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name">'+esc(c.name)+'</div><div class="number">Channel '+String(c.number).padStart(2,'0')+'</div></div></div><div class="source">Input: '+c.sourceLabel+'</div><div class="meter"><span style="--level:'+Math.round(c.fader*100)+'%"></span></div><div class="footer"><span>Fader '+Math.round(c.fader*100)+'%</span><strong class="'+(c.muted?'mute':'open')+'">'+(c.muted?'MUTED':'OPEN')+'</strong></div></article>').join('');
  }catch(e){document.querySelector('#connection').textContent='API unavailable';}}
 refresh();setInterval(refresh,1000);
