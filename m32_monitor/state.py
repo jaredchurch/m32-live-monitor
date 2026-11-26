@@ -40,8 +40,8 @@ class ConsoleState:
         self.meters = {}
         self.received = set()
         self.last_seen = time.monotonic()
-        self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 32 + n, True) for n in range(1, 9)}
-        self.fx_returns = {n: ChannelState(n, "FX RTN %02d" % n, 0.72, False, 1, 0, True) for n in range(1, 9)}
+        self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 32 + n, False) for n in range(1, 9)}
+        self.fx_returns = {n: ChannelState(n, "FX RTN %02d" % n, 0.72, False, 1, 0, False) for n in range(1, 9)}
         self.dcas = {
             n: {"number": n, "name": "DCA %d" % n, "on": True, "fader": 0.75}
             for n in range(1, 9)
