@@ -147,10 +147,6 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if address == "/-prefs/dcamute":
-                return int(self.dca_mutes_enabled) if self.dca_mutes_enabled is not None else None
-            if address == "/-prefs/hardmute":
-                return int(self.hard_mutes_enabled) if self.hard_mutes_enabled is not None else None
             if address in ("/main/st/mix/on", "/main/m/mix/on",
                            "/main/st/mix/fader", "/main/m/mix/fader"):
                 key = "main_st" if "/st/" in address else "main_mono"
