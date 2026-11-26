@@ -25,10 +25,11 @@ class HardwareMonitor:
         self.state.mode = "hardware"
         self.state.received.clear()
         self.state.last_seen = None
-        for channel in self.state.channels.values():
-            channel.source = 0
-            channel.connected = False
-            channel.colour = 0
+        for collection in (self.state.channels, self.state.auxins, self.state.fx_returns):
+            for channel in collection.values():
+                channel.source = 0
+                channel.connected = False
+                channel.colour = 0
         self.receiver = asyncio.create_task(self._receive())
         self.keepalive = asyncio.create_task(self._keepalive())
         self.query_task = asyncio.create_task(self._query_console())
