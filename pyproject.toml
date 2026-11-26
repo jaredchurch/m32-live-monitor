@@ -4,24 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "m32-live-monitor"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local-first monitoring dashboard for a Midas M32 mixing console"
 requires-python = ">=3.11"
-dependencies = [
-  "fastapi>=0.115,<1",
-  "uvicorn[standard]>=0.34,<1",
-  "python-osc>=1.9,<2",
-]
+dependencies = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1", "python-osc>=1.9,<2"]
 
 [project.optional-dependencies]
-dev = [
-  "httpx>=0.27,<1",
-  "pytest>=8.3,<9",
-  "ruff>=0.9,<1",
-]
+dev = ["httpx>=0.27,<1", "pytest>=8.3,<9", "ruff>=0.9,<1"]
 
 [tool.setuptools.packages.find]
 include = ["m32_monitor*"]
+
+[tool.setuptools.package-data]
+m32_monitor = ["web/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
