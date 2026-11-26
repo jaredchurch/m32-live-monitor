@@ -35,6 +35,8 @@ class ConsoleState:
         self.mode = "simulator"
         self.received = set()
         self.last_seen = time.monotonic()
+        self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 33 + n, True) for n in range(1, 9)}
+        self.fx_returns = {n: ChannelState(n, "FX RTN %02d" % n, 0.72, False, 1, 0, True) for n in range(1, 9)}
         self.dcas = {
             n: {"number": n, "name": "DCA %d" % n, "on": True, "fader": 0.75}
             for n in range(1, 9)
@@ -47,9 +49,11 @@ class ConsoleState:
             for n in range(1, 17)
         }
         self.outputs = {
-            "main_st": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0},
-            "main_mono": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0},
+            "main_st": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0, "sends": {}},
+            "main_mono": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0, "sends": {}},
         }
+        self.matrices = {n: {"number": n, "name": "Matrix %02d" % n, "on": True, "fader": 0.75,
+                             "dca_mask": 0, "mute_mask": 0} for n in range(1, 7)}
 
     @property
     def online(self):
@@ -67,14 +71,15 @@ class ConsoleState:
     def update(self, address, value):
         parts = address.strip("/").split("/")
         try:
-            if len(parts) >= 4 and parts[0] == "ch":
-                channel = self.channels[int(parts[1])]
+            if len(parts) >= 4 and parts[0] in ("ch", "auxin", "fxrtn"):
+                collection = {"ch": self.channels, "auxin": self.auxins, "fxrtn": self.fx_returns}[parts[0]]
+                channel = collection[int(parts[1])]
                 path = "/".join(parts[2:])
                 if path == "config/name" and isinstance(value, str):
                     channel.name = value
                 elif path == "config/color" and isinstance(value, (int, float)):
                     channel.colour = int(value)
-                elif path == "config/source" and isinstance(value, (int, float)):
+                elif path == "config/source" and isinstance(value, (int, float)) and parts[0] != "fxrtn":
                     channel.source = int(value)
                     channel.connected = channel.source > 0
                 elif path == "mix/fader" and isinstance(value, (int, float)):
@@ -104,6 +109,8 @@ class ConsoleState:
                         return False
                 else:
                     return False
+                if parts[0] == "fxrtn" and path == "config/color":
+                    channel.connected = channel.colour != 0
                 self.received.add(address)
                 return True
 
