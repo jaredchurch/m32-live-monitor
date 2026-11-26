@@ -21,13 +21,13 @@ def test_unknown_patch_value_is_not_guessed():
 def test_output_patch_and_fx_assignments_are_exposed():
     state = RoutingState()
     state.update("/config/routing/AES50A/1-8", 0)
-    state.update("/outputs/main/01", 7)
+    state.update("/outputs/main/01/src", 7)
     state.update("/fx/1/type", 3)
     state.update("/fx/1/source", 41)
     snapshot = state.snapshot()
     assert any(x["address"] == "/config/routing/AES50A/1-8" and x["known"]
                for section in snapshot["sections"] for x in section["items"])
-    assert next(x for x in snapshot["outputs"] if x["address"] == "/outputs/main/01")["value"] == 7
+    assert next(x for x in snapshot["outputs"] if x["address"] == "/outputs/main/01/src")["value"] == 7
     assert any(x["address"] == "/fx/1/type" and x["value"] == 3 for x in snapshot["effects"])
 
 
