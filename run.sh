@@ -3,13 +3,6 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-# Load local runtime settings for native macOS/Linux use.
-if [ -f ".env" ]; then
-  set -a
-  . ./.env
-  set +a
-fi
-
 if [ ! -d ".venv" ]; then
   python3 -m venv .venv
 fi
