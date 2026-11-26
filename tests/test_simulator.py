@@ -519,3 +519,68 @@ def test_node_get_returns_rta_options_x32node_response():
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
     assert response.params == ["/-prefs/rta/options 0" + chr(10)]
+
+
+@pytest.mark.parametrize("path,value", [
+    ("/-prefs/rta/det", 1),
+    ("/-prefs/rta/peakhold", 8),
+    ("/-prefs/rta/options", 33),
+    ("/-prefs/rta/option", 33),
+    ("/-stat/rtamodeeq", 1),
+    ("/-stat/rtamodegeq", 1),
+    ("/-stat/rtaeqpre", 1),
+    ("/-stat/rtageqpost", 1),
+    ("/-stat/rtasource", 170),
+])
+def test_rta_integer_preferences_and_status_are_node_readable(path, value):
+    state = ConsoleState()
+    assert state.update(path, value)
+    assert state.get(path) == value
+
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/node", path.lstrip("/")))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == [f"{path} {value}\\n"]
+
+
+@pytest.mark.parametrize("path,value", [
+    ("/-prefs/rta/det", 2),
+    ("/-prefs/rta/peakhold", 9),
+    ("/-prefs/rta/options", 64),
+    ("/-stat/rtamodeeq", 2),
+    ("/-stat/rtamodegeq", -1),
+    ("/-stat/rtaeqpre", 2),
+    ("/-stat/rtageqpost", -1),
+    ("/-stat/rtasource", 171),
+])
+def test_rta_integer_preferences_and_status_reject_out_of_range_values(path, value):
+    assert not ConsoleState().update(path, value)
+
+
+@pytest.mark.parametrize("value,expected", [
+    (0.0, 0.0), (1 / 18, 0.0556), (0.5, 0.5), (1.0, 1.0),
+])
+def test_rta_decay_uses_documented_normalised_log_steps(value, expected):
+    state = ConsoleState()
+    assert state.update("/-prefs/rta/decay", value)
+    assert state.get("/-prefs/rta/decay") == pytest.approx(expected)
+
+
+def test_rta_decay_rejects_values_outside_documented_curve():
+    state = ConsoleState()
+    assert not state.update("/-prefs/rta/decay", -0.1)
+    assert not state.update("/-prefs/rta/decay", 1.1)
+    assert not state.update("/-prefs/rta/decay", 0.2)
+
+
+def test_node_get_returns_rta_decay_as_float():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/node", "-prefs/rta/decay"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == ["/-prefs/rta/decay 0.0000\\n"]
