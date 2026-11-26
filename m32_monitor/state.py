@@ -38,6 +38,7 @@ class ConsoleState:
         self.mode = "simulator"
         self.routing = RoutingState()
         self.meters = {}
+        self.preferences = {"rta/visibility": 0}
         self.received = set()
         self.last_seen = time.monotonic()
         self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 32 + n, False) for n in range(1, 9)}
@@ -181,6 +182,11 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if address == "/-prefs/rta/visibility" and isinstance(value, (int, float)) and 0 <= int(value) <= 12:
+                self.preferences["rta/visibility"] = int(value)
+                self.received.add(address)
+                return True
+
             if address in ("/-prefs/dcamute", "/-prefs/hardmute") and isinstance(value, (int, float)):
                 if address.endswith("dcamute"):
                     self.dca_mutes_enabled = self._bool(value)
@@ -278,6 +284,8 @@ class ConsoleState:
                 if len(parts) == 5 and parts[2] == "mix" and parts[3].isdigit():
                     send = channel.sends.get(int(parts[3]), {"on": True, "level": 0.0})
                     return send.get(parts[4])
+            if address == "/-prefs/rta/visibility":
+                return self.preferences["rta/visibility"]
             if address == "/-prefs/dcamute":
                 return int(self.dca_mutes_enabled) if self.dca_mutes_enabled is not None else None
             if address == "/-prefs/hardmute":
