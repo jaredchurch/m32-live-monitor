@@ -237,7 +237,7 @@ class Simulator:
             value = self.state.get("/-prefs/rta/visibility")
             if value is None:
                 value = 0
-            response = "/-prefs/rta/visibility %d\\n" % int(value)
+            response = "/-prefs/rta/visibility %d\n" % int(value)
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned RTA visibility X32node")
