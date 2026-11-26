@@ -229,3 +229,34 @@ def test_matrix_output_mute_fader_dca_and_mute_group_are_applied():
     state.update("/dca/1/fader", 0.0)
     cell = state.matrix_input_matrix()["sources"][0]["cells"]["mtx_01"]
     assert "dca_1_fader_zero" in cell["reasons"]
+
+
+def test_matrix_path_requires_hardware_snapshot_before_showing_open():
+    state = ConsoleState()
+    state.mode = "hardware"
+    state.received.clear()
+    cell = state.matrix_input_matrix()["sources"][0]["cells"]["mtx_01"]
+    assert cell["uncertain"] is True
+    assert "matrix_send_switch_unknown" in cell["reasons"]
+
+    for address, value in (
+        ("/bus/01/mix/on", 1), ("/bus/01/mix/fader", 0.7),
+        ("/bus/01/grp/dca", 0), ("/bus/01/grp/mute", 0),
+        ("/bus/01/mix/01/on", 1), ("/bus/01/mix/01/level", 0.6),
+        ("/mtx/01/mix/on", 1), ("/mtx/01/mix/fader", 0.7),
+        ("/mtx/01/grp/dca", 0), ("/mtx/01/grp/mute", 0),
+    ):
+        state.update(address, value)
+    cell = state.matrix_input_matrix()["sources"][0]["cells"]["mtx_01"]
+    assert cell["muted"] is False
+    assert cell["uncertain"] is False
+
+
+def test_simulator_get_supports_matrix_and_matrix_send_parameters():
+    state = ConsoleState()
+    state.update("/bus/01/mix/02/on", 0)
+    state.update("/bus/01/mix/02/level", 0.4)
+    state.update("/mtx/02/mix/on", 0)
+    assert state.get("/bus/01/mix/02/on") == 0
+    assert state.get("/bus/01/mix/02/level") == 0.4
+    assert state.get("/mtx/02/mix/on") == 0
