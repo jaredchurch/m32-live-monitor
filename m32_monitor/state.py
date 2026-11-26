@@ -249,13 +249,14 @@ class ConsoleState:
         else:
             for dca in range(1, 9):
                 if channel.dca_mask & (1 << (dca - 1)):
-                    if not self._known("/dca/%d/on" % dca):
-                        uncertain.append("dca_%d_state_unknown" % dca)
-                    elif not self.dcas[dca]["on"]:
-                        if self.dca_mutes_enabled is True:
-                            reasons.append("dca_%d_muted" % dca)
-                        elif self.dca_mutes_enabled is None:
-                            uncertain.append("dca_mute_setting_unknown")
+                    if self.dca_mutes_enabled is not False:
+                        if not self._known("/dca/%d/on" % dca):
+                            uncertain.append("dca_%d_state_unknown" % dca)
+                        elif not self.dcas[dca]["on"]:
+                            if self.dca_mutes_enabled is True:
+                                reasons.append("dca_%d_muted" % dca)
+                            else:
+                                uncertain.append("dca_mute_setting_unknown")
                     if include_dca_fader:
                         if not self._known("/dca/%d/fader" % dca):
                             uncertain.append("dca_%d_fader_unknown" % dca)
