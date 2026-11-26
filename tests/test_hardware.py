@@ -91,3 +91,33 @@ def test_hardware_monitor_send_builds_enquiry_without_arguments():
     assert destination == ("192.0.2.10", 10023)
     assert sent.address == "/xremote"
     assert sent.params == []
+
+def test_hardware_monitor_records_unexpected_address():
+    state = ConsoleState()
+    monitor = HardwareMonitor(state, "192.0.2.10", 10023, "127.0.0.1", 10024)
+    monitor._process_datagram(message("/vendor/private/parameter", 12).dgram)
+    assert monitor.diagnostics.counters["unexpected_addresses"] == 1
+
+
+def test_hardware_monitor_records_wrong_argument_type_for_expected_address():
+    state = ConsoleState()
+    monitor = HardwareMonitor(state, "192.0.2.10", 10023, "127.0.0.1", 10024)
+    monitor.diagnostics.begin_cycle(["/ch/01/mix/fader"])
+    monitor._process_datagram(message("/ch/01/mix/fader", "not-a-number").dgram)
+    assert monitor.diagnostics.counters["invalid_responses"] == 1
+    assert "/ch/01/mix/fader" not in state.received
+
+
+def test_hardware_monitor_records_malformed_packet():
+    state = ConsoleState()
+    monitor = HardwareMonitor(state, "192.0.2.10", 10023, "127.0.0.1", 10024)
+    monitor._process_datagram(b"not an OSC packet")
+    assert monitor.diagnostics.counters["malformed_packets"] == 1
+
+
+def test_hardware_monitor_rejects_unexpected_peer():
+    state = ConsoleState()
+    monitor = HardwareMonitor(state, "192.0.2.10", 10023, "127.0.0.1", 10024)
+    monitor._process_datagram(message("/info").dgram, ("198.51.100.7", 10023))
+    assert monitor.diagnostics.counters["unexpected_peers"] == 1
+    assert state.last_seen is not None or state.mode == "simulator"
