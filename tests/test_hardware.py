@@ -117,7 +117,9 @@ def test_hardware_monitor_records_malformed_packet():
 
 def test_hardware_monitor_rejects_unexpected_peer():
     state = ConsoleState()
+    state.mode = "hardware"
+    state.last_seen = None
     monitor = HardwareMonitor(state, "192.0.2.10", 10023, "127.0.0.1", 10024)
     monitor._process_datagram(message("/info").dgram, ("198.51.100.7", 10023))
     assert monitor.diagnostics.counters["unexpected_peers"] == 1
-    assert state.last_seen is not None or state.mode == "simulator"
+    assert state.last_seen is None
