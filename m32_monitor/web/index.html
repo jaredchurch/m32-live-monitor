@@ -37,7 +37,7 @@ td.zero-cell{background:#493b20;color:#f4d28b}td.unknown-cell{background:#333b45
 <nav class="tabs"><button class="tab active" data-panel="matrix">Output mute matrix</button><button class="tab" data-panel="channels-panel">Channel strips</button></nav>
 <section id="matrix" class="panel active">
 <h2>Channel → output signal paths</h2>
-<div class="muted">A cell is green only when the channel has an enabled, non-zero path to that destination and no upstream mute is active. Hover a cell for every detected reason.</div>
+<div class="muted">A cell is green only when the channel has an enabled, non-zero path to that destination and no upstream mute is active. OPEN means the routing permits signal, not that audio is present. Matrix 1–6 feeds are downstream and are not included yet. Hover a cell for every detected reason.</div>
 <div id="matrix-summary" class="summary"></div><div id="group-state" class="group-state"></div>
 <div class="legend"><span><i class="dot" style="background:#286543"></i>Signal path available</span><span><i class="dot" style="background:#87434a"></i>Muted / switched off</span><span><i class="dot" style="background:#8a6b2d"></i>Fader at zero</span><span><i class="dot" style="background:#59636e"></i>CHECK / state not received</span></div>
 <div id="matrix-table" class="matrix-wrap"><div class="empty">Waiting for console routing data…</div></div>
