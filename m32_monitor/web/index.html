@@ -73,7 +73,18 @@ td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;ba
 <h3>Missing and stale parameters</h3><div id="diagnostic-coverage" class="matrix-wrap"></div>
 <h3 style="margin-top:20px">Recent diagnostic events</h3><div id="diagnostic-events" class="matrix-wrap"></div>
 </section>
-\n<section id="channels-panel" class="panel"><h2>Live audio meters</h2><div class="muted">Read-only meter streams from the console. Streams appear when the M32 responds to the meter subscription.</div><div id="meter-streams" class="summary"></div><div id="channels"><div class="empty">Waiting for console data…</div></div></section>
+<section id="simulator-panel" class="panel">
+<h2>Simulator control and OSC traffic</h2>
+<div class="muted">Select a repeatable console state, then connect M32-Edit to this Mac at 127.0.0.1:10023. Every decoded incoming and outgoing OSC message is recorded. Unsupported addresses and malformed packets are highlighted so we can extend compatibility from observed traffic.</div>
+<div class="sim-controls">
+<label>Scenario <select id="sim-scenario"></select></label>
+<button id="sim-load">Load scenario</button><button id="sim-clear">Clear log</button>
+<label>Filter <input id="sim-filter" placeholder="OSC address or detail"></label>
+</div>
+<div id="sim-summary" class="summary"><span class="pill">Waiting for simulator…</span></div>
+<div id="sim-log" class="matrix-wrap"><div class="empty">No simulator messages recorded yet.</div></div>
+</section>
+<section id="channels-panel" class="panel"><h2>Live audio meters</h2><div class="muted">Read-only meter streams from the console. Streams appear when the M32 responds to the meter subscription.</div><div id="meter-streams" class="summary"></div><div id="channels"><div class="empty">Waiting for console data…</div></div></section>
 <script>
 const colours=['#59616b','#d66b6b','#64b77b','#d9bd5a','#5b9fd0','#bb78b5','#55b9b0','#e2e8f0','#7d4141','#36784b','#918132','#315e8c','#754d80','#327d79','#9aa4b0','#f4f6f8'];
 const reasonNames={source_muted:'Source strip muted',source_fader_zero:'Source fader at zero',matrix_source_state_unknown:'Matrix source state not received',matrix_source_groups_unknown:'Matrix source DCA/mute groups not received',matrix_send_switch_unknown:'Matrix send switch not received',matrix_send_level_unknown:'Matrix send level not received',matrix_output_mute_unknown:'Matrix output mute not received',matrix_output_fader_unknown:'Matrix output fader not received',channel_muted:'Channel mute',channel_fader_zero:'Channel fader at zero',channel_mute_unknown:'Channel mute state not received',channel_fader_unknown:'Channel fader state not received',mute_group_assignments_unknown:'Mute group assignments not received',dca_assignments_unknown:'DCA assignments not received',dca_mute_setting_unknown:'DCA Mutes preference not received',output_mute_group_assignments_unknown:'Output mute-group assignments not received',output_dca_assignments_unknown:'Output DCA assignments not received',hard_mute_setting_unknown:'Hard Mutes preference not received',send_tap_point_unknown:'Send tap point not received',send_switch_state_unknown:'Send switch state not received',send_level_state_unknown:'Send level not received',output_mute_state_unknown:'Output mute state not received',output_fader_state_unknown:'Output fader not received',main_send_state_unknown:'Main send state not received',main_mono_send_level_unknown:'Mono/C send level not received',send_off:'Send switched off',send_level_zero:'Send fader at zero',output_muted:'Destination muted',output_fader_zero:'Destination fader at zero'};
