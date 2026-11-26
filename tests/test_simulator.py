@@ -361,3 +361,64 @@ def test_showdump_returns_documented_empty_show_node():
     assert response.address == "/node"
     assert response.params == ['/-show/showfile/show "" 0 0 0 0 0 0 0 0 0 0 "4.06"']
     assert simulator.snapshot(outcome="handled_showdump")["events"]
+
+
+def test_formatsubscribe_handles_multiple_groups_and_packs_values():
+    import struct
+
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    args = [
+        "states/prefs",
+        "/-stat/tape/state", "/-usb/path/", "/-usb/title",
+        "/-stat/tape/etime", "/-stat/tape/rtime",
+        "/-stat/aes50/state", "/-stat/aes50/A", "/-stat/aes50/B",
+        "/-prefs/clockrate", "/-prefs/clocksource", "/-show/prepos/current",
+        "/-stat/usbmounted", "/-usb/dir/dirpos", "/-usb/dir/maxpos",
+        "/-stat/xcardtype", "/-prefs/card/UFifc", "/-prefs/card/UFmode",
+        0, 0, 0,
+        "states/solo", "/-stat/solosw/**", 0, 0, 0,
+    ]
+
+    simulator.handle(client, packet("/formatsubscribe", *args))
+
+    assert len(simulator.transport.sent) == 2
+    prefs = OscMessage(simulator.transport.sent[0][0])
+    assert prefs.address == "/states/prefs"
+    prefs_blob = prefs.params[0]
+    assert isinstance(prefs_blob, bytes)
+    assert struct.unpack("<I", prefs_blob[:4])[0] == len(prefs_blob) - 4 == 124
+    assert prefs_blob[4:8] == struct.pack("<i", 0)
+    assert prefs_blob[8:40] == bytes(32)
+
+    solo = OscMessage(simulator.transport.sent[1][0])
+    assert solo.address == "/states/solo"
+    solo_blob = solo.params[0]
+    assert isinstance(solo_blob, bytes)
+    assert struct.unpack("<I", solo_blob[:4])[0] == len(solo_blob) - 4 == 320
+    assert struct.unpack("<80i", solo_blob[4:]) == (0,) * 80
+    assert simulator.snapshot(outcome="handled_format_subscription")["events"]
+
+
+def test_formatsubscribe_rejects_malformed_group_without_sending():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/formatsubscribe", "alias", "/ch/**/mix/on", 1))
+
+    assert simulator.transport.sent == []
+    assert simulator.snapshot(outcome="unhandled_command")["events"]
+
+
+def test_node_get_returns_card_preferences():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "-prefs/card"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ["/-prefs/card " + " ".join(["0"] * 13) + "\\n"]
