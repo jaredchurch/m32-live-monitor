@@ -248,11 +248,6 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if address == "/-prefs/rta/options" and isinstance(value, (int, float)) and float(value) == int(value) and 0 <= int(value) <= 63:
-                self.preferences["rta/options"] = int(value)
-                self.received.add(address)
-                return True
-
             if address == "/-prefs/rta/mode" and isinstance(value, (int, float)) and float(value) == int(value) and int(value) in (0, 1):
                 self.preferences["rta/mode"] = int(value)
                 self.received.add(address)
