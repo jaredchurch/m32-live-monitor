@@ -31,10 +31,16 @@ td.zero-cell{background:#493b20;color:#f4d28b}td.unknown-cell{background:#333b45
 .group-state{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px}
 .group-state span{font-size:11px;border-radius:5px;padding:4px 7px;background:#27313c;color:#c7d1db}
 .group-state .active{background:#48282c;color:#ffb2b2}
+.sim-controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:14px 0}
+.sim-controls label{display:grid;gap:5px;color:#b6c0cb;font-size:12px}
+.sim-controls select,.sim-controls input,.sim-controls button{background:#202832;color:#e9edf2;border:1px solid #46515e;border-radius:7px;padding:9px}
+.sim-controls button{cursor:pointer}.sim-controls button:hover{border-color:#8aa9c4}
+td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;background:#493b20}
+.osc-detail{max-width:500px;white-space:normal;overflow-wrap:anywhere;text-align:left}
 @media(max-width:700px){body{padding:14px}th,td{padding:6px 5px}.matrix-wrap{max-height:68vh}}
 </style></head><body>
 <header><div><h1>M32 Live Monitor</h1><div class="muted">Read-only console overview and signal-path mute analysis</div></div><div id="connection">Connecting…</div></header>
-<nav class="tabs"><button class="tab active" data-panel="matrix">Output mute matrix</button><button class="tab" data-panel="channels-panel">Channel strips</button><button class="tab" data-panel="routing-panel">Routing map</button><button class="tab" data-panel="diagnostics-panel">Diagnostics</button></nav>
+<nav class="tabs"><button class="tab active" data-panel="matrix">Output mute matrix</button><button class="tab" data-panel="channels-panel">Channel strips</button><button class="tab" data-panel="routing-panel">Routing map</button><button class="tab" data-panel="diagnostics-panel">Diagnostics</button><button class="tab" data-panel="simulator-panel">Simulator / OSC log</button></nav>
 <section id="matrix" class="panel active">
 <h2>Channel → output signal paths</h2>
 <div class="muted">A cell is green only when the channel has an enabled, non-zero path to that destination and no upstream mute is active. OPEN means the routing permits signal, not that audio is present. Matrix feeds are shown in the downstream Matrix view. Physical output patching is shown in the Routing map. Hover a cell for every detected reason.</div>
@@ -131,7 +137,39 @@ function renderMeters(data){
  document.querySelector('#diagnostic-events').innerHTML=events.length?'<table><thead><tr><th>Time</th><th>Type</th><th>Address</th><th>Detail</th></tr></thead><tbody>'+events.map(e=>'<tr><td>'+new Date(e.time*1000).toLocaleTimeString()+'</td><td>'+esc(e.kind)+'</td><td>'+esc(e.address||'—')+'</td><td>'+esc(e.message)+' '+esc(typeof e.detail==='object'?JSON.stringify(e.detail):(e.detail||''))+'</td></tr>').join('')+'</tbody></table>':'<div class="empty">No protocol errors recorded.</div>';
 }
 
-function renderRouting(data){
+
+async function loadSimulatorControls(){
+ const select=document.querySelector('#sim-scenario');
+ try{const data=await fetch('/api/simulator/scenarios').then(r=>r.json());select.innerHTML=(data.scenarios||[]).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+' — '+esc(s.description)+'</option>').join('');}
+ catch(e){select.innerHTML='<option value="">Simulator controls unavailable in hardware mode</option>';}
+}
+async function renderSimulatorLogs(){
+ const root=document.querySelector('#sim-log'),summary=document.querySelector('#sim-summary');
+ try{
+  const q=new URLSearchParams({limit:'500'}),filter=document.querySelector('#sim-filter').value.trim();
+  if(filter)q.set('search',filter);
+  const data=await fetch('/api/simulator/logs?'+q.toString()).then(r=>{if(!r.ok)throw new Error('Simulator mode only');return r.json();});
+  const counts=data.counts||{};
+  summary.innerHTML='<span class="pill">UDP '+esc(data.host)+':'+data.port+'</span><span class="pill">'+data.clients.length+' M32-Edit/client endpoint(s)</span><span class="pill">'+data.event_count+' total messages</span><span class="pill">'+(counts.in||0)+' inbound</span><span class="pill">'+(counts.out||0)+' outbound</span><span class="pill">'+(counts.unhandled_get||0)+' unhandled GET</span><span class="pill">'+(counts.unhandled_set||0)+' unhandled SET</span><span class="pill">'+(counts.malformed||0)+' malformed</span>';
+  const events=data.events||[];
+  root.innerHTML=events.length?'<table><thead><tr><th>#</th><th>Time</th><th>Direction</th><th>Result</th><th>OSC address</th><th>Arguments / detail</th><th>Peer</th></tr></thead><tbody>'+events.slice().reverse().map(e=>{
+   const bad=e.outcome.startsWith('unhandled')||e.outcome==='malformed'||e.outcome==='send_error';
+   const system=e.direction==='system'||e.outcome==='scenario_loaded';
+   return '<tr><td>'+e.sequence+'</td><td>'+new Date(e.timestamp*1000).toLocaleTimeString()+'</td><td>'+esc(e.direction.toUpperCase())+'</td><td class="'+(bad?'osc-unhandled':system?'osc-system':'')+'">'+esc(e.outcome)+'</td><td>'+esc(e.address||'—')+'</td><td class="osc-detail">'+esc(JSON.stringify(e.args||[]))+(e.detail?' · '+esc(e.detail):'')+'</td><td>'+esc(e.peer||'—')+'</td></tr>';
+  }).join('')+'</tbody></table>':'<div class="empty">No OSC messages yet. Start M32-Edit and connect it to this Mac on UDP port 10023.</div>';
+ }catch(e){summary.innerHTML='<span class="pill">Simulator logging is available in simulator mode</span>';root.innerHTML='<div class="empty">Switch M32_MODE to simulator to inspect M32-Edit OSC traffic.</div>';}
+}
+document.querySelector('#sim-load').addEventListener('click',async()=>{
+ const id=document.querySelector('#sim-scenario').value;if(!id)return;
+ const response=await fetch('/api/simulator/scenarios/'+encodeURIComponent(id),{method:'POST'});
+ if(response.ok){await refresh();await renderSimulatorLogs();}
+});
+document.querySelector('#sim-clear').addEventListener('click',async()=>{
+ await fetch('/api/simulator/logs',{method:'DELETE'});await renderSimulatorLogs();
+});
+document.querySelector('#sim-filter').addEventListener('input',renderSimulatorLogs);
+loadSimulatorControls();
+\nfunction renderRouting(data){
  const itemTable=items=>'<div class="matrix-wrap"><table><thead><tr><th>Assignment</th><th>Console value</th><th>Decoded / status</th></tr></thead><tbody>'+items.map(x=>'<tr><td>'+esc(x.label||x.address)+'</td><td>'+esc(x.known?x.value:'—')+'</td><td class="'+(x.known?'':'unknown-cell')+'">'+esc(x.display|| (x.known?String(x.value):'CHECK · not received'))+'</td></tr>').join('')+'</tbody></table></div>';
  document.querySelector('#routing-summary').innerHTML='<span class="pill">'+data.known+' of '+data.total+' core routing parameters received</span><span class="pill">'+(data.complete?'Core routing snapshot complete':'Snapshot incomplete · CHECK unknowns')+'</span><span class="pill">'+data.special.length+' additional routing parameters</span>';
  document.querySelector('#routing-sections').innerHTML=(data.sections||[]).map(s=>'<h3>'+esc(s.name)+'</h3>'+itemTable(s.items)).join('');
@@ -148,7 +186,7 @@ document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click
 async function refresh(){try{
  const pair=await Promise.all([fetch('/api/status').then(r=>r.json()),fetch('/api/channels').then(r=>r.json()),fetch('/api/output-matrix').then(r=>r.json()),fetch('/api/matrix-inputs').then(r=>r.json()),fetch('/api/routing-map').then(r=>r.json()),fetch('/api/meters').then(r=>r.json()),fetch('/api/diagnostics').then(r=>r.json())]);
  const status=pair[0],badge=document.querySelector('#connection');badge.textContent=status.mode.toUpperCase()+' · '+status.connection;badge.style.borderColor=status.online?'#4b9b70':'#a66b55';
- renderChannels(pair[1]);renderMatrix(pair[2]);renderMatrixInputs(pair[3]);renderRouting(pair[4]);renderMeters(pair[5]);renderDiagnostics(pair[6]);
+ renderChannels(pair[1]);renderMatrix(pair[2]);renderMatrixInputs(pair[3]);renderRouting(pair[4]);renderMeters(pair[5]);renderDiagnostics(pair[6]);if(status.mode==="simulator")renderSimulatorLogs();
  }catch(e){document.querySelector('#connection').textContent='API unavailable';}}
 refresh();setInterval(refresh,1500);
 </script></body></html>
