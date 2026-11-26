@@ -255,18 +255,6 @@ class ConsoleState:
             if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
                 key = "main_st" if address.startswith("/main/st/") else "main_mono"
                 return self.outputs[key]["sends"].get(int(parts[3]), {}).get(parts[4])
-            if len(parts) == 4 and parts[0] == "mtx":
-                matrix = self.matrices[int(parts[1])]
-                if parts[2:] == ["mix", "on"]: return matrix["on"]
-                if parts[2:] == ["mix", "fader"]: return matrix["fader"]
-                if parts[2:] == ["grp", "dca"]: return matrix["dca_mask"]
-                if parts[2:] == ["grp", "mute"]: return matrix["mute_mask"]
-                if parts[2:] == ["config", "name"]: return matrix["name"]
-            if len(parts) == 5 and parts[0] == "bus" and parts[2] == "mix":
-                return self.buses[int(parts[1])].get("matrix_sends", {}).get(int(parts[3]), {}).get(parts[4])
-            if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
-                key = "main_st" if address.startswith("/main/st/") else "main_mono"
-                return self.outputs[key]["sends"].get(int(parts[3]), {}).get(parts[4])
             if len(parts) == 3 and parts[0] == "dca":
                 dca = self.dcas[int(parts[1])]
                 return dca.get(parts[2])
