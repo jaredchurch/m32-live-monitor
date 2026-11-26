@@ -117,6 +117,7 @@ class HardwareMonitor:
                 for family, count in (("ch", 32), ("auxin", 8), ("fxrtn", 8), ("bus", 16), ("mtx", 6)):
                     for number in range(1, count + 1):
                         addresses.append("/%s/%02d/mix/pan" % (family, number))
+                addresses.extend(("/main/st/mix/pan", "/main/m/mix/pan"))
                 for path in ("chlink", "auxlink", "fxlink", "buslink", "mtxlink"):
                     maximum = 32 if path == "chlink" else 8 if path in ("auxlink", "fxlink") else 16 if path == "buslink" else 6
                     for number in range(1, maximum, 2):
