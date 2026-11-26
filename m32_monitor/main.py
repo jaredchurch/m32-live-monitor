@@ -8,6 +8,7 @@ from m32_monitor.hardware import HardwareMonitor
 from m32_monitor.simulator import Simulator
 from m32_monitor.state import ConsoleState
 from m32_monitor.scenarios import apply_scenario, list_scenarios
+from m32_monitor.osc_catalogue import catalogue_snapshot
 
 settings=get_settings()
 state=ConsoleState()
@@ -92,6 +93,12 @@ def diagnostics():
 def meters():
     """Latest read-only audio meter streams received from the console."""
     return state.meters_snapshot()
+
+
+@app.get("/api/osc-catalogue")
+def osc_catalogue():
+    """Categorized X32/M32 OSC address-family and command catalogue."""
+    return catalogue_snapshot()
 
 
 @app.get("/api/simulator/scenarios")
