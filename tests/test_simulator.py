@@ -725,3 +725,46 @@ def test_xlive_urec_individual_node_values(header, expected):
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
     assert response.params == [expected]
+
+
+@pytest.mark.parametrize("family,pairs", [
+    ("chlink", 16), ("auxlink", 4), ("fxlink", 4),
+    ("buslink", 8), ("mtxlink", 3),
+])
+def test_config_link_node_returns_all_pair_states(family, pairs):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "config/" + family))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    lines = response.params[0].strip().splitlines()
+    assert len(lines) == pairs
+    assert all(line.endswith(" OFF") for line in lines)
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+def test_config_link_parameters_can_be_read_and_set():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/config/chlink/1-2"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/config/chlink/1-2"
+    assert response.params == [0]
+
+    simulator.handle(client, packet("/config/chlink/1-2", 1))
+    assert state.get("/config/chlink/1-2") == 1
+    assert state.update("/config/buslink/1-2", 1)
+    assert state.get("/config/buslink/1-2") == 1
+
+
+def test_config_link_rejects_unknown_pair_and_invalid_value():
+    state = ConsoleState()
+    assert not state.update("/config/chlink/2-3", 1)
+    assert not state.update("/config/chlink/1-2", 2)
