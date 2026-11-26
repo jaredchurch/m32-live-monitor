@@ -89,3 +89,17 @@ def test_main_and_mono_sends_are_separate_destinations():
     cells = next(row for row in state.output_matrix()["channels"] if row["number"] == 1)["cells"]
     assert cells["main_st"]["muted"] is False
     assert "send_off" in cells["main_mono"]["reasons"]
+
+
+def test_hard_mute_setting_controls_channel_mute_on_pre_fader_sends():
+    state = ConsoleState()
+    state.update("/ch/01/mix/01/type", 3)
+    state.update("/ch/01/mix/01/level", 0.6)
+    state.update("/ch/01/mix/01/on", 1)
+    state.update("/ch/01/mix/on", 0)
+
+    assert channel_cell(state)["uncertain"] is True
+    state.update("/-prefs/hardmute", 0)
+    assert channel_cell(state)["muted"] is False
+    state.update("/-prefs/hardmute", 1)
+    assert "channel_muted" in channel_cell(state)["reasons"]
