@@ -137,7 +137,8 @@ function renderMeters(data){
   return '<div class="channel" style="min-width:100%;margin-bottom:10px"><strong>Meter stream '+esc(s.id)+' · '+esc(names[Number(s.id)]||'Additional meter data')+'</strong><div class="muted">'+vals.length+' values · peak '+max.toFixed(3)+'</div><div class="summary">'+bars+'</div></div>';
  }).join('');
 }
-\nfunction renderDiagnostics(data){
+
+function renderDiagnostics(data){
  const summary=document.querySelector('#diagnostic-summary');
  if(!data.available){summary.innerHTML='<span class="pill">'+esc(data.mode||'simulator')+'</span><span class="pill">Hardware diagnostics are enabled in hardware mode</span>';document.querySelector('#diagnostic-coverage').innerHTML='';document.querySelector('#diagnostic-events').innerHTML='';return;}
  const c=data.counters||{};
@@ -180,7 +181,8 @@ document.querySelector('#sim-clear').addEventListener('click',async()=>{
 });
 document.querySelector('#sim-filter').addEventListener('input',renderSimulatorLogs);
 loadSimulatorControls();
-\nfunction renderRouting(data){
+
+function renderRouting(data){
  const itemTable=items=>'<div class="matrix-wrap"><table><thead><tr><th>Assignment</th><th>Console value</th><th>Decoded / status</th></tr></thead><tbody>'+items.map(x=>'<tr><td>'+esc(x.label||x.address)+'</td><td>'+esc(x.known?x.value:'—')+'</td><td class="'+(x.known?'':'unknown-cell')+'">'+esc(x.display|| (x.known?String(x.value):'CHECK · not received'))+'</td></tr>').join('')+'</tbody></table></div>';
  document.querySelector('#routing-summary').innerHTML='<span class="pill">'+data.known+' of '+data.total+' core routing parameters received</span><span class="pill">'+(data.complete?'Core routing snapshot complete':'Snapshot incomplete · CHECK unknowns')+'</span><span class="pill">'+data.special.length+' additional routing parameters</span>';
  document.querySelector('#routing-sections').innerHTML=(data.sections||[]).map(s=>'<h3>'+esc(s.name)+'</h3>'+itemTable(s.items)).join('');
@@ -189,7 +191,8 @@ loadSimulatorControls();
  const special=(data.special||[]).map(x=>({label:x.address,value:x.value,known:true,display:String(x.value)}));
  document.querySelector('#routing-special').innerHTML=special.length?itemTable(special):'<div class="empty">No direct-route, insert, solo or talkback values received yet.</div>';
 }
-\nfunction renderChannels(channels){
+
+function renderChannels(channels){
  const root=document.querySelector('#channels');if(!channels.length){root.innerHTML='<div class="empty">No connected channels with an enabled scribble strip reported.</div>';return;}
  root.innerHTML=channels.map(c=>'<article class="channel" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name">'+esc(c.name)+'</div><div class="number">'+(c.stripType==='fx_return'?'FX return':c.stripType==='aux'?'Aux input':'Channel')+' '+String(c.number).padStart(2,'0')+'</div></div></div><div class="source">'+(c.stripType==='fx_return'?'FX return':c.stripType==='aux'?'Aux input':'Input')+': '+c.sourceLabel+'</div><div class="fader-track"><span style="--level:'+Math.round(c.fader*100)+'%"></span></div><div class="footer"><span>Fader '+Math.round(c.fader*100)+'%</span><strong class="'+(c.muted?'mute':'open')+'">'+(c.muted?'MUTED':'OPEN')+'</strong></div></article>').join('');
 }
