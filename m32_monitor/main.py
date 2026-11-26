@@ -75,6 +75,14 @@ def routing_map():
     return state.routing.snapshot()
 
 
+@app.get("/api/diagnostics")
+def diagnostics():
+    """Structured OSC transport and protocol diagnostics."""
+    if settings.mode != "hardware" or runtime is None:
+        return {"mode": settings.mode, "available": False, "message": "OSC diagnostics are available in hardware mode."}
+    return {"mode": settings.mode, "available": True, **runtime.diagnostics.snapshot(state.online)}
+
+
 @app.get("/api/meters")
 def meters():
     """Latest read-only audio meter streams received from the console."""
