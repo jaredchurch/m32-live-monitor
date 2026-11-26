@@ -52,6 +52,8 @@ OUT_PATCH_CHOICES = {
             "Aux / Control Room","Aux / Talkback","Ultranet 5-8","Ultranet 13-16","Ultranet 21-24","Ultranet 29-32",
             "Ultranet 37-40","Ultranet 45-48","USB 5-8","USB 13-16","USB 21-24","USB 29-32"),
 }
+OUT_PATCH_CHOICES["9-12"] = OUT_PATCH_CHOICES["1-4"]
+OUT_PATCH_CHOICES["13-16"] = OUT_PATCH_CHOICES["5-8"]
 for bank in OUTPUT_BLOCKS:
     ROUTING_PATHS[f"/config/routing/OUT/{bank}"] = ("Output patch " + bank, OUT_PATCH_CHOICES[bank])
 for bank in ("1-8", "9-16", "17-24", "25-32"):
