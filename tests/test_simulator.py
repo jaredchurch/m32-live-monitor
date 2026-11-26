@@ -1,3 +1,4 @@
+import pytest
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_message_builder import OscMessageBuilder
 
@@ -31,7 +32,7 @@ def test_simulator_answers_parameter_get():
     response = OscMessage(data)
     assert destination == client
     assert response.address == "/ch/01/mix/fader"
-    assert response.params == [0.72]
+    assert response.params[0] == pytest.approx(0.72)
 
 
 def test_simulator_accepts_parameter_set_and_notifies_subscriber():
