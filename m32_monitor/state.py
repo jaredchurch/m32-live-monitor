@@ -186,7 +186,7 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if address == "/-prefs/rta/visibility" and isinstance(value, (int, float)) and 0 <= int(value) <= 12:
+            if address == "/-prefs/rta/visibility" and isinstance(value, (int, float)) and float(value) == int(value) and 0 <= int(value) <= 12:
                 self.preferences["rta/visibility"] = int(value)
                 self.received.add(address)
                 return True
