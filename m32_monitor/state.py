@@ -1,6 +1,7 @@
 """Shared console state and effective mute-path calculation."""
 from dataclasses import asdict, dataclass, field
 import time
+from m32_monitor.routing import RoutingState
 
 
 @dataclass
@@ -34,6 +35,7 @@ class ConsoleState:
             for n in range(1, 33)
         }
         self.mode = "simulator"
+        self.routing = RoutingState()
         self.received = set()
         self.last_seen = time.monotonic()
         self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 32 + n, True) for n in range(1, 9)}
@@ -70,6 +72,9 @@ class ConsoleState:
         return bool(int(value))
 
     def update(self, address, value):
+        if self.routing.update(address, value):
+            self.received.add(address)
+            return True
         parts = address.strip("/").split("/")
         try:
             if len(parts) >= 4 and parts[0] in ("ch", "auxin", "fxrtn"):
@@ -224,6 +229,9 @@ class ConsoleState:
         return False
 
     def get(self, address):
+        routed = self.routing.get(address)
+        if routed is not None:
+            return routed
         parts = address.strip("/").split("/")
         try:
             if len(parts) >= 4 and parts[0] in ("ch", "auxin", "fxrtn"):
@@ -479,6 +487,7 @@ class ConsoleState:
         sources += [("/fxrtn/%02d/" % c.number, c) for c in self.fx_returns.values()]
         for prefix, channel in sources:
             if not channel.connected or channel.colour == 0:
+                continue
             cells = {}
             for destination in destinations:
                 ident = destination["id"]
