@@ -18,7 +18,10 @@ async def lifespan(_app):
     global runtime
     if settings.mode=="simulator":
         state.mode="simulator"
-        runtime=Simulator(state,settings.simulator_host,settings.simulator_port)
+        runtime=Simulator(state, settings.simulator_host, settings.simulator_port,
+                          name=settings.simulator_name, model=settings.simulator_model,
+                          firmware=settings.simulator_firmware,
+                          server_version=settings.simulator_server_version)
         apply_scenario(state, "service")
     else:
         runtime=HardwareMonitor(state,settings.m32_host,settings.m32_port,
