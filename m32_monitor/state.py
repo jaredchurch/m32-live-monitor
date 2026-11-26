@@ -40,6 +40,8 @@ class ConsoleState:
         self.meters = {}
         self.preferences = {"rta/visibility": 0, "rta/gain": 0.0, "rta/autogain": 0, "rta/source": 0}
         self.key_solo = 0
+        self.solo_switches = {number: 0 for number in range(1, 81)}
+        self.card_preferences = {name: 0 for name in ("UFifc", "UFmode", "USBmode", "ADATwc", "ADATsync", "MADImode", "MADIin", "MADIout", "MADIsrc", "URECtracks", "URECplayb", "URECrout", "URECsdsel")}
         self.received = set()
         self.last_seen = time.monotonic()
         self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 32 + n, False) for n in range(1, 9)}
@@ -188,6 +190,19 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if len(parts) == 3 and parts[:2] == ["-stat", "solosw"] and parts[2].isdigit():
+                number = int(parts[2])
+                if number not in self.solo_switches or not isinstance(value, (int, float)) or int(value) not in (0, 1) or float(value) != int(value):
+                    return False
+                self.solo_switches[number] = int(value)
+                self.received.add(address)
+                return True
+
+            if len(parts) == 3 and parts[:2] == ["-prefs", "card"] and parts[2] in self.card_preferences and isinstance(value, (int, float)) and float(value) == int(value):
+                self.card_preferences[parts[2]] = int(value)
+                self.received.add(address)
+                return True
+
             if address == "/-stat/keysolo" and isinstance(value, (int, float)) and int(value) in (0, 1) and float(value) == int(value):
                 self.key_solo = int(value)
                 self.received.add(address)
@@ -317,6 +332,10 @@ class ConsoleState:
                 return self.preferences["rta/source"]
             if address == "/-stat/keysolo":
                 return self.key_solo
+            if len(parts) == 3 and parts[:2] == ["-stat", "solosw"] and parts[2].isdigit():
+                return self.solo_switches.get(int(parts[2]))
+            if len(parts) == 3 and parts[:2] == ["-prefs", "card"]:
+                return self.card_preferences.get(parts[2])
             if address == "/-prefs/dcamute":
                 return int(self.dca_mutes_enabled) if self.dca_mutes_enabled is not None else None
             if address == "/-prefs/hardmute":
