@@ -320,3 +320,44 @@ def test_rta_autogain_preference_can_be_read_and_updated():
     assert state.get("/-prefs/rta/autogain") == 1
     assert state.update("/-prefs/rta/autogain", 0)
     assert not state.update("/-prefs/rta/autogain", 2)
+
+
+def test_node_get_returns_rta_source_and_keysolo():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "-prefs/rta/source"))
+    source = OscMessage(simulator.transport.sent[-1][0])
+    assert source.address == "/node"
+    assert source.params == ["/-prefs/rta/source 0\\n"]
+
+    simulator.handle(client, packet("/node", "-stat/keysolo"))
+    keysolo = OscMessage(simulator.transport.sent[-1][0])
+    assert keysolo.address == "/node"
+    assert keysolo.params == ["/-stat/keysolo 0\\n"]
+
+
+def test_rta_source_and_keysolo_state_are_readable_and_validated():
+    state = ConsoleState()
+    assert state.get("/-prefs/rta/source") == 0
+    assert state.update("/-prefs/rta/source", 73)
+    assert state.get("/-prefs/rta/source") == 73
+    assert not state.update("/-prefs/rta/source", 74)
+    assert state.get("/-stat/keysolo") == 0
+    assert state.update("/-stat/keysolo", 1)
+    assert state.get("/-stat/keysolo") == 1
+    assert not state.update("/-stat/keysolo", 2)
+
+
+def test_showdump_returns_documented_empty_show_node():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/showdump"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ['/-show/showfile/show "" 0 0 0 0 0 0 0 0 0 0 "4.06"']
+    assert simulator.snapshot(outcome="handled_showdump")["events"]
