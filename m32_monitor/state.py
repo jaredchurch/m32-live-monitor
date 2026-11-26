@@ -1,5 +1,6 @@
 """Shared console state and effective mute-path calculation."""
 from dataclasses import asdict, dataclass, field
+import struct
 import time
 from m32_monitor.routing import RoutingState
 
@@ -36,6 +37,7 @@ class ConsoleState:
         }
         self.mode = "simulator"
         self.routing = RoutingState()
+        self.meters = {}
         self.received = set()
         self.last_seen = time.monotonic()
         self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 32 + n, True) for n in range(1, 9)}
@@ -70,6 +72,29 @@ class ConsoleState:
     @staticmethod
     def _bool(value):
         return bool(int(value))
+
+    def update_meter(self, address, blob):
+        """Decode the documented M32 meter blob format without guessing malformed packets."""
+        if not address.startswith("/meters/") or not isinstance(blob, (bytes, bytearray)):
+            return False
+        payload = bytes(blob)
+        if len(payload) < 8:
+            return False
+        byte_length = struct.unpack(">I", payload[:4])[0]
+        count = struct.unpack("<I", payload[4:8])[0]
+        if count > 512 or byte_length > len(payload) - 4 or 8 + count * 4 > len(payload):
+            return False
+        values = struct.unpack("<%df" % count, payload[8:8 + count * 4]) if count else ()
+        self.meters[address.rsplit("/", 1)[-1]] = {
+            "values": [max(0.0, float(value)) for value in values],
+            "received_at": time.time(),
+        }
+        return True
+
+    def meters_snapshot(self):
+        return {"streams": [{"id": key, "count": len(item["values"]),
+                             "values": item["values"], "received_at": item["received_at"]}
+                            for key, item in sorted(self.meters.items())]}
 
     def update(self, address, value):
         if self.routing.update(address, value):
