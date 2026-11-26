@@ -276,4 +276,5 @@ class ConsoleState:
         return {"destinations": destinations, "channels": rows,
                 "dcas": list(self.dcas.values()),
                 "mute_groups": [{"number": n, "muted": active} for n, active in self.mute_groups.items()],
-                "dca_mutes_enabled": self.dca_mutes_enabled,\n                "hard_mutes_enabled": self.hard_mutes_enabled}
+                "dca_mutes_enabled": self.dca_mutes_enabled,
+                "hard_mutes_enabled": self.hard_mutes_enabled}
