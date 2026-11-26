@@ -33,6 +33,7 @@ class ConsoleState:
             for n in range(1, 33)
         }
         self.mode = "simulator"
+        self.received = set()
         self.last_seen = time.monotonic()
         self.dcas = {
             n: {"number": n, "name": "DCA %d" % n, "on": True, "fader": 0.75}
@@ -103,6 +104,7 @@ class ConsoleState:
                         return False
                 else:
                     return False
+                self.received.add(address)
                 return True
 
             if len(parts) == 3 and parts[0] == "dca":
@@ -117,6 +119,7 @@ class ConsoleState:
                     self.dcas[number]["name"] = value
                 else:
                     return False
+                self.received.add(address)
                 return True
 
             if address in ("/-prefs/dcamute", "/-prefs/hardmute") and isinstance(value, (int, float)):
@@ -124,6 +127,7 @@ class ConsoleState:
                     self.dca_mutes_enabled = self._bool(value)
                 else:
                     self.hard_mutes_enabled = self._bool(value)
+                self.received.add(address)
                 return True
 
             if len(parts) == 3 and parts[0] == "config" and parts[1] == "mute":
@@ -131,6 +135,7 @@ class ConsoleState:
                 if number not in self.mute_groups:
                     return False
                 self.mute_groups[number] = self._bool(value)
+                self.received.add(address)
                 return True
 
             if len(parts) == 4 and parts[0] == "bus" and parts[2:] in (["mix", "on"], ["mix", "fader"]):
@@ -139,6 +144,7 @@ class ConsoleState:
                     return False
                 key = "on" if parts[3] == "on" else "fader"
                 self.buses[number][key] = self._bool(value) if key == "on" else max(0.0, min(1.0, float(value)))
+                self.received.add(address)
                 return True
 
             if address == "/-prefs/dcamute":
@@ -150,6 +156,7 @@ class ConsoleState:
                 key = "main_st" if "/st/" in address else "main_mono"
                 field_name = "on" if address.endswith("/on") else "fader"
                 self.outputs[key][field_name] = self._bool(value) if field_name == "on" else max(0.0, min(1.0, float(value)))
+                self.received.add(address)
                 return True
         except (ValueError, KeyError, TypeError):
             return False
@@ -208,28 +215,52 @@ class ConsoleState:
     def visible_channels(self):
         return [c.as_dict() for c in self.channels.values() if c.connected and c.colour != 0]
 
+    def _known(self, address):
+        return self.mode == "simulator" or address in self.received
+
     def _upstream_mutes(self, channel, include_channel_fader=True, include_dca_fader=True, include_channel_mute=True):
         reasons = []
         uncertain = []
-        if channel.muted:
+        prefix = "/ch/%02d/" % channel.number
+        if not self._known(prefix + "mix/on"):
+            uncertain.append("channel_mute_unknown")
+        elif channel.muted:
             if include_channel_mute or self.hard_mutes_enabled is True:
                 reasons.append("channel_muted")
             elif self.hard_mutes_enabled is None:
                 uncertain.append("hard_mute_setting_unknown")
-        if include_channel_fader and channel.fader <= 0.000001:
-            reasons.append("channel_fader_zero")
-        for group in range(1, 7):
-            if channel.mute_mask & (1 << (group - 1)) and self.mute_groups[group]:
-                reasons.append("mute_group_%d" % group)
-        for dca in range(1, 9):
-            if channel.dca_mask & (1 << (dca - 1)):
-                if not self.dcas[dca]["on"]:
-                    if self.dca_mutes_enabled is True:
-                        reasons.append("dca_%d_muted" % dca)
-                    elif self.dca_mutes_enabled is None:
-                        uncertain.append("dca_mute_setting_unknown")
-                if include_dca_fader and self.dcas[dca]["fader"] <= 0.000001:
-                    reasons.append("dca_%d_fader_zero" % dca)
+        if include_channel_fader:
+            if not self._known(prefix + "mix/fader"):
+                uncertain.append("channel_fader_unknown")
+            elif channel.fader <= 0.000001:
+                reasons.append("channel_fader_zero")
+        if not self._known(prefix + "grp/mute"):
+            uncertain.append("mute_group_assignments_unknown")
+        else:
+            for group in range(1, 7):
+                if channel.mute_mask & (1 << (group - 1)):
+                    address = "/config/mute/%d" % group
+                    if not self._known(address):
+                        uncertain.append("mute_group_%d_state_unknown" % group)
+                    elif self.mute_groups[group]:
+                        reasons.append("mute_group_%d" % group)
+        if not self._known(prefix + "grp/dca"):
+            uncertain.append("dca_assignments_unknown")
+        else:
+            for dca in range(1, 9):
+                if channel.dca_mask & (1 << (dca - 1)):
+                    if not self._known("/dca/%d/on" % dca):
+                        uncertain.append("dca_%d_state_unknown" % dca)
+                    elif not self.dcas[dca]["on"]:
+                        if self.dca_mutes_enabled is True:
+                            reasons.append("dca_%d_muted" % dca)
+                        elif self.dca_mutes_enabled is None:
+                            uncertain.append("dca_mute_setting_unknown")
+                    if include_dca_fader:
+                        if not self._known("/dca/%d/fader" % dca):
+                            uncertain.append("dca_%d_fader_unknown" % dca)
+                        elif self.dcas[dca]["fader"] <= 0.000001:
+                            reasons.append("dca_%d_fader_zero" % dca)
         return reasons, uncertain
 
     @staticmethod
