@@ -38,7 +38,7 @@ class ConsoleState:
         self.mode = "simulator"
         self.routing = RoutingState()
         self.meters = {}
-        self.preferences = {"rta/visibility": 0, "rta/gain": 0.0, "rta/autogain": 0, "rta/source": 0}
+        self.preferences = {"rta/visibility": 0, "rta/gain": 0.0, "rta/autogain": 0, "rta/source": 0, "rta/pos": 0}
         self.key_solo = 0
         self.solo_switches = {number: 0 for number in range(1, 81)}
         self.card_preferences = {name: 0 for name in ("UFifc", "UFmode", "USBmode", "ADATwc", "ADATsync", "MADImode", "MADIin", "MADIout", "MADIsrc", "URECtracks", "URECplayb", "URECrout", "URECsdsel")}
@@ -213,6 +213,11 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if address == "/-prefs/rta/pos" and isinstance(value, (int, float)) and float(value) == int(value) and int(value) in (0, 1):
+                self.preferences["rta/pos"] = int(value)
+                self.received.add(address)
+                return True
+
             if address == "/-prefs/rta/autogain" and isinstance(value, (int, float)) and int(value) in (0, 1) and float(value) == int(value):
                 self.preferences["rta/autogain"] = int(value)
                 self.received.add(address)
@@ -330,6 +335,8 @@ class ConsoleState:
                 return self.preferences["rta/autogain"]
             if address == "/-prefs/rta/source":
                 return self.preferences["rta/source"]
+            if address == "/-prefs/rta/pos":
+                return self.preferences["rta/pos"]
             if address == "/-stat/keysolo":
                 return self.key_solo
             if len(parts) == 3 and parts[:2] == ["-stat", "solosw"] and parts[2].isdigit():
