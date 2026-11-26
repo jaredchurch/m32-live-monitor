@@ -233,7 +233,7 @@ class Simulator:
                         "Expected exactly one X32node header string")
             return
         header = args[0].lstrip("/")
-        if header in ("-prefs/rta/visibility", "-prefs/rta/gain"):
+        if header in ("-prefs/rta/visibility", "-prefs/rta/gain", "-prefs/rta/autogain"):
             address = "/" + header
             value = self.state.get(address)
             if value is None:
