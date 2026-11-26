@@ -441,7 +441,7 @@ class Simulator:
             self._handle_node(client, args)
             return
         if address == "/showdump":
-            show_response = '/-show/showfile/show "" 0 0 0 0 0 0 0 0 0 0 "4.06"'
+            show_response = '/-showfile/show "" 0 0 0 0 0 0 0 0 0 "4.06"'
             self.send(client, "/node", show_response, outcome="showdump_response")
             self.record("in", "handled_showdump", address, args, client,
                         "Returned empty show metadata (no stored show data is modelled)")
