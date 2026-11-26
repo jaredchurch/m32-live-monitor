@@ -265,7 +265,7 @@ class Simulator:
                 value = self.state.get(address)
                 if address in string_paths:
                     encoded = str(value or "").encode("utf-8")[:32]
-                    body.extend(encoded.ljust(32, b"\\x00"))
+                    body.extend(encoded.ljust(32, b"\x00"))
                 else:
                     body.extend(struct.pack("<i", int(value or 0)))
         return struct.pack("<I", len(body)) + bytes(body)
@@ -345,7 +345,7 @@ class Simulator:
         if header == "-prefs/card":
             names = tuple(self.state.card_preferences)
             values = " ".join(str(self.state.card_preferences[name]) for name in names)
-            self.send(client, "/node", "/-prefs/card " + values + "\\n", outcome="node_response")
+            self.send(client, "/node", "/-prefs/card " + values + "\n", outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned card preference node (%d values)" % len(names))
             return
