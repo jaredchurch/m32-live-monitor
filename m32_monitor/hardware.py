@@ -66,7 +66,7 @@ class HardwareMonitor:
                     for number in range(1, count + 1):
                         prefix = "/%s/%02d" % (family, number)
                         suffixes = ["config/name", "config/color", "mix/fader", "mix/on",
-                                    "mix/st", "mix/mono", "grp/dca", "grp/mute"]
+                                    "mix/st", "mix/mono", "mix/mlevel", "grp/dca", "grp/mute"]
                         if family != "fxrtn":
                             suffixes.append("config/source")
                         addresses.extend(prefix + "/" + suffix for suffix in suffixes)
