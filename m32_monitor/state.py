@@ -46,7 +46,7 @@ class ConsoleState:
         self.dca_mutes_enabled = None
         self.hard_mutes_enabled = None
         self.buses = {
-            n: {"number": n, "on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0}
+            n: {"number": n, "name": "Bus %02d" % n, "on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0}
             for n in range(1, 17)
         }
         self.outputs = {
@@ -180,7 +180,9 @@ class ConsoleState:
                 number = int(parts[1])
                 if number not in self.buses:
                     return False
-                if parts[2:] == ["mix", "on"]:
+                if parts[2:] == ["config", "name"] and isinstance(value, str):
+                    self.buses[number]["name"] = value
+                elif parts[2:] == ["mix", "on"]:
                     self.buses[number]["on"] = self._bool(value)
                 elif parts[2:] == ["mix", "fader"]:
                     self.buses[number]["fader"] = max(0.0, min(1.0, float(value)))
@@ -265,6 +267,7 @@ class ConsoleState:
             if len(parts) == 3 and parts[:2] == ["config", "mute"]:
                 return int(self.mute_groups[int(parts[2])])
             if len(parts) == 4 and parts[0] == "bus":
+                if parts[2:] == ["config", "name"]: return self.buses[int(parts[1])]["name"]
                 if parts[2:] == ["grp", "dca"]: return self.buses[int(parts[1])]["dca_mask"]
                 if parts[2:] == ["grp", "mute"]: return self.buses[int(parts[1])]["mute_mask"]
                 return self.buses[int(parts[1])].get(parts[3]) if parts[2] == "mix" else None
