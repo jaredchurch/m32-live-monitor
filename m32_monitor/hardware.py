@@ -5,6 +5,7 @@ import socket
 
 from pythonosc.osc_packet import OscPacket, ParseError
 from pythonosc.osc_message_builder import OscMessageBuilder
+from m32_monitor.diagnostics import OscDiagnostics
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ class HardwareMonitor:
         self.state, self.host, self.port = state, host, port
         self.listen_host, self.listen_port = listen_host, listen_port
         self.sock = None
+        self.diagnostics = OscDiagnostics(host)
         self.receiver = self.keepalive = self.query_task = None
 
     async def start(self):
@@ -64,7 +66,8 @@ class HardwareMonitor:
                 self._send("/xremote")
                 for meter_id in (0, 2, 4, 9, 11):
                     self._send_meter_subscription(meter_id)
-            except OSError:
+            except OSError as exc:
+                self.diagnostics.event("send_errors", exc, detail="keepalive / meter subscription")
                 logger.exception("M32 OSC keepalive failed")
             await asyncio.sleep(5)
 
@@ -162,34 +165,59 @@ class HardwareMonitor:
                     addresses.extend((prefix + "/config/name", prefix + "/mix/on",
                                       prefix + "/mix/fader", prefix + "/grp/dca",
                                       prefix + "/grp/mute"))
+                self.diagnostics.begin_cycle(addresses)
                 for address in addresses:
                     self._send(address)
                     await asyncio.sleep(0.01)
-            except OSError:
+            except OSError as exc:
+                self.diagnostics.event("send_errors", exc, detail="parameter enquiry cycle")
                 logger.exception("M32 OSC enquiry failed")
+            self.diagnostics.last_cycle_at = time.time()
             await asyncio.sleep(30)
 
-    def _process_datagram(self, data):
-        """Apply OSC messages from either a single message or an OSC bundle."""
+    def _process_datagram(self, data, peer=None):
+        """Apply OSC messages and retain actionable protocol diagnostics."""
+        if peer:
+            try:
+                expected_ip = socket.gethostbyname(self.host)
+                if peer[0] != expected_ip:
+                    self.diagnostics.event("unexpected_peers", "OSC packet received from unexpected host", detail={"peer": peer[0], "expected": expected_ip})
+                    return
+            except OSError as exc:
+                self.diagnostics.event("dns_errors", exc, detail=self.host)
         try:
             packet = OscPacket(data)
             for timed_message in packet.messages:
                 message = timed_message.message
                 if message.address == "/info":
+                    self.diagnostics.received(message.address)
                     self.state.mark_seen()
-                elif message.address.startswith("/meters/") and message.params and self.state.update_meter(
-                    message.address, message.params[0]
-                ):
-                    self.state.mark_seen()
+                elif message.address.startswith("/meters/"):
+                    if len(message.params) == 1 and self.state.update_meter(message.address, message.params[0]):
+                        self.diagnostics.received(message.address)
+                        self.state.mark_seen()
+                    else:
+                        self.diagnostics.event("invalid_responses", "Malformed or unsupported meter response", message.address,
+                                               {"argument_count": len(message.params), "argument_types": [type(x).__name__ for x in message.params]})
                 elif message.params:
                     value = message.params if message.address.startswith("/fx/") or "/insert" in message.address else message.params[0]
                     if self.state.update(message.address, value):
+                        self.diagnostics.received(message.address)
                         self.state.mark_seen()
-        except (ValueError, IndexError, ParseError):
-            logger.debug("Ignoring unrecognised OSC datagram", exc_info=True)
+                    elif message.address in self.diagnostics.expected:
+                        self.diagnostics.event("invalid_responses", "Expected OSC address returned an unsupported value or format",
+                                               message.address, {"values": repr(message.params), "types": [type(x).__name__ for x in message.params]})
+                    else:
+                        self.diagnostics.event("unexpected_addresses", "Unrecognised OSC address", message.address,
+                                               {"values": repr(message.params), "types": [type(x).__name__ for x in message.params]})
+                else:
+                    self.diagnostics.event("invalid_responses", "OSC response contained no arguments", message.address)
+        except (ValueError, IndexError, ParseError) as exc:
+            self.diagnostics.event("malformed_packets", exc, detail="OSC packet parse failed")
+            logger.debug("Ignoring malformed OSC datagram", exc_info=True)
 
     async def _receive(self):
         loop = asyncio.get_running_loop()
         while True:
-            data, _peer = await loop.sock_recvfrom(self.sock, 65535)
-            self._process_datagram(data)
+            data, peer = await loop.sock_recvfrom(self.sock, 65535)
+            self._process_datagram(data, peer)
