@@ -422,3 +422,32 @@ def test_node_get_returns_card_preferences():
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
     assert response.params == ["/-prefs/card " + " ".join(["0"] * 13) + "\\n"]
+
+
+def test_snapshot_can_filter_only_protocol_exceptions():
+    simulator = Simulator(ConsoleState())
+    simulator.record("in", "handled_get", "/ch/01/mix/fader")
+    simulator.record("in", "unhandled_get", "/mystery/path", detail="Unknown address")
+    simulator.record("in", "unhandled_set", "/formatsubscribe", detail="Bad format")
+    simulator.record("in", "malformed", detail="Invalid OSC packet")
+    simulator.record("out", "send_error", "/ch/01/mix/fader", detail="UDP send failed")
+    simulator.record("system", "scenario_loaded", detail="basic")
+
+    result = simulator.snapshot(limit=2000, exceptions_only=True)
+
+    assert [event["outcome"] for event in result["events"]] == [
+        "unhandled_get", "unhandled_set", "malformed", "send_error"
+    ]
+    assert result["event_count"] == 6
+    assert result["retained_events"] == 6
+
+
+def test_exception_filter_can_be_combined_with_search():
+    simulator = Simulator(ConsoleState())
+    simulator.record("in", "unhandled_get", "/mystery/path", detail="Unknown address")
+    simulator.record("in", "unhandled_set", "/formatsubscribe", detail="Bad format")
+
+    result = simulator.snapshot(exceptions_only=True, search="format")
+
+    assert len(result["events"]) == 1
+    assert result["events"][0]["outcome"] == "unhandled_set"
