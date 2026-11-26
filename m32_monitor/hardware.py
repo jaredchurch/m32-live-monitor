@@ -61,33 +61,41 @@ class HardwareMonitor:
         while True:
             try:
                 addresses = ["/info"]
-                for number in range(1, 33):
-                    prefix = "/ch/%02d" % number
-                    addresses.extend(prefix + "/" + suffix for suffix in (
-                        "config/name", "config/color", "config/source",
-                        "mix/fader", "mix/on", "mix/st", "mix/mono",
-                        "grp/dca", "grp/mute",
-                    ))
-                    for bus in range(1, 17):
-                        if bus % 2:
-                            addresses.append(prefix + "/mix/%02d/type" % bus)
-                        addresses.extend((
-                            prefix + "/mix/%02d/on" % bus,
-                            prefix + "/mix/%02d/level" % bus,
-                        ))
+                for family, count in (("ch", 32), ("auxin", 8), ("fxrtn", 8)):
+                    for number in range(1, count + 1):
+                        prefix = "/%s/%02d" % (family, number)
+                        suffixes = ["config/name", "config/color", "mix/fader", "mix/on",
+                                    "mix/st", "mix/mono", "grp/dca", "grp/mute"]
+                        if family != "fxrtn":
+                            suffixes.append("config/source")
+                        addresses.extend(prefix + "/" + suffix for suffix in suffixes)
+                        for bus in range(1, 17):
+                            if bus % 2:
+                                addresses.append(prefix + "/mix/%02d/type" % bus)
+                            addresses.extend((prefix + "/mix/%02d/on" % bus,
+                                              prefix + "/mix/%02d/level" % bus))
                 for number in range(1, 9):
                     addresses.extend(("/dca/%d/on" % number, "/dca/%d/fader" % number))
                 addresses.extend("/config/mute/%d" % number for number in range(1, 7))
                 addresses.extend(("/-prefs/dcamute", "/-prefs/hardmute"))
                 for number in range(1, 17):
-                    addresses.extend(("/bus/%02d/mix/on" % number, "/bus/%02d/mix/fader" % number,
-                                      "/bus/%02d/grp/dca" % number, "/bus/%02d/grp/mute" % number))
-                addresses.extend((
-                    "/main/st/mix/on", "/main/st/mix/fader",
-                    "/main/m/mix/on", "/main/m/mix/fader",
-                    "/main/st/grp/dca", "/main/st/grp/mute",
-                    "/main/m/grp/dca", "/main/m/grp/mute",
-                ))
+                    prefix = "/bus/%02d" % number
+                    addresses.extend((prefix + "/mix/on", prefix + "/mix/fader",
+                                      prefix + "/grp/dca", prefix + "/grp/mute"))
+                    for matrix in range(1, 7):
+                        addresses.extend((prefix + "/mix/%02d/on" % matrix,
+                                          prefix + "/mix/%02d/level" % matrix))
+                for prefix in ("/main/st", "/main/m"):
+                    addresses.extend((prefix + "/mix/on", prefix + "/mix/fader",
+                                      prefix + "/grp/dca", prefix + "/grp/mute"))
+                    for matrix in range(1, 7):
+                        addresses.extend((prefix + "/mix/%02d/on" % matrix,
+                                          prefix + "/mix/%02d/level" % matrix))
+                for number in range(1, 7):
+                    prefix = "/mtx/%02d" % number
+                    addresses.extend((prefix + "/config/name", prefix + "/mix/on",
+                                      prefix + "/mix/fader", prefix + "/grp/dca",
+                                      prefix + "/grp/mute"))
                 for address in addresses:
                     self._send(address)
                     await asyncio.sleep(0.01)
