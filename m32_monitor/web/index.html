@@ -1,27 +1,81 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>M32 Live Monitor</title><style>
-:root{font-family:system-ui,sans-serif;color:#e9edf2;background:#11151b}body{margin:0;padding:28px;max-width:1400px;margin-inline:auto}
-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}h1{font-size:24px;margin:0}
-.muted{color:#9ca8b6;font-size:13px}#connection{padding:7px 11px;border:1px solid #46515e;border-radius:99px;font-size:12px}
+:root{font-family:system-ui,sans-serif;color:#e9edf2;background:#11151b;color-scheme:dark}*{box-sizing:border-box}
+body{margin:0;padding:24px;max-width:1800px;margin-inline:auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:24px;margin:0}h2{font-size:17px;margin:0 0 12px}.muted{color:#9ca8b6;font-size:13px}
+#connection{padding:7px 11px;border:1px solid #46515e;border-radius:99px;font-size:12px}
+.tabs{display:flex;gap:8px;margin:18px 0}.tab{border:1px solid #46515e;border-radius:8px;background:#1b222b;color:#cbd5df;padding:9px 14px;cursor:pointer}.tab.active{background:#30465a;border-color:#6b91b2;color:white}
+.panel{display:none}.panel.active{display:block}
 #channels{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
 .channel{background:#1b222b;border:1px solid #303b48;border-radius:12px;padding:14px;min-height:150px}
 .channel-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}.swatch{width:10px;height:30px;border-radius:4px;background:var(--strip)}
 .name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.number{font-size:11px;color:#9ca8b6;margin-top:3px}
 .source{font-size:12px;color:#9ca8b6;margin-bottom:12px}.fader-track{height:7px;background:#303b48;border-radius:99px;overflow:hidden}
 .fader-track span{display:block;height:100%;width:var(--level);background:#6ac18a}.footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px}
-.mute{color:#e8a0a0}.open{color:#8bd5a5}.empty{padding:28px;border:1px dashed #46515e;border-radius:12px;color:#9ca8b6}
-</style></head><body><header><div><h1>M32 Live Monitor</h1><div class="muted">Read-only channel overview</div></div><div id="connection">Connecting…</div></header>
-<main id="channels"><div class="empty">Waiting for console data…</div></main>
+.mute{color:#f18d8d}.open{color:#8bd5a5}.empty{padding:28px;border:1px dashed #46515e;border-radius:12px;color:#9ca8b6}
+.matrix-wrap{overflow:auto;border:1px solid #303b48;border-radius:10px;background:#171d25;max-height:75vh}
+table{border-collapse:separate;border-spacing:0;min-width:100%;font-size:12px}
+th,td{padding:7px 6px;border-right:1px solid #303b48;border-bottom:1px solid #303b48;text-align:center;white-space:nowrap}
+thead th{position:sticky;top:0;background:#242e39;z-index:2;font-weight:650}
+th:first-child,td:first-child{position:sticky;left:0;text-align:left;background:#202832;z-index:1;min-width:175px}
+thead th:first-child{z-index:3;background:#2b3744}
+td.signal{min-width:78px;font-weight:700;cursor:help}
+td.live{background:#173b2a;color:#9ce0b4}td.muted-cell{background:#48282c;color:#ffb2b2}
+td.zero-cell{background:#493b20;color:#f4d28b}td.unknown-cell{background:#333b45;color:#c4ccd5}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 14px;font-size:12px;color:#b6c0cb}
+.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
+.summary{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+.pill{border:1px solid #3c4856;border-radius:20px;padding:5px 9px;color:#c6d0da;font-size:12px}
+.group-state{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px}
+.group-state span{font-size:11px;border-radius:5px;padding:4px 7px;background:#27313c;color:#c7d1db}
+.group-state .active{background:#48282c;color:#ffb2b2}
+@media(max-width:700px){body{padding:14px}th,td{padding:6px 5px}.matrix-wrap{max-height:68vh}}
+</style></head><body>
+<header><div><h1>M32 Live Monitor</h1><div class="muted">Read-only console overview and signal-path mute analysis</div></div><div id="connection">Connecting…</div></header>
+<nav class="tabs"><button class="tab active" data-panel="matrix">Output mute matrix</button><button class="tab" data-panel="channels-panel">Channel strips</button></nav>
+<section id="matrix" class="panel active">
+<h2>Channel → output signal paths</h2>
+<div class="muted">A cell is green only when the channel has an enabled, non-zero path to that destination and no upstream mute is active. Hover a cell for every detected reason.</div>
+<div id="matrix-summary" class="summary"></div><div id="group-state" class="group-state"></div>
+<div class="legend"><span><i class="dot" style="background:#286543"></i>Signal path available</span><span><i class="dot" style="background:#87434a"></i>Muted / switched off</span><span><i class="dot" style="background:#8a6b2d"></i>Fader at zero</span><span><i class="dot" style="background:#59636e"></i>No send / not available</span></div>
+<div id="matrix-table" class="matrix-wrap"><div class="empty">Waiting for console routing data…</div></div>
+</section>
+<section id="channels-panel" class="panel"><div id="channels"><div class="empty">Waiting for console data…</div></div></section>
 <script>
 const colours=['#59616b','#d66b6b','#64b77b','#d9bd5a','#5b9fd0','#bb78b5','#55b9b0','#e2e8f0','#7d4141','#36784b','#918132','#315e8c','#754d80','#327d79','#9aa4b0','#f4f6f8'];
-function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-async function refresh(){try{
- const pair=await Promise.all([fetch('/api/status').then(r=>r.json()),fetch('/api/channels').then(r=>r.json())]);
- const status=pair[0],channels=pair[1],badge=document.querySelector('#connection');
- badge.textContent=status.mode.toUpperCase()+' · '+status.connection;badge.style.borderColor=status.online?'#4b9b70':'#a66b55';
+const reasonNames={channel_muted:'Channel mute',channel_fader_zero:'Channel fader at zero',send_off:'Send switched off',send_level_zero:'Send fader at zero',output_muted:'Destination muted',output_fader_zero:'Destination fader at zero'};
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function describeReason(reason){if(reasonNames[reason])return reasonNames[reason];let m=reason.match(/^dca_(\d+)_(muted|fader_zero)$/);if(m)return 'DCA '+m[1]+(m[2]==='muted'?' muted':' fader at zero');m=reason.match(/^mute_group_(\d+)$/);if(m)return 'Mute group '+m[1]+' active';return reason;}
+function renderMatrix(data){
+ const rows=data.channels||[],dest=data.destinations||[];
+ let total=rows.length*dest.length,live=0,blocked=0,zero=0;
+ const head='<thead><tr><th>Input channel</th>'+dest.map(d=>'<th>'+esc(d.label)+'</th>').join('')+'</tr></thead>';
+ const body=rows.map(row=>'<tr><td><strong>'+String(row.number).padStart(2,'0')+' · '+esc(row.name)+'</strong><div class="muted">'+esc(row.source)+'</div></td>'+dest.map(d=>{
+  const c=row.cells[d.id];if(!c)return '<td class="signal unknown-cell" title="No state received">?</td>';
+  if(!c.muted){live++;return '<td class="signal live" title="Signal path available">LIVE</td>';}
+  const reasons=c.reasons||[],isZero=reasons.some(x=>x.endsWith('zero'));if(isZero)zero++;else blocked++;
+  const labels=reasons.map(describeReason),primary=labels[0]||'Muted';
+  let short=primary.replace('Channel ','').replace('Destination ','').replace(' switched off',' OFF').replace(' at zero',' ZERO').replace(' active',' ACTIVE');
+  if(labels.length>1)short+=' +'+(labels.length-1);
+  return '<td class="signal '+(isZero?'zero-cell':'muted-cell')+'" title="'+esc(labels.join('\n'))+'">'+esc(short)+'</td>';
+ }).join('')+'</tr>').join('');
+ document.querySelector('#matrix-table').innerHTML='<table>'+head+'<tbody>'+body+'</tbody></table>';
+ document.querySelector('#matrix-summary').innerHTML='<span class="pill">'+rows.length+' visible channels</span><span class="pill">'+dest.length+' destinations</span><span class="pill">'+live+' available paths</span><span class="pill">'+blocked+' switched/muted paths</span><span class="pill">'+zero+' zero-fader paths</span>';
+ const dcas=(data.dcas||[]).map(d=>'<span class="'+(!d.on?'active':'')+'">'+esc(d.name)+': '+(d.on?'ON':'MUTED')+' · '+Math.round(d.fader*100)+'%</span>');
+ const groups=(data.mute_groups||[]).map(g=>'<span class="'+(g.muted?'active':'')+'">Mute group '+g.number+': '+(g.muted?'ACTIVE':'off')+'</span>');
+ document.querySelector('#group-state').innerHTML=dcas.concat(groups).join('');
+}
+function renderChannels(channels){
  const root=document.querySelector('#channels');if(!channels.length){root.innerHTML='<div class="empty">No connected channels with an enabled scribble strip reported.</div>';return;}
  root.innerHTML=channels.map(c=>'<article class="channel" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name">'+esc(c.name)+'</div><div class="number">Channel '+String(c.number).padStart(2,'0')+'</div></div></div><div class="source">Input: '+c.sourceLabel+'</div><div class="fader-track"><span style="--level:'+Math.round(c.fader*100)+'%"></span></div><div class="footer"><span>Fader '+Math.round(c.fader*100)+'%</span><strong class="'+(c.muted?'mute':'open')+'">'+(c.muted?'MUTED':'OPEN')+'</strong></div></article>').join('');
+}
+document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
+async function refresh(){try{
+ const pair=await Promise.all([fetch('/api/status').then(r=>r.json()),fetch('/api/channels').then(r=>r.json()),fetch('/api/output-matrix').then(r=>r.json())]);
+ const status=pair[0],badge=document.querySelector('#connection');badge.textContent=status.mode.toUpperCase()+' · '+status.connection;badge.style.borderColor=status.online?'#4b9b70':'#a66b55';
+ renderChannels(pair[1]);renderMatrix(pair[2]);
  }catch(e){document.querySelector('#connection').textContent='API unavailable';}}
-refresh();setInterval(refresh,1000);
+refresh();setInterval(refresh,1500);
 </script></body></html>
