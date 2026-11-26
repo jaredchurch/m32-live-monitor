@@ -176,6 +176,22 @@ class HardwareMonitor:
             self.diagnostics.last_cycle_at = time.time()
             await asyncio.sleep(30)
 
+    @staticmethod
+    def _response_format_error(address, params):
+        """Return a reason when OSC argument shape/type is implausible."""
+        if address == "/info":
+            return None
+        if address.startswith("/meters/"):
+            return None if len(params) == 1 and isinstance(params[0], (bytes, bytearray)) else "meter response must contain one binary blob"
+        if not params:
+            return "expected at least one OSC argument"
+        if address.endswith("/config/name"):
+            return None if len(params) == 1 and isinstance(params[0], str) else "name response must contain one string"
+        if (address.startswith("/fx/") and address.endswith("/par")) or "/insert" in address:
+            valid = all(isinstance(value, (int, float, bool)) for value in params)
+            return None if valid else "FX/insert parameters must be numeric"
+        valid = len(params) == 1 and isinstance(params[0], (int, float, bool))
+        return None if valid else "expected one numeric OSC argument"
     def _process_datagram(self, data, peer=None):
         """Apply OSC messages and retain actionable protocol diagnostics."""
         if peer:
@@ -201,6 +217,11 @@ class HardwareMonitor:
                         self.diagnostics.event("invalid_responses", "Malformed or unsupported meter response", message.address,
                                                {"argument_count": len(message.params), "argument_types": [type(x).__name__ for x in message.params]})
                 elif message.params:
+                    format_error = self._response_format_error(message.address, message.params)
+                    if format_error:
+                        self.diagnostics.event("invalid_responses", format_error, message.address,
+                                               {"values": repr(message.params), "types": [type(x).__name__ for x in message.params]})
+                        continue
                     value = message.params if message.address.startswith("/fx/") or "/insert" in message.address else message.params[0]
                     if self.state.update(message.address, value):
                         self.diagnostics.received(message.address)
