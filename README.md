@@ -6,7 +6,7 @@ A local-first browser dashboard for monitoring a Midas M32. It runs natively on 
 
 - FastAPI browser dashboard, polling the local API once per second.
 - 32-channel state model with name, input source, fader, mute and scribble-strip colour.
-- Channel-to-output mute matrix covering Main L/R, Mono/Centre and all 16 mix buses. It distinguishes channel mute, mute groups, DCA mute/fader, send switch-off, send fader at zero, and destination mute/fader at zero.
+- Channel-to-output mute matrix covering Main L/R, Mono/Centre and all 16 mix buses. It distinguishes channel mute, channel and destination mute-group assignments, channel and destination DCA mute/fader effects, send switch-off, send fader at zero, and destination mute/fader at zero.
 - Reads the console's DCA Mutes and Hard Mutes preferences, and accounts for pre/post-fader send tap points when evaluating channel and DCA faders. Unknown mute-system preferences and parameters not yet received from the console are shown as CHECK rather than guessed. OPEN means the routing controls permit a signal path; it does not claim audio is currently present. Matrix 1–6 are downstream of buses/main and are not yet traced in this first pass.
 - OSC simulator on UDP 10023. It supports basic parameter GET/SET, /info, /xinfo, /status and /xremote for the subset represented in the dashboard.
 - Hardware mode uses a read-only OSC client. It sends /xremote and parameter enquiries but never sends parameter SET messages.
