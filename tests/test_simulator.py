@@ -544,7 +544,7 @@ def test_rta_integer_preferences_and_status_are_node_readable(path, value):
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    expected_value = {"/-stat/rtamodeeq": "SPEC", "/-stat/rtamodegeq": "SPEC", "/-stat/rtaeqpre": "ON", "/-stat/rtageqpost": "ON"}.get(path, str(value))
+    expected_value = {"/-prefs/rta/det": "PEAK", "/-prefs/rta/peakhold": "8", "/-prefs/rta/options": "%100001", "/-prefs/rta/option": "%100001", "/-stat/rtamodeeq": "SPEC", "/-stat/rtamodegeq": "SPEC", "/-stat/rtaeqpre": "ON", "/-stat/rtageqpost": "ON"}.get(path, str(value))
     assert response.params == [f"{path} {expected_value}\n"]
 
 
