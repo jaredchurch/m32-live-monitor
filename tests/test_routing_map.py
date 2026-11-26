@@ -64,3 +64,18 @@ def test_malformed_meter_blob_is_rejected():
     state = ConsoleState()
     assert not state.update_meter("/meters/0", b"bad")
     assert state.meters_snapshot()["streams"] == []
+
+
+def test_output_source_and_tap_point_decode_and_pan_is_visible():
+    state = RoutingState()
+    state.update("/outputs/main/01/src", 4)
+    state.update("/outputs/main/01/pos", 8)
+    state.update("/ch/01/mix/pan", 0.25)
+    state.update("/config/chlink/1-2", 1)
+    snapshot = state.snapshot()
+    source = next(x for x in snapshot["outputs"] if x["address"] == "/outputs/main/01/src")
+    tap = next(x for x in snapshot["outputs"] if x["address"] == "/outputs/main/01/pos")
+    assert source["display"] == "Mix Bus 01"
+    assert tap["display"] == "Post Fader"
+    assert any(x["address"] == "/ch/01/mix/pan" for x in snapshot["special"])
+    assert any(x["address"] == "/config/chlink/1-2" for x in snapshot["special"])
