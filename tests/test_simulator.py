@@ -330,12 +330,12 @@ def test_node_get_returns_rta_source_and_keysolo():
     simulator.handle(client, packet("/node", "-prefs/rta/source"))
     source = OscMessage(simulator.transport.sent[-1][0])
     assert source.address == "/node"
-    assert source.params == ["/-prefs/rta/source 0\n"]
+    assert source.params == ["/-prefs/rta/source 0" + chr(10)]
 
     simulator.handle(client, packet("/node", "-stat/keysolo"))
     keysolo = OscMessage(simulator.transport.sent[-1][0])
     assert keysolo.address == "/node"
-    assert keysolo.params == ["/-stat/keysolo 0\n"]
+    assert keysolo.params == ["/-stat/keysolo 0" + chr(10)]
 
 
 def test_rta_source_and_keysolo_state_are_readable_and_validated():
@@ -421,7 +421,7 @@ def test_node_get_returns_card_preferences():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/-prefs/card " + " ".join(["0"] * 13) + "\n"]
+    assert response.params == ["/-prefs/card " + " ".join(["0"] * 13) + chr(10)]
 
 
 def test_snapshot_can_filter_only_protocol_exceptions():
