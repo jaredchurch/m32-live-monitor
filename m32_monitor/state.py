@@ -40,6 +40,7 @@ class ConsoleState:
         }
         self.mute_groups = {n: False for n in range(1, 7)}
         self.dca_mutes_enabled = None
+        self.hard_mutes_enabled = None
         self.buses = {
             n: {"number": n, "on": True, "fader": 0.75}
             for n in range(1, 17)
@@ -118,8 +119,11 @@ class ConsoleState:
                     return False
                 return True
 
-            if address == "/-prefs/dcamute" and isinstance(value, (int, float)):
-                self.dca_mutes_enabled = self._bool(value)
+            if address in ("/-prefs/dcamute", "/-prefs/hardmute") and isinstance(value, (int, float)):
+                if address.endswith("dcamute"):
+                    self.dca_mutes_enabled = self._bool(value)
+                else:
+                    self.hard_mutes_enabled = self._bool(value)
                 return True
 
             if len(parts) == 3 and parts[0] == "config" and parts[1] == "mute":
@@ -139,6 +143,8 @@ class ConsoleState:
 
             if address == "/-prefs/dcamute":
                 return int(self.dca_mutes_enabled) if self.dca_mutes_enabled is not None else None
+            if address == "/-prefs/hardmute":
+                return int(self.hard_mutes_enabled) if self.hard_mutes_enabled is not None else None
             if address in ("/main/st/mix/on", "/main/m/mix/on",
                            "/main/st/mix/fader", "/main/m/mix/fader"):
                 key = "main_st" if "/st/" in address else "main_mono"
@@ -200,10 +206,14 @@ class ConsoleState:
     def visible_channels(self):
         return [c.as_dict() for c in self.channels.values() if c.connected and c.colour != 0]
 
-    def _upstream_mutes(self, channel, include_channel_fader=True, include_dca_fader=True):
+    def _upstream_mutes(self, channel, include_channel_fader=True, include_dca_fader=True, include_channel_mute=True):
         reasons = []
         uncertain = []
-        if channel.muted: reasons.append("channel_muted")
+        if channel.muted:
+            if include_channel_mute or self.hard_mutes_enabled is True:
+                reasons.append("channel_muted")
+            elif self.hard_mutes_enabled is None:
+                uncertain.append("hard_mute_setting_unknown")
         if include_channel_fader and channel.fader <= 0.000001:
             reasons.append("channel_fader_zero")
         for group in range(1, 7):
@@ -256,8 +266,9 @@ class ConsoleState:
                     send = channel.sends.get(bus, {"on": True, "level": 0.0})
                     send_type = channel.send_types.get(bus if bus % 2 else bus - 1, 4)
                     bus_reasons, bus_uncertain = self._upstream_mutes(
-                        channel, include_channel_fader=(send_type == 4),
-                        include_dca_fader=(send_type == 4))
+                        channel, include_channel_fader=(send_type in (4, 5)),
+                        include_dca_fader=(send_type in (4, 5)),
+                        include_channel_mute=(send_type in (4, 5)))
                     cells[ident] = self._cell(bus_reasons, bus_uncertain, send["on"], send["level"],
                         self.buses[bus]["on"], self.buses[bus]["fader"])
             rows.append({"number": channel.number, "name": channel.name,
@@ -265,4 +276,4 @@ class ConsoleState:
         return {"destinations": destinations, "channels": rows,
                 "dcas": list(self.dcas.values()),
                 "mute_groups": [{"number": n, "muted": active} for n, active in self.mute_groups.items()],
-                "dca_mutes_enabled": self.dca_mutes_enabled}
+                "dca_mutes_enabled": self.dca_mutes_enabled,\n                "hard_mutes_enabled": self.hard_mutes_enabled}
