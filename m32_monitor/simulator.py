@@ -519,7 +519,7 @@ class Simulator:
                 rendered = json.dumps(value, ensure_ascii=False)
             else:
                 rendered = str(int(value))
-            self.send(client, "/node", "%s %s\\n" % (address, rendered),
+            self.send(client, "/node", "%s %s\n" % (address, rendered),
                       outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned X-Live recorder value")
