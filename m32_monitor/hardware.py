@@ -80,7 +80,13 @@ class HardwareMonitor:
                 addresses.extend("/config/routing/OUT/%s" % bank for bank in ("1-4", "5-8", "9-12", "13-16"))
                 addresses.extend(("/config/routing/PLAY/AUX",))
                 for family, count in (("main", 16), ("aux", 6), ("p16", 16), ("aes", 2)):
-                    addresses.extend("/outputs/%s/%02d" % (family, number) for number in range(1, count + 1))
+                    for number in range(1, count + 1):
+                        prefix = "/outputs/%s/%02d" % (family, number)
+                        addresses.extend((prefix + "/src", prefix + "/pos", prefix + "/invert"))
+                        if family == "main":
+                            addresses.extend((prefix + "/delay/on", prefix + "/delay/time"))
+                        if family == "p16":
+                            addresses.extend((prefix + "/iQ/group", prefix + "/iQ/speaker", prefix + "/iQ/eq"))
                 for number in range(1, 9):
                     addresses.extend(("/fx/%d/type" % number, "/fx/%d/source" % number))
                 addresses.extend(("/config/solo/level", "/config/solo/source", "/config/solo/sourcetrim",
@@ -97,6 +103,15 @@ class HardwareMonitor:
                                   "/config/talk/A/destmap", "/config/talk/B/destmap"))
                 addresses.extend("/config/userrout/out/%02d" % number for number in range(1, 49))
                 addresses.extend("/config/userrout/in/%02d" % number for number in range(1, 33))
+                # Stereo links and pan/balance affect the interpretation of the signal path.
+                for family, count in (("ch", 32), ("auxin", 8), ("fxrtn", 8), ("bus", 16), ("mtx", 6)):
+                    for number in range(1, count + 1):
+                        addresses.append("/%s/%02d/mix/pan" % (family, number))
+                for path in ("chlink", "auxlink", "fxlink", "buslink", "mtxlink"):
+                    maximum = 32 if path == "chlink" else 8 if path in ("auxlink", "fxlink") else 16 if path == "buslink" else 6
+                    for number in range(1, maximum, 2):
+                        addresses.append("/config/%s/%d-%d" % (path, number, number + 1))
+                addresses.extend(("/config/mono/mode", "/config/mono/link"))
                 for number in range(1, 33):
                     addresses.append("/ch/%02d/insert" % number)
                 for family, count in (("ch", 32), ("auxin", 8), ("fxrtn", 8)):
