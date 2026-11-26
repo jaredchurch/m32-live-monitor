@@ -241,5 +241,10 @@ class HardwareMonitor:
     async def _receive(self):
         loop = asyncio.get_running_loop()
         while True:
-            data, peer = await loop.sock_recvfrom(self.sock, 65535)
-            self._process_datagram(data, peer)
+            try:
+                data, peer = await loop.sock_recvfrom(self.sock, 65535)
+                self._process_datagram(data, peer)
+            except OSError as exc:
+                self.diagnostics.event("receive_errors", exc, detail="OSC UDP receive")
+                logger.exception("M32 OSC receive failed")
+                await asyncio.sleep(1)
