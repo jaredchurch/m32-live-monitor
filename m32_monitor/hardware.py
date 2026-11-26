@@ -77,7 +77,7 @@ class HardwareMonitor:
                 for number in range(1, 9):
                     addresses.extend(("/dca/%d/on" % number, "/dca/%d/fader" % number))
                 addresses.extend("/config/mute/%d" % number for number in range(1, 7))
-                addresses.append("/-prefs/dcamute")
+                addresses.extend(("/-prefs/dcamute", "/-prefs/hardmute"))
                 for number in range(1, 17):
                     addresses.extend(("/bus/%02d/mix/on" % number, "/bus/%02d/mix/fader" % number))
                 addresses.extend((
