@@ -388,7 +388,7 @@ def test_formatsubscribe_handles_multiple_groups_and_packs_values():
     assert prefs.address == "/states/prefs"
     prefs_blob = prefs.params[0]
     assert isinstance(prefs_blob, bytes)
-    assert struct.unpack("<I", prefs_blob[:4])[0] == len(prefs_blob) - 4 == 124
+    assert struct.unpack("<I", prefs_blob[:4])[0] == len(prefs_blob) - 4 == 180
     assert prefs_blob[4:8] == struct.pack("<i", 0)
     assert prefs_blob[8:40] == bytes(32)
 
