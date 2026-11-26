@@ -78,7 +78,7 @@ td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;ba
 <div class="muted">Select a repeatable console state, then scan for M32-Live-Monitor in M32-Edit. If discovery does not find it, enter 127.0.0.1 and UDP port 10023 manually. Every decoded incoming and outgoing OSC message is recorded. Unsupported addresses and malformed packets are highlighted so we can extend compatibility from observed traffic.</div>
 <div class="sim-controls">
 <label>Scenario <select id="sim-scenario"></select></label>
-<button id="sim-load">Load scenario</button><button id="sim-clear">Clear log</button>
+<button id="sim-load">Load scenario</button><button id="sim-export-csv">Export CSV</button><button id="sim-export-json">Export JSON</button><button id="sim-clear">Clear log</button>
 <label>Filter <input id="sim-filter" placeholder="OSC address or detail"></label>
 </div>
 <div id="sim-summary" class="summary"><span class="pill">Waiting for simulator…</span></div>
@@ -158,7 +158,7 @@ async function loadSimulatorControls(){
 async function renderSimulatorLogs(){
  const root=document.querySelector('#sim-log'),summary=document.querySelector('#sim-summary');
  try{
-  const q=new URLSearchParams({limit:'500'}),filter=document.querySelector('#sim-filter').value.trim();
+  const q=new URLSearchParams({limit:'2000'}),filter=document.querySelector('#sim-filter').value.trim();
   if(filter)q.set('search',filter);
   const data=await fetch('/api/simulator/logs?'+q.toString()).then(r=>{if(!r.ok)throw new Error('Simulator mode only');return r.json();});
   const counts=data.counts||{};
@@ -171,6 +171,29 @@ async function renderSimulatorLogs(){
   }).join('')+'</tbody></table>':'<div class="empty">No OSC messages yet. Start M32-Edit and connect it to this Mac on UDP port 10023.</div>';
  }catch(e){summary.innerHTML='<span class="pill">Simulator logging is available in simulator mode</span>';root.innerHTML='<div class="empty">Switch M32_MODE to simulator to inspect M32-Edit OSC traffic.</div>';}
 }
+async function exportSimulatorLog(format){
+ const q=new URLSearchParams({limit:'2000'}),filter=document.querySelector('#sim-filter').value.trim();
+ if(filter)q.set('search',filter);
+ const response=await fetch('/api/simulator/logs?'+q.toString());
+ if(!response.ok){alert('The OSC log can only be exported in simulator mode.');return;}
+ const data=await response.json(),events=data.events||[];
+ let content,type,extension;
+ if(format==='json'){
+  content=JSON.stringify({exported_at:new Date().toISOString(),...data},null,2);
+  type='application/json';extension='json';
+ }else{
+  const columns=['sequence','timestamp','time_local','direction','outcome','address','args','detail','peer'];
+  const quote=value=>'"'+String(value??'').replace(/"/g,'""')+'"';
+  const rows=events.map(e=>[e.sequence,e.timestamp,new Date(e.timestamp*1000).toISOString(),e.direction,e.outcome,e.address,JSON.stringify(e.args||[]),e.detail,e.peer]);
+  content=[columns.map(quote).join(','),...rows.map(row=>row.map(quote).join(','))].join('\\r\\n');
+  type='text/csv;charset=utf-8';extension='csv';
+ }
+ const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),link=document.createElement('a');
+ link.href=url;link.download='m32-osc-log-'+new Date().toISOString().replace(/[:.]/g,'-')+'.'+extension;
+ document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+}
+document.querySelector('#sim-export-csv').addEventListener('click',()=>exportSimulatorLog('csv'));
+document.querySelector('#sim-export-json').addEventListener('click',()=>exportSimulatorLog('json'));
 document.querySelector('#sim-load').addEventListener('click',async()=>{
  const id=document.querySelector('#sim-scenario').value;if(!id)return;
  const response=await fetch('/api/simulator/scenarios/'+encodeURIComponent(id),{method:'POST'});
