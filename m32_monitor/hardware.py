@@ -68,6 +68,8 @@ class HardwareMonitor:
                         "grp/dca", "grp/mute",
                     ))
                     for bus in range(1, 17):
+                        if bus % 2:
+                            addresses.append(prefix + "/mix/%02d/type" % bus)
                         addresses.extend((
                             prefix + "/mix/%02d/on" % bus,
                             prefix + "/mix/%02d/level" % bus,
@@ -75,6 +77,7 @@ class HardwareMonitor:
                 for number in range(1, 9):
                     addresses.extend(("/dca/%d/on" % number, "/dca/%d/fader" % number))
                 addresses.extend("/config/mute/%d" % number for number in range(1, 7))
+                addresses.append("/-prefs/dcamute")
                 for number in range(1, 17):
                     addresses.extend(("/bus/%02d/mix/on" % number, "/bus/%02d/mix/fader" % number))
                 addresses.extend((
