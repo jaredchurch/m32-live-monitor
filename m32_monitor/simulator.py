@@ -313,7 +313,7 @@ class Simulator:
                 return
             first, last, time_factor = args[index:index + 3]
             index += 3
-            if first < 0 or last < 0 or (last and first > last) or not 0 <= time_factor <= 99:
+            if first < 0 or last < 0 or ((first == 0) != (last == 0)) or (last and first > last) or not 0 <= time_factor <= 99:
                 self.record("in", "unhandled_command", "/formatsubscribe", args, client,
                             "Invalid wildcard range or time factor")
                 return
@@ -390,7 +390,7 @@ class Simulator:
             name = args[0] if args else None
             matching = [key for key in self.batch_subscriptions
                         if key[0] == client and (name is None or
-                        name in (key[1], key[1].lstrip("/")))]
+                        name.lstrip("/") == key[1].lstrip("/"))]
             format_matching = [key for key in self.format_subscriptions
                                if key[0] == client and (name is None or
                                name in (key[1], key[1].lstrip("/")))]
