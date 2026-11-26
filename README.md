@@ -1,78 +1,63 @@
 # M32 Live Monitor
 
-A local-first browser dashboard for monitoring a Midas M32. The application is designed to
-run natively on macOS and Linux, with a Dev Container for consistent development in VS Code
-and GitHub Codespaces.
+A local-first browser dashboard for monitoring a Midas M32. It runs natively on macOS/Linux and in a local VS Code Dev Container. Codespaces is for UI and simulator development; its forwarded web port is not a route to a physical console on your home LAN.
 
-> **Current state:** infrastructure scaffold only. The web server and health/status endpoints
-> run, but M32 OSC communication, live channel data, and the M32-Edit-compatible simulator
-> have not been implemented yet. The application is read-only by design at this stage.
+## Current implementation
 
-## Quick start on macOS or Linux
+- FastAPI browser dashboard, polling the local API once per second.
+- 32-channel state model with name, input source, fader, mute and scribble-strip colour.
+- OSC simulator on UDP 10023. It supports basic parameter GET/SET, /info, /xinfo, /status and /xremote for the subset represented in the dashboard.
+- Hardware mode uses a read-only OSC client. It sends /xremote and parameter enquiries but never sends parameter SET messages.
+- Channels are hidden if the input source is OFF or the scribble-strip colour is OFF.
+- Tests cover state updates, input-source decoding and channel visibility.
 
-Requirements: Python 3.11 or newer.
+**M32-Edit compatibility is experimental and incomplete.** The simulator is not a full console emulator. It is an early protocol subset intended to establish the transport and state model; further protocol capture and iterative compatibility testing will be required before relying on it with M32-Edit.
 
-From a terminal in the repository:
+## Run on macOS or Linux
 
-```bash
-bash ./run.sh
-```
+Requirements: Python 3.11+.
 
-Then open http://localhost:8000.
+    bash ./run.sh
 
-The first run creates a local virtual environment and installs the Python dependencies.
-Subsequent runs reuse it. Stop the server with Ctrl+C.
+Open http://localhost:8000. The first run creates .venv and installs dependencies. Stop with Ctrl+C.
 
-## Start in a Dev Container
+The default mode is simulator. The app binds UDP 10023 for the virtual console. In M32-Edit, create a connection to the Mac's LAN IP address and port 10023. Do not point M32-Edit at the physical console while testing the simulator. If UDP 10023 is already in use, stop the other service or change SIMULATOR_PORT.
 
-1. Install Docker Desktop (macOS) or Docker Engine and the Docker Compose plugin (Linux).
-2. Install Visual Studio Code and its Dev Containers extension.
-3. Open this repository in VS Code.
-4. Choose **Reopen in Container** from the command palette.
-5. Open the forwarded port 8000 when the container starts.
+## Use a physical M32
 
-The same Dev Container definition is used by GitHub Codespaces. Create a Codespace from
-this repository and wait for the container to build; port 8000 hosts the browser interface.
+Copy .env.example to .env, set M32_MODE=hardware, and set M32_HOST to the console's IP address. Run the app on a Mac/Linux machine on the same LAN as the console. The monitor listens on OSC_LISTEN_PORT (default 10024) and sends read-only enquiries to the console's UDP port 10023.
 
-The container publishes UDP port 10024 in preparation for the OSC receive service. That
-does not make a physical M32 reachable from Codespaces: Codespaces is for the UI, code and
-simulator work. For a real console connection, run the backend natively on a Mac/Linux
-machine on the same network as the M32. A locally running container may also be able to
-reach the console, subject to the host network and firewall configuration.
+The hardware transport is deliberately read-only. The UI currently shows fader position as a normalized percentage, not calibrated dB. It does not yet display audio meter levels.
+
+## Dev Container
+
+1. Install Docker Desktop (Mac) or Docker Engine + Compose (Linux), VS Code and the Dev Containers extension.
+2. Open the repository in VS Code and select **Reopen in Container**.
+3. Open forwarded HTTP port 8000.
+
+The local Compose configuration publishes UDP 10023 for M32-Edit to reach the simulator through the host. This UDP mapping is useful for a local container; GitHub Codespaces port forwarding is not a substitute for LAN UDP access to a physical M32.
 
 ## Configuration
 
-Copy .env.example to .env and adjust the values when the OSC transport is implemented:
+- M32_MODE: simulator (default) or hardware.
+- M32_HOST: physical console IP.
+- M32_PORT: console UDP port (10023).
+- OSC_LISTEN_HOST / OSC_LISTEN_PORT: local OSC receive endpoint in hardware mode.
+- SIMULATOR_HOST / SIMULATOR_PORT: simulator bind address and UDP port.
 
-- M32_MODE: simulator or hardware (defaults to simulator).
-- M32_HOST: IP address of the physical M32.
-- M32_PORT: M32 OSC port (default 10023).
-- OSC_LISTEN_PORT: local OSC receive port reserved by this scaffold (default 10024).
+## Development checks
 
-The current scaffold reports the selected mode but does not yet open an OSC connection.
+    python3 -m venv .venv
+    . .venv/bin/activate
+    python -m pip install -e ".[dev]"
+    python -m compileall -q m32_monitor tests
+    pytest
 
-## Development
+GitHub Actions runs compile and pytest on pushes and pull requests. Python 3.12 is used; Node.js is not required.
 
-Install the development dependencies and run the checks:
+## Next work
 
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install -e ".[dev]"
-ruff check .
-pytest
-```
-
-GitHub Actions runs lint and tests on pushes and pull requests. The workflow uses Python 3.12
-and does not require Node.js.
-
-## Planned next steps
-
-1. Implement and test the OSC transport in read-only mode against a real M32.
-2. Add a deterministic virtual console for dashboard testing.
-3. Expand simulator protocol coverage and validate M32-Edit compatibility separately.
-4. Build the live channel, mute, input mapping and scribble-strip dashboard.
-5. Add native packaging only if launching through the local browser becomes inconvenient.
-
-Simulator traffic and hardware traffic will remain explicitly separated so test messages
-cannot accidentally control a live mixing console.
+1. Verify hardware OSC responses on the actual M32 and validate source/color values against the console.
+2. Capture M32-Edit startup traffic and extend simulator protocol compatibility from observed requests.
+3. Add audio meter data and a more useful channel-strip layout.
+4. Add reconnect/timeout handling and a small connection configuration page.
