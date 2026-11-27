@@ -468,11 +468,6 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) == 3 and parts[0] == "headamp" and parts[1].isdigit():
-                number = int(parts[1])
-                if number not in self.headamps or parts[2] not in ("gain", "phantom"):
-                    return None
-                return self.headamps[number][parts[2]]
             if len(parts) >= 4 and parts[0] == "outputs" and parts[1] in ("main", "aux", "p16", "aes", "rec"):
                 collection = {"main": self.output_main, "aux": self.output_aux, "p16": self.output_p16, "aes": self.output_aes, "rec": self.output_rec}[parts[1]]
                 number = int(parts[2])
@@ -1112,6 +1107,11 @@ class ConsoleState:
             if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
                 key = "main_st" if address.startswith("/main/st/") else "main_mono"
                 return self.outputs[key]["sends"].get(int(parts[3]), {"on": True, "level": 0.0}).get(parts[4])
+            if len(parts) == 3 and parts[0] == "headamp" and parts[1].isdigit():
+                number = int(parts[1])
+                if number not in self.headamps or parts[2] not in ("gain", "phantom"):
+                    return None
+                return self.headamps[number][parts[2]]
             if len(parts) >= 4 and parts[0] == "outputs" and parts[1] in ("main", "aux", "p16", "aes", "rec"):
                 collection = {"main": self.output_main, "aux": self.output_aux, "p16": self.output_p16, "aes": self.output_aes, "rec": self.output_rec}[parts[1]]
                 output = collection.get(int(parts[2]))
