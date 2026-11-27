@@ -19,7 +19,7 @@ def test_health_endpoint(client):
 def test_home_page_loads(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert "M32 Live Monitor" in response.text
+    assert "M32 Simulation" in response.text
 
 
 def test_status_reports_simulator(client):
