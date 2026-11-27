@@ -397,7 +397,7 @@ class Simulator:
                 raise ValueError("Empty X32node text")
             header = tokens[0].lstrip("/")
             values = tokens[1:]
-            if header.startswith("config/userrout/out/") and len(values) == 1:
+            if header.startswith(("config/userrout/out/", "config/userrout/in/")) and len(values) == 1:
                 address = "/" + header
                 parsed = [int(values[0], 0)]
                 paths = [address]
@@ -512,7 +512,7 @@ class Simulator:
             return
         self.record("in", "handled_node_set", "/", args, client,
                     "Applied %d %s configuration value(s)" % (
-                        len(paths), "talkback" if paths[0].startswith("/config/talk/") else "oscillator" if paths[0].startswith("/config/osc/") else "user output routing" if paths[0].startswith("/config/userrout/out/") else "RTA preference"))
+                        len(paths), "talkback" if paths[0].startswith("/config/talk/") else "oscillator" if paths[0].startswith("/config/osc/") else "user routing" if paths[0].startswith("/config/userrout/") else "RTA preference"))
         self.send(client, "/", args[0], outcome="node_set_echo")
         for subscriber in tuple(self.clients):
             self.send(subscriber, "/", args[0], outcome="subscription_update")
@@ -631,24 +631,26 @@ class Simulator:
                         "Returned all 17 solo-monitor configuration fields")
             return
 
-        if header == "config/userrout/out":
-            response = "".join("/config/userrout/out/%02d %d\n" % (slot, source)
-                               for slot, source in self.state.user_rout_out.items())
+        if header in ("config/userrout/out", "config/userrout/in"):
+            direction = header.rsplit("/", 1)[1]
+            slots = self.state.user_rout_out if direction == "out" else self.state.user_rout_in
+            response = "".join("/config/userrout/%s/%02d %d\\n" % (direction, slot, source)
+                               for slot, source in slots.items())
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
-                        "Returned all 48 user output routing assignments")
+                        "Returned all %d user %s routing assignments" % (len(slots), direction))
             return
 
-        if header.startswith("config/userrout/out/"):
+        if header.startswith(("config/userrout/out/", "config/userrout/in/")):
             address = "/" + header
             value = self.state.get(address)
             if value is None:
                 self.record("in", "unhandled_command", "/node", args, client,
-                            "No user output routing slot is modelled for header %r" % header)
+                            "No user routing slot is modelled for header %r" % header)
                 return
-            self.send(client, "/node", "%s %d\n" % (address, value), outcome="node_response")
+            self.send(client, "/node", "%s %d\\n" % (address, value), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
-                        "Returned individual user output routing assignment")
+                        "Returned individual user routing assignment")
             return
 
         if header == "config/osc":
