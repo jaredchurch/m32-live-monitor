@@ -748,15 +748,6 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if address.startswith(("/-show/", "/-prefs/", "/-action/")):
-                if isinstance(value, bool) or not isinstance(value, (str, int, float)):
-                    return False
-                if isinstance(value, float) and not math.isfinite(value):
-                    return False
-                self.misc_nodes[address] = value
-                self.received.add(address)
-                return True
-
             if address == "/-prefs/rta/visibility" and isinstance(value, (int, float)) and float(value) == int(value) and 0 <= int(value) <= 12:
                 self.preferences["rta/visibility"] = int(value)
                 self.received.add(address)
@@ -841,6 +832,15 @@ class ConsoleState:
                     self.dca_mutes_enabled = self._bool(value)
                 else:
                     self.hard_mutes_enabled = self._bool(value)
+                self.received.add(address)
+                return True
+
+            if address.startswith(("/-show/", "/-prefs/", "/-action/")):
+                if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+                    return False
+                if isinstance(value, float) and not math.isfinite(value):
+                    return False
+                self.misc_nodes[address] = value
                 self.received.add(address)
                 return True
 
