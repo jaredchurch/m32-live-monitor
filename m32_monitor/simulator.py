@@ -622,6 +622,53 @@ class Simulator:
                                       if self.state.routing.get(path) is not None else 0)
                        for path in paths)
 
+    def _config_userctrl_node_group(self, bank, section=None):
+        """Render a user-assignable control bank or its encoder/button sub-node."""
+        values = self.state.user_controls[bank]
+        color_names = ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
+                       "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi")
+        if section == "enc":
+            return "".join("/config/userctrl/%s/enc/%d %s\\n" %
+                           (bank, n, values["enc"][n]) for n in range(1, 5))
+        if section == "btn":
+            return "".join("/config/userctrl/%s/btn/%d %s\\n" %
+                           (bank, n, values["btn"][n]) for n in range(5, 13))
+        lines = ["/config/userctrl/%s/color %s\\n" % (bank, color_names[values["color"]])]
+        lines.extend("/config/userctrl/%s/enc/%d %s\\n" % (bank, n, values["enc"][n])
+                     for n in range(1, 5))
+        lines.extend("/config/userctrl/%s/btn/%d %s\\n" % (bank, n, values["btn"][n])
+                     for n in range(5, 13))
+        return "".join(lines)
+
+    def _config_tape_node_group(self):
+        values = self.state.tape_config
+        return ("/config/tape/gainL %.1f\\n/config/tape/gainR %.1f\\n"
+                "/config/tape/autoplay %s\\n" %
+                (values["gainL"], values["gainR"], ("OFF", "ON")[values["autoplay"]]))
+
+    def _config_amixenable_node_group(self):
+        values = self.state.amix_enable
+        return "".join("/config/amixenable/%s %s\\n" % (group, ("OFF", "ON")[values[group]])
+                       for group in ("X", "Y"))
+
+    def _config_dp48_node_group(self, section=None):
+        values = self.state.dp48_config
+        if section == "link":
+            return "".join("/config/dp48/link/%02d %d\\n" % (n, values["link"][n])
+                           for n in range(1, 25))
+        if section == "assign":
+            return "".join("/config/dp48/assign/%02d %d\\n" % (n, values["assign"][n])
+                           for n in range(1, 49))
+        if section == "grpname":
+            return "".join("/config/dp48/grpname/%02d %s\\n" % (n, values["grpname"][n])
+                           for n in range(1, 13))
+        return ("/config/dp48/scope %%%04d\\n/config/dp48/broadcast %d\\n"
+                "/config/dp48/aesAB %s\\n" %
+                (int(values["scope"]), values["broadcast"], ("AESA", "AESB")[values["aesAB"]]) +
+                self._config_dp48_node_group("link") +
+                self._config_dp48_node_group("assign") +
+                self._config_dp48_node_group("grpname"))
+
     def _handle_node(self, client, args):
         if len(args) != 1 or not isinstance(args[0], str):
             self.record("in", "unhandled_command", "/node", args, client,
@@ -638,6 +685,38 @@ class Simulator:
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned %d routing configuration entries" %
                         len(response.splitlines()))
+            return
+
+        if header in ("config/userctrl/A", "config/userctrl/B", "config/userctrl/C"):
+            bank = header[-1]
+            self.send(client, "/node", self._config_userctrl_node_group(bank), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned user control bank %s" % bank)
+            return
+        if header in ("config/userctrl/A/enc", "config/userctrl/B/enc", "config/userctrl/C/enc",
+                      "config/userctrl/A/btn", "config/userctrl/B/btn", "config/userctrl/C/btn"):
+            bank, section = header.split("/")[-2:]
+            self.send(client, "/node", self._config_userctrl_node_group(bank, section), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned user control %s %s assignments" % (bank, section))
+            return
+        if header == "config/tape":
+            self.send(client, "/node", self._config_tape_node_group(), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client, "Returned tape configuration")
+            return
+        if header == "config/amixenable":
+            self.send(client, "/node", self._config_amixenable_node_group(), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client, "Returned automix enable configuration")
+            return
+        if header == "config/dp48":
+            self.send(client, "/node", self._config_dp48_node_group(), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client, "Returned DP48 configuration")
+            return
+        if header in ("config/dp48/assign", "config/dp48/link", "config/dp48/grpname"):
+            section = header.rsplit("/", 1)[1]
+            self.send(client, "/node", self._config_dp48_node_group(section), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned DP48 %s assignments" % section)
             return
 
         if header == "config/linkcfg":
@@ -681,6 +760,29 @@ class Simulator:
             self.send(client, "/node", "%s %d\n" % (address, value), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned individual user routing assignment")
+            return
+
+        if header.startswith("config/userctrl/") or header.startswith("config/tape/") or header.startswith("config/amixenable/") or header.startswith("config/dp48/"):
+            address = "/" + header
+            value = self.state.get(address)
+            if value is None:
+                self.record("in", "unhandled_command", "/node", args, client,
+                            "No configuration value is modelled for header %r" % header)
+                return
+            if header.endswith("/color"):
+                value = ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
+                         "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi")[int(value)]
+            elif header.endswith("/autoplay"):
+                value = ("OFF", "ON")[int(value)]
+            elif header.endswith("/aesAB"):
+                value = ("AESA", "AESB")[int(value)]
+            elif header.endswith("/broadcast") or "/link/" in header or "/assign/" in header:
+                value = str(int(value))
+            elif isinstance(value, float):
+                value = "%.1f" % value
+            self.send(client, "/node", "%s %s\\n" % (address, value), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned individual configuration value")
             return
 
         if header == "config/osc":
