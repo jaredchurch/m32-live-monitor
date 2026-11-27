@@ -398,12 +398,13 @@ class Simulator:
             header = tokens[0].lstrip("/")
             values = tokens[1:]
             if header == "config/osc":
-            self.send(client, "/node", self._config_osc_node_group(), outcome="node_response")
-            self.record("in", "handled_node_get", "/node", args, client,
-                        "Returned all six oscillator generator settings")
-            return
-
-        if header == "config/talk":
+                if len(values) != 6:
+                    raise ValueError("Oscillator group requires level, F1, F2, selected frequency, type and destination")
+                parsed = [float(values[0]), float(values[1]), float(values[2]),
+                          ("F1", "F2").index(values[3]),
+                          ("SINE", "PINK", "WHITE").index(values[4]), int(values[5], 0)]
+                paths = ["/config/osc/" + field for field in ("level", "f1", "f2", "fsel", "type", "dest")]
+            elif header == "config/talk":
                 if len(values) != 2:
                     raise ValueError("Talkback group requires enable and source")
                 parsed = [("OFF", "ON").index(values[0]), ("INT", "EXT").index(values[1])]
@@ -631,6 +632,12 @@ class Simulator:
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned all 17 solo-monitor configuration fields")
+            return
+
+        if header == "config/osc":
+            self.send(client, "/node", self._config_osc_node_group(), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned all six oscillator generator settings")
             return
 
         if header == "config/talk":
