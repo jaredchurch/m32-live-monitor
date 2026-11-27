@@ -421,7 +421,11 @@ class Simulator:
                 raise ValueError("Empty X32node text")
             header = tokens[0].lstrip("/")
             values = tokens[1:]
-            if header == "config/routing" or header in (
+            if header == "config/routing" and len(values) == 1:
+                from m32_monitor.routing import routing_enum_index
+                paths = ["/config/routing/outswitch"]
+                parsed = [routing_enum_index(paths[0], values[0])]
+            elif header == "config/routing" or header in (
                     "config/routing/IN", "config/routing/AES50A",
                     "config/routing/AES50B", "config/routing/CARD",
                     "config/routing/OUT", "config/routing/PLAY"):
@@ -1689,6 +1693,23 @@ class Simulator:
 
         # Scene files send routing patch banks as ordered multi-value OSC
         # messages. Keep their order identical to the documented X32node GET.
+        if address == "/config/routing" and len(args) == 1:
+            from m32_monitor.routing import routing_enum_index
+            path = "/config/routing/outswitch"
+            try:
+                value = routing_enum_index(path, args[0])
+            except ValueError as exc:
+                self.record("in", "unhandled_set", address, args, client, str(exc))
+                return
+            if self.state.routing.update(path, value):
+                self.state.received.add(path)
+                self.record("in", "handled_set", address, args, client,
+                            "Applied routing mode switch")
+            else:
+                self.record("in", "unhandled_set", address, args, client,
+                            "Routing mode switch was rejected")
+            return
+
         if address == "/config/routing" or address in (
                 "/config/routing/IN", "/config/routing/AES50A",
                 "/config/routing/AES50B", "/config/routing/CARD",
