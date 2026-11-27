@@ -576,6 +576,12 @@ class Simulator:
                 else:
                     raise ValueError("Unknown oscillator field")
                 paths = [path]
+            elif header == "-prefs/card":
+                fields = tuple(self.state.card_preferences)
+                if len(values) != len(fields):
+                    raise ValueError("Card preference node requires %d values" % len(fields))
+                paths = ["/-prefs/card/" + field for field in fields]
+                parsed = [int(token, 0) for token in values]
             elif header == "-prefs/rta":
                 if len(values) != 10:
                     raise ValueError("RTA group requires 10 ordered values")
@@ -818,6 +824,7 @@ class Simulator:
             old_tape = dict(self.state.tape_config)
             old_amix = dict(self.state.amix_enable)
             old_dp48 = json.loads(json.dumps(self.state.dp48_config))
+            old_card_preferences = dict(self.state.card_preferences)
             old_config_links = json.loads(json.dumps(self.state.config_links))
             old_link_config = dict(self.state.link_config)
             old_mono_config = dict(self.state.mono_config)
@@ -835,6 +842,7 @@ class Simulator:
                     self.state.tape_config = old_tape
                     self.state.amix_enable = old_amix
                     self.state.dp48_config = old_dp48
+                    self.state.card_preferences = old_card_preferences
                     self.state.config_links = old_config_links
                     self.state.link_config = old_link_config
                     self.state.mono_config = old_mono_config
