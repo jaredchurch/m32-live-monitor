@@ -922,6 +922,21 @@ class ConsoleState:
                     return send.get(parts[4], self.strip_nodes.get(address))
                 return self.strip_nodes.get(address)
                 return self.strip_nodes.get(address)
+            if len(parts) >= 3 and parts[0] == "fx":
+                number = int(parts[1])
+                fx = self.fx.get(number)
+                if fx is None:
+                    return None
+                field = parts[2:]
+                if field == ["type"]:
+                    return fx["type"]
+                if field == ["source", "l"]:
+                    return fx["source_l"]
+                if field == ["source", "r"]:
+                    return fx["source_r"]
+                if len(field) == 2 and field[0] == "par" and field[1].isdigit():
+                    return fx["par"].get(int(field[1]))
+                return None
             if parts[:1] == ["-urec"] and len(parts) == 2:
                 return self.urec.get(parts[1])
             if len(parts) == 4 and parts[0] == "-urec" and parts[1] == "session" and parts[3] == "name":
