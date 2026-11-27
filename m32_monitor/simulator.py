@@ -593,7 +593,7 @@ class Simulator:
     def _config_osc_node_group(self):
         """Render the six oscillator generator settings in protocol order."""
         values = self.state.osc_config
-        return "/config/osc %.1f %.3f %.3f %s %s %d\\n" % (
+        return "/config/osc %.1f %.3f %.3f %s %s %d\n" % (
             values["level"], values["f1"], values["f2"],
             ("F1", "F2")[values["fsel"]],
             ("SINE", "PINK", "WHITE")[values["type"]], values["dest"])
@@ -737,7 +737,7 @@ class Simulator:
                 rendered = "%" + format(int(value), "018b")
             else:
                 rendered = "%.1f" % float(value)
-            self.send(client, "/node", "%s %s\n" % (address, rendered), outcome="node_response")
+            self.send(client, "/node", "%s %s\\n" % (address, rendered), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned individual talkback configuration value")
             return
