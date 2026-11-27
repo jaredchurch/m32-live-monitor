@@ -576,10 +576,10 @@ class Simulator:
                 else:
                     raise ValueError("Unknown RTA preference")
                 paths, parsed = [path], parsed
-            elif header.startswith(("outputs/main/", "outputs/aux/", "outputs/p16/")):
+            elif header.startswith(("outputs/main/", "outputs/aux/", "outputs/p16/", "outputs/aes/", "outputs/rec/")):
                 parts = header.split("/")
                 family = parts[1]
-                collection = {"main": self.state.output_main, "aux": self.state.output_aux, "p16": self.state.output_p16}[family]
+                collection = {"main": self.state.output_main, "aux": self.state.output_aux, "p16": self.state.output_p16, "aes": self.state.output_aes, "rec": self.state.output_rec}[family]
                 if len(parts) not in (3, 4, 5) or not parts[2].isdigit() or int(parts[2]) not in collection:
                     raise ValueError("Unknown physical %s output" % family)
                 number = int(parts[2])
@@ -587,11 +587,11 @@ class Simulator:
                 positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
                 speakers = ("none", "iQ8", "iQ10", "iQ12", "iQ15", "iQ15B", "iQ18B")
                 if len(parts) == 3:
-                    expected = 2 if family == "p16" else 3
+                    expected = 2 if family in ("p16", "rec") else 3
                     if len(values) != expected: raise ValueError("Output node requires %d values" % expected)
                     paths = [prefix + "/src", prefix + "/pos"]
                     parsed = [int(values[0], 0), positions.index(values[1])]
-                    if family != "p16":
+                    if family in ("main", "aux", "aes"):
                         paths.append(prefix + "/invert")
                         parsed.append(("OFF", "ON").index(values[2]))
                 elif family == "p16" and parts[3] == "iQ" and len(parts) == 4:
@@ -610,7 +610,7 @@ class Simulator:
                     paths, parsed = [prefix + "/delay/on"], [("OFF", "ON").index(values[0])]
                 elif family == "main" and len(parts) == 5 and parts[3:5] == ["delay", "time"] and len(values) == 1:
                     paths, parsed = [prefix + "/delay/time"], [float(values[0])]
-                elif len(parts) == 4 and parts[3] in ("src", "pos", "invert") and len(values) == 1:
+                elif len(parts) == 4 and parts[3] in ("src", "pos", "invert") and (parts[3] != "invert" or family in ("main", "aux", "aes")) and len(values) == 1:
                     field = parts[3]
                     if field == "src": parsed = [int(values[0], 0)]
                     elif field == "pos": parsed = [positions.index(values[0])]
@@ -1267,16 +1267,16 @@ class Simulator:
 
         output_parts = header.split("/")
         if (len(output_parts) in (3, 4) and output_parts[0] == "outputs"
-                and output_parts[1] in ("main", "aux", "p16") and output_parts[2].isdigit()):
+                and output_parts[1] in ("main", "aux", "p16", "aes", "rec") and output_parts[2].isdigit()):
             family = output_parts[1]
-            collection = {"main": self.state.output_main, "aux": self.state.output_aux, "p16": self.state.output_p16}[family]
+            collection = {"main": self.state.output_main, "aux": self.state.output_aux, "p16": self.state.output_p16, "aes": self.state.output_aes, "rec": self.state.output_rec}[family]
             number = int(output_parts[2])
             if number in collection:
                 prefix = "/outputs/%s/%02d" % (family, number)
                 output = collection[number]
                 positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
                 speakers = ("none", "iQ8", "iQ10", "iQ12", "iQ15", "iQ15B", "iQ18B")
-                if len(output_parts) == 3 and family == "p16":
+                if len(output_parts) == 3 and family in ("p16", "rec"):
                     response = "%s/src %d\n%s/pos %s\n" % (prefix, output["src"], prefix, positions[output["pos"]])
                 elif len(output_parts) == 3:
                     response = ("%s/src %d\n%s/pos %s\n%s/invert %s\n" % (
@@ -1290,7 +1290,7 @@ class Simulator:
                         prefix, ("OFF", "ON")[output["delay_on"]], prefix, output["delay_time"])
                 elif output_parts[3] == "src": response = "%s/src %d\n" % (prefix, output["src"])
                 elif output_parts[3] == "pos": response = "%s/pos %s\n" % (prefix, positions[output["pos"]])
-                elif output_parts[3] == "invert" and family != "p16": response = "%s/invert %s\n" % (prefix, ("OFF", "ON")[output["invert"]])
+                elif output_parts[3] == "invert" and family in ("main", "aux", "aes"): response = "%s/invert %s\n" % (prefix, ("OFF", "ON")[output["invert"]])
                 else: response = None
                 if response is not None:
                     self.send(client, "/node", response, outcome="node_response")
