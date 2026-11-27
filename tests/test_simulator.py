@@ -823,7 +823,30 @@ def test_invalid_rta_group_node_set_is_atomic():
     assert simulator.snapshot(outcome="unhandled_set")["events"]
 
 
-def test_node_get_returns_xlive_urec_group():
+@pytest.mark.parametrize("tokens,expected", [
+    ("0 0 0 0 0 NONE 0 0 0 0 NONE NONE \"\" \"\" \"\" 0",
+     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "", "", "", 0]),
+    ("1 2 3 4 5 GOOD 6 7 8 9 READY ERROR \"Card one\" \"Card two\" \"No error\" 10",
+     [1, 2, 3, 4, 5, 1, 6, 7, 8, 9, 1, 3, "Card one", "Card two", "No error", 10]),
+])
+def test_xlive_urec_group_set_updates_all_fields(tokens, expected):
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", "-urec " + tokens))
+    assert list(simulator.state.urec.values()) == expected
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+def test_xlive_urec_group_set_rejects_invalid_enum_atomically():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    before = dict(simulator.state.urec)
+    simulator.handle(("127.0.0.1", 50123), packet("/", "-urec 1 2 3 4 5 INVALID 6 7 8 9 NONE NONE \"\" \"\" \"\" 0"))
+    assert simulator.state.urec == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
     client = ("127.0.0.1", 50123)
