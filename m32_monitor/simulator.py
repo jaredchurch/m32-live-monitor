@@ -397,7 +397,13 @@ class Simulator:
                 raise ValueError("Empty X32node text")
             header = tokens[0].lstrip("/")
             values = tokens[1:]
-            if header == "config/talk":
+            if header == "config/osc":
+            self.send(client, "/node", self._config_osc_node_group(), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned all six oscillator generator settings")
+            return
+
+        if header == "config/talk":
                 if len(values) != 2:
                     raise ValueError("Talkback group requires enable and source")
                 parsed = [("OFF", "ON").index(values[0]), ("INT", "EXT").index(values[1])]
@@ -426,6 +432,27 @@ class Simulator:
                 else:
                     raise ValueError("Unknown talkback field")
                 paths = ["/" + header]
+            elif header == "config/osc":
+                if len(values) != 6:
+                    raise ValueError("Oscillator group requires level, F1, F2, selected frequency, type and destination")
+                parsed = [float(values[0]), float(values[1]), float(values[2]),
+                          ("F1", "F2").index(values[3]),
+                          ("SINE", "PINK", "WHITE").index(values[4]), int(values[5], 0)]
+                paths = ["/config/osc/" + field for field in ("level", "f1", "f2", "fsel", "type", "dest")]
+            elif header.startswith("config/osc/") and len(values) == 1:
+                field = header.rsplit("/", 1)[1]
+                path = "/" + header
+                if field in ("fsel",):
+                    parsed = [("F1", "F2").index(values[0])]
+                elif field == "type":
+                    parsed = [("SINE", "PINK", "WHITE").index(values[0])]
+                elif field in ("level", "f1", "f2"):
+                    parsed = [float(values[0])]
+                elif field == "dest":
+                    parsed = [int(values[0], 0)]
+                else:
+                    raise ValueError("Unknown oscillator field")
+                paths = [path]
             elif header == "-prefs/rta":
                 if len(values) != 10:
                     raise ValueError("RTA group requires 10 ordered values")
@@ -470,12 +497,14 @@ class Simulator:
                 raise ValueError("Unsupported X32node SET header %r" % header)
             old_preferences = dict(self.state.preferences)
             old_talk = json.loads(json.dumps(self.state.talk_config))
+            old_osc = dict(self.state.osc_config)
             old_status = dict(self.state.rta_status)
             old_received = set(self.state.received)
             for path, value in zip(paths, parsed):
                 if not self.state.update(path, value):
                     self.state.preferences.update(old_preferences)
                     self.state.talk_config = old_talk
+                    self.state.osc_config.update(old_osc)
                     self.state.rta_status.update(old_status)
                     self.state.received.clear()
                     self.state.received.update(old_received)
@@ -485,7 +514,7 @@ class Simulator:
             return
         self.record("in", "handled_node_set", "/", args, client,
                     "Applied %d %s configuration value(s)" % (
-                        len(paths), "talkback" if paths[0].startswith("/config/talk/") else "RTA preference"))
+                        len(paths), "talkback" if paths[0].startswith("/config/talk/") else "oscillator" if paths[0].startswith("/config/osc/") else "RTA preference"))
         self.send(client, "/", args[0], outcome="node_set_echo")
         for subscriber in tuple(self.clients):
             self.send(subscriber, "/", args[0], outcome="subscription_update")
@@ -563,6 +592,14 @@ class Simulator:
             section, values["level"], ("OFF", "ON")[values["dim"]],
             ("OFF", "ON")[values["latch"]], "%" + format(values["destmap"], "018b"))
 
+    def _config_osc_node_group(self):
+        """Render the six oscillator generator settings in protocol order."""
+        values = self.state.osc_config
+        return "/config/osc %.1f %.1f %.1f %s %s %d\\n" % (
+            values["level"], values["f1"], values["f2"],
+            ("F1", "F2")[values["fsel"]],
+            ("SINE", "PINK", "WHITE")[values["type"]], values["dest"])
+
     def _config_mute_node_group(self):
         """Render all six mute-group selection states."""
         return "".join("/config/mute/%d %s\n" % (
@@ -635,6 +672,26 @@ class Simulator:
             self.send(client, "/node", self._rta_node_group(), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned all ten RTA preference fields")
+            return
+        if header.startswith("config/osc/"):
+            address = "/" + header
+            value = self.state.get(address)
+            if value is None:
+                self.record("in", "unhandled_command", "/node", args, client,
+                            "No oscillator value is modelled for header %r" % header)
+                return
+            field = header.rsplit("/", 1)[1]
+            if field == "fsel":
+                rendered = ("F1", "F2")[int(value)]
+            elif field == "type":
+                rendered = ("SINE", "PINK", "WHITE")[int(value)]
+            elif field in ("level", "f1", "f2"):
+                rendered = "%.1f" % float(value)
+            else:
+                rendered = str(int(value))
+            self.send(client, "/node", "%s %s\\n" % (address, rendered), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned individual oscillator configuration value")
             return
         if header.startswith("config/talk/"):
             address = "/" + header
