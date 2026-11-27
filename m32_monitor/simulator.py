@@ -587,10 +587,14 @@ class Simulator:
                     positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
                     paths = [prefix + "/src", prefix + "/pos", prefix + "/invert"]
                     parsed = [int(values[0], 0), positions.index(values[1]), ("OFF", "ON").index(values[2])]
-                elif parts[3] == "delay":
+                elif parts[3] == "delay" and len(parts) == 4:
                     if len(values) != 2: raise ValueError("Main output delay node requires enable and time")
                     paths = [prefix + "/delay/on", prefix + "/delay/time"]
                     parsed = [("OFF", "ON").index(values[0]), float(values[1])]
+                elif len(parts) == 5 and parts[3:5] == ["delay", "on"] and len(values) == 1:
+                    paths, parsed = [prefix + "/delay/on"], [("OFF", "ON").index(values[0])]
+                elif len(parts) == 5 and parts[3:5] == ["delay", "time"] and len(values) == 1:
+                    paths, parsed = [prefix + "/delay/time"], [float(values[0])]
                 elif len(parts) == 4 and parts[3] in ("src", "pos", "invert") and len(values) == 1:
                     field = parts[3]
                     if field == "src": parsed = [int(values[0], 0)]
