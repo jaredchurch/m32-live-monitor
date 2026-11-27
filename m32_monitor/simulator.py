@@ -856,6 +856,10 @@ class Simulator:
                 value = ("OFF", "ON")[int(value)]
             elif header.endswith("/aesAB"):
                 value = ("AESA", "AESB")[int(value)]
+            elif header.startswith("config/amixenable/") or header.endswith("/autoplay"):
+                value = ("OFF", "ON")[int(value)]
+            elif header.endswith("/scope"):
+                value = "%" + format(int(value), "04b")
             elif header.endswith("/broadcast") or "/link/" in header or "/assign/" in header:
                 value = str(int(value))
             elif isinstance(value, float):
