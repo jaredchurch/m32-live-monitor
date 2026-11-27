@@ -2141,4 +2141,4 @@ def test_rta_peakhold_accepts_console_duration_labels(token, expected):
     assert simulator.snapshot(outcome="handled_node_set")["events"]
     simulator.handle(client, packet("/node", "-prefs/rta/peakhold"))
     response = OscMessage(simulator.transport.sent[-1][0])
-    assert response.params == ["/-prefs/rta/peakhold " + token + "\\n"]
+    assert response.params == ["/-prefs/rta/peakhold " + token + "\n"]
