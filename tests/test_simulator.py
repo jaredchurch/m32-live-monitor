@@ -1540,6 +1540,49 @@ def test_userrout_out_individual_node_get_and_set():
     assert response.params == ["/config/userrout/out/08 167\n"]
     assert simulator.snapshot(outcome="handled_node_set")["events"]
 
+@pytest.mark.parametrize("direction,count,maximum", [("out", 48, 208), ("in", 32, 168)])
+def test_userrout_parent_node_set_applies_complete_mapping_atomically(direction, count, maximum):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    values = [0] * count
+    values[0] = 1
+    values[-1] = maximum
+    simulator.handle(client, packet("/", "config/userrout/%s " % direction + " ".join(map(str, values))))
+    slots = state.user_rout_out if direction == "out" else state.user_rout_in
+    assert list(slots.values()) == values
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+@pytest.mark.parametrize("direction,count,maximum", [("out", 48, 208), ("in", 32, 168)])
+def test_userrout_direct_bulk_osc_set_applies_complete_mapping(direction, count, maximum):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    values = [0] * count
+    values[0] = 1
+    values[-1] = maximum
+    simulator.handle(client, packet("/config/userrout/" + direction, *values))
+    slots = state.user_rout_out if direction == "out" else state.user_rout_in
+    assert list(slots.values()) == values
+    assert simulator.snapshot(outcome="handled_set")["events"]
+
+
+@pytest.mark.parametrize("direction,count,maximum", [("out", 48, 208), ("in", 32, 168)])
+def test_userrout_bulk_sets_reject_wrong_count_or_invalid_source_without_partial_write(direction, count, maximum):
+    for invalid_values in ([0] * (count - 1), [0] * (count - 1) + [maximum + 1]):
+        state = ConsoleState()
+        simulator = Simulator(state)
+        simulator.transport = FakeTransport()
+        client = ("127.0.0.1", 50123)
+        before = dict(state.user_rout_out if direction == "out" else state.user_rout_in)
+        simulator.handle(client, packet("/config/userrout/" + direction, *invalid_values))
+        assert (state.user_rout_out if direction == "out" else state.user_rout_in) == before
+        assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
 def test_channel_config_parent_node_returns_identity_and_routing_fields():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
