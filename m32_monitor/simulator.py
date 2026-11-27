@@ -576,6 +576,27 @@ class Simulator:
                 else:
                     raise ValueError("Unknown RTA preference")
                 paths, parsed = [path], parsed
+            elif header.startswith("headamp/"):
+                parts = header.split("/")
+                if len(parts) not in (2, 3) or not parts[1].isdigit() or not 0 <= int(parts[1]) <= 127:
+                    raise ValueError("Unknown headamp index")
+                number = int(parts[1])
+                prefix = "/headamp/%03d" % number
+                if len(parts) == 2:
+                    if len(values) != 2:
+                        raise ValueError("Headamp node requires gain and phantom state")
+                    paths = [prefix + "/gain", prefix + "/phantom"]
+                    parsed = [float(values[0]), ("OFF", "ON").index(values[1])]
+                elif parts[2] == "gain" and len(values) == 1:
+                    paths, parsed = [prefix + "/gain"], [float(values[0])]
+                elif parts[2] == "phantom" and len(values) == 1:
+                    paths, parsed = [prefix + "/phantom"], [("OFF", "ON").index(values[0])]
+                else:
+                    raise ValueError("Unsupported headamp node field")
+                previous = dict(self.state.headamps[number])
+                if not all(self.state.update(path, value) for path, value in zip(paths, parsed)):
+                    self.state.headamps[number].update(previous)
+                    raise ValueError("Invalid headamp value")
             elif header.startswith(("outputs/main/", "outputs/aux/", "outputs/p16/", "outputs/aes/", "outputs/rec/")):
                 parts = header.split("/")
                 family = parts[1]
@@ -1265,6 +1286,22 @@ class Simulator:
                             "Returned %s %02d config discovery node" % (family, number))
                 return
 
+        headamp_parts = header.split("/")
+        if len(headamp_parts) in (2, 3) and headamp_parts[0] == "headamp" and headamp_parts[1].isdigit():
+            number = int(headamp_parts[1])
+            if number in self.state.headamps and (len(headamp_parts) == 2 or headamp_parts[2] in ("gain", "phantom")):
+                prefix = "/headamp/%03d" % number
+                headamp = self.state.headamps[number]
+                if len(headamp_parts) == 2:
+                    response = "%s %+.1f %s\\n" % (prefix, headamp["gain"], ("OFF", "ON")[headamp["phantom"]])
+                elif headamp_parts[2] == "gain":
+                    response = "%s/gain %+.1f\\n" % (prefix, headamp["gain"])
+                else:
+                    response = "%s/phantom %s\\n" % (prefix, ("OFF", "ON")[headamp["phantom"]])
+                self.send(client, "/node", response, outcome="node_response")
+                self.record("in", "handled_node_get", "/node", args, client,
+                            "Returned headamp %03d %s node" % (number, "configuration" if len(headamp_parts) == 2 else headamp_parts[2]))
+                return
         output_parts = header.split("/")
         if (len(output_parts) in (3, 4) and output_parts[0] == "outputs"
                 and output_parts[1] in ("main", "aux", "p16", "aes", "rec") and output_parts[2].isdigit()):
