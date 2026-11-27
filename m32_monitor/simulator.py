@@ -876,7 +876,7 @@ class Simulator:
                 parsed = [self._parse_strip_node_value(
                     schema[node][field], token, field,
                     fader_db=(prefix.startswith("/ch/") and
-                              ((node == "mix" and field == "fader") or
+                              ((node == "mix" and field in ("fader", "mlevel")) or
                                (node.startswith("mix/") and field == "level"))))
                           for field, token in zip(fields, values)]
                 for path, value in zip(paths, parsed):
