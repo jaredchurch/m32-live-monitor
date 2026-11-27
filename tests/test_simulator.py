@@ -984,3 +984,79 @@ def test_config_solo_fields_can_be_read_and_set(field, value):
 ])
 def test_config_solo_fields_reject_invalid_values(field, value):
     assert not ConsoleState().update("/config/solo/" + field, value)
+
+
+def test_config_osc_node_returns_all_six_fields_in_protocol_order():
+    state = ConsoleState()
+    state.osc_config.update({"level": -12.5, "f1": 1000.0, "f2": 2000.0,
+                             "fsel": 1, "type": 2, "dest": 24})
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    simulator.handle(("127.0.0.1", 50123), packet("/node", "config/osc"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ["/config/osc -12.5 1000.0 2000.0 F2 WHITE 24\\n"]
+
+
+@pytest.mark.parametrize("field,value", [
+    ("level", -90.0), ("level", 10.0), ("f1", 20.0), ("f1", 20000.0),
+    ("f2", 1000.0), ("fsel", 1), ("type", 2), ("dest", 25),
+])
+def test_config_osc_fields_can_be_read_and_set(field, value):
+    state = ConsoleState()
+    address = "/config/osc/" + field
+    assert state.get(address) is not None
+    assert state.update(address, value)
+    assert state.get(address) == value
+
+
+@pytest.mark.parametrize("field,value", [
+    ("level", 10.1), ("level", -90.1), ("level", -12.3),
+    ("f1", 19.9), ("f1", 20001.0), ("f1", 1001.0),
+    ("f2", 0), ("fsel", 2), ("type", 3), ("dest", 26),
+    ("dest", 1.5), ("type", True), ("unknown", 1),
+])
+def test_config_osc_rejects_invalid_values(field, value):
+    assert not ConsoleState().update("/config/osc/" + field, value)
+
+
+def test_config_osc_individual_node_get_uses_enum_labels():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.state.osc_config.update({"fsel": 1, "type": 2, "dest": 25})
+    for header, expected in (
+        ("config/osc/fsel", "/config/osc/fsel F2\\n"),
+        ("config/osc/type", "/config/osc/type WHITE\\n"),
+        ("config/osc/dest", "/config/osc/dest 25\\n"),
+    ):
+        simulator.handle(client, packet("/node", header))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.params == [expected]
+
+
+def test_config_osc_node_set_updates_all_fields_atomically():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", "config/osc -12.5 1000 2000 F2 WHITE 24"))
+    assert simulator.state.osc_config == {
+        "level": -12.5, "f1": 1000.0, "f2": 2000.0,
+        "fsel": 1, "type": 2, "dest": 24,
+    }
+    before = dict(simulator.state.osc_config)
+    simulator.handle(client, packet("/", "config/osc -12.3 1000 2000 F2 WHITE 24"))
+    assert simulator.state.osc_config == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+def test_config_osc_individual_node_set_updates_enum_and_numeric_values():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", "config/osc/fsel F2"))
+    simulator.handle(client, packet("/", "config/osc/type PINK"))
+    simulator.handle(client, packet("/", "config/osc/dest 25"))
+    assert simulator.state.osc_config["fsel"] == 1
+    assert simulator.state.osc_config["type"] == 1
+    assert simulator.state.osc_config["dest"] == 25
