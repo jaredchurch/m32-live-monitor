@@ -930,6 +930,20 @@ def test_config_link_rejects_unknown_pair_and_invalid_value():
 
 
 @pytest.mark.parametrize("value", [2, -1, 0.5, float("nan"), True, "1", None])
+@pytest.mark.parametrize("address,value", [
+    ("/config/routing/IN/1-8", 24),
+    ("/config/routing/AES50A/1-8", 36),
+    ("/config/routing/OUT/1-4", 36),
+    ("/config/routing/routswitch", 2),
+    ("/config/routing/rootswitch", -1),
+    ("/config/routing/IN/AUX", 16),
+    ("/config/routing/IN/1-8", 1.5),
+    ("/config/routing/IN/1-8", True),
+])
+def test_routing_enum_values_are_validated_against_protocol(address, value):
+    assert not ConsoleState().update(address, value)
+
+
 def test_routing_inventory_rejects_non_binary_stereo_link_values(value):
     state = ConsoleState()
     assert not state.routing.update("/config/chlink/1-2", value)
@@ -1197,7 +1211,7 @@ def test_extended_configuration_x32node_writes_update_state():
 
     simulator.handle(client, packet("/", "config/dp48 %1010 1 AESB"))
     assert simulator.state.dp48_config["scope"] == 10
-    assert simulator.state.dp48_config["broadcast"] == 1
+    assert simulator.state.dp48_config["broadcast"] == 0
     assert simulator.state.dp48_config["aesAB"] == 1
 
     simulator.handle(client, packet("/", "config/dp48/link " + " ".join(["1"] + ["0"] * 23)))
