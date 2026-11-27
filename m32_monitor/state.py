@@ -255,6 +255,8 @@ class ConsoleState:
         self.key_solo = 0
         self.solo_switches = {number: 0 for number in range(1, 81)}
         self.card_preferences = {name: 0 for name in ("UFifc", "UFmode", "USBmode", "ADATwc", "ADATsync", "MADImode", "MADIin", "MADIout", "MADIsrc", "URECtracks", "URECplayb", "URECrout", "URECsdsel")}
+        # Preserve M32-Edit showfile, miscellaneous preference and action-option values.
+        self.misc_nodes = {}
         self.received = set()
         self.last_seen = time.monotonic()
         self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 32 + n, False) for n in range(1, 9)}
@@ -746,6 +748,15 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if address.startswith(("/-show/", "/-prefs/", "/-action/")):
+                if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+                    return False
+                if isinstance(value, float) and not math.isfinite(value):
+                    return False
+                self.misc_nodes[address] = value
+                self.received.add(address)
+                return True
+
             if address == "/-prefs/rta/visibility" and isinstance(value, (int, float)) and float(value) == int(value) and 0 <= int(value) <= 12:
                 self.preferences["rta/visibility"] = int(value)
                 self.received.add(address)
@@ -1084,6 +1095,8 @@ class ConsoleState:
                 return self.solo_switches.get(int(parts[2]))
             if len(parts) == 3 and parts[:2] == ["-prefs", "card"]:
                 return self.card_preferences.get(parts[2])
+            if address.startswith(("/-show/", "/-prefs/", "/-action/")):
+                return self.misc_nodes.get(address)
             if address == "/-prefs/dcamute":
                 return int(self.dca_mutes_enabled) if self.dca_mutes_enabled is not None else None
             if address == "/-prefs/hardmute":
