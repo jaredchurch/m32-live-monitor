@@ -133,6 +133,8 @@ for family in ("AES50A", "AES50B", "CARD"):
             ROUTING_ENUM_TOKENS[path] = AES50_OUTPUT_PATCH_TOKENS
 for bank, tokens in OUT_PATCH_TOKENS.items():
     ROUTING_ENUM_TOKENS[f"/config/routing/OUT/{bank}"] = tokens
+for switch in ("outswitch", "routswitch", "rootswitch"):
+    ROUTING_ENUM_TOKENS[f"/config/routing/{switch}"] = ("REC", "PLAY")
 
 
 def routing_enum_index(address, value):
