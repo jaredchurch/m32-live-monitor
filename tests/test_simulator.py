@@ -1473,7 +1473,7 @@ def test_bus_dynamics_node_reads_and_writes_group_and_individual_fields():
     assert len(response.params[0].split()) == 16
     assert response.params[0].startswith("/bus/01/dyn ")
 
-    simulator.handle(client, packet("/", "bus/01/dyn ON COMP PEAK LIN -24 6 0 0 10 10 100 PRE 0 100 OFF"))
+    simulator.handle(client, packet("/", "bus/01/dyn ON COMP PEAK LIN -24 4.0 0 0 10 10 100 PRE 0 100 OFF"))
     assert simulator.state.get("/bus/01/dyn/on") == 1
     assert simulator.state.get("/bus/01/dyn/mode") == 0
     assert simulator.state.get("/bus/01/dyn/thr") == -24.0
