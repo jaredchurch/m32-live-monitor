@@ -1459,3 +1459,44 @@ def test_bus_config_fields_can_be_read_and_set_with_validation():
     assert not state.update("/bus/01/config/icon", 75)
     assert not state.update("/bus/01/config/color", 16)
     assert not state.update("/bus/01/config/name", "Name is too long")
+
+
+
+def test_bus_dynamics_node_reads_and_writes_group_and_individual_fields():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "bus/01/dyn"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert len(response.params[0].split()) == 16
+    assert response.params[0].startswith("/bus/01/dyn ")
+
+    simulator.handle(client, packet("/", "bus/01/dyn ON COMP PEAK LIN -24 6 0 0 10 10 100 PRE 0 100 OFF"))
+    assert simulator.state.get("/bus/01/dyn/on") == 1
+    assert simulator.state.get("/bus/01/dyn/mode") == 0
+    assert simulator.state.get("/bus/01/dyn/thr") == -24.0
+    assert simulator.state.get("/bus/01/dyn/ratio") == 6
+    assert simulator.state.get("/bus/01/dyn/auto") == 0
+
+    simulator.handle(client, packet("/node", "bus/01/dyn/thr"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == ["/bus/01/dyn/thr -24.000\\n"]
+
+
+def test_bus_dynamics_reject_invalid_values():
+    state = ConsoleState()
+    assert not state.update("/bus/01/dyn/thr", -60.25)
+    assert not state.update("/bus/01/dyn/ratio", 12)
+    assert not state.update("/bus/01/dyn/on", 2)
+
+
+def test_simulator_default_discovery_name_is_m32_simulation():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/xinfo"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/xinfo"
+    assert response.params[1] == "M32-Simulation"
