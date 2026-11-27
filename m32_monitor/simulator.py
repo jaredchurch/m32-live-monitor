@@ -576,41 +576,39 @@ class Simulator:
                 else:
                     raise ValueError("Unknown RTA preference")
                 paths, parsed = [path], parsed
-            elif header.startswith("outputs/main/"):
+            elif header.startswith(("outputs/main/", "outputs/aux/")):
                 parts = header.split("/")
-                if len(parts) not in (3, 4, 5) or not parts[2].isdigit() or int(parts[2]) not in self.state.output_main:
-                    raise ValueError("Unknown physical main output")
+                family = parts[1]
+                collection = self.state.output_main if family == "main" else self.state.output_aux
+                if len(parts) not in (3, 4, 5) or not parts[2].isdigit() or int(parts[2]) not in collection:
+                    raise ValueError("Unknown physical %s output" % family)
                 number = int(parts[2])
-                prefix = "/outputs/main/%02d" % number
+                prefix = "/outputs/%s/%02d" % (family, number)
+                positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
                 if len(parts) == 3:
-                    if len(values) != 3: raise ValueError("Main output node requires source, position and invert")
-                    positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
+                    if len(values) != 3: raise ValueError("Output node requires source, position and invert")
                     paths = [prefix + "/src", prefix + "/pos", prefix + "/invert"]
                     parsed = [int(values[0], 0), positions.index(values[1]), ("OFF", "ON").index(values[2])]
-                elif parts[3] == "delay" and len(parts) == 4:
+                elif family == "main" and parts[3] == "delay" and len(parts) == 4:
                     if len(values) != 2: raise ValueError("Main output delay node requires enable and time")
                     paths = [prefix + "/delay/on", prefix + "/delay/time"]
                     parsed = [("OFF", "ON").index(values[0]), float(values[1])]
-                elif len(parts) == 5 and parts[3:5] == ["delay", "on"] and len(values) == 1:
+                elif family == "main" and len(parts) == 5 and parts[3:5] == ["delay", "on"] and len(values) == 1:
                     paths, parsed = [prefix + "/delay/on"], [("OFF", "ON").index(values[0])]
-                elif len(parts) == 5 and parts[3:5] == ["delay", "time"] and len(values) == 1:
+                elif family == "main" and len(parts) == 5 and parts[3:5] == ["delay", "time"] and len(values) == 1:
                     paths, parsed = [prefix + "/delay/time"], [float(values[0])]
                 elif len(parts) == 4 and parts[3] in ("src", "pos", "invert") and len(values) == 1:
                     field = parts[3]
                     if field == "src": parsed = [int(values[0], 0)]
-                    elif field == "pos": parsed = [("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST").index(values[0])]
+                    elif field == "pos": parsed = [positions.index(values[0])]
                     else: parsed = [("OFF", "ON").index(values[0])]
                     paths = [prefix + "/" + field]
-                elif len(parts) == 5 and parts[3:5] == ["delay", "on"] and len(values) == 1:
-                    paths, parsed = [prefix + "/delay/on"], [("OFF", "ON").index(values[0])]
-                elif len(parts) == 5 and parts[3:5] == ["delay", "time"] and len(values) == 1:
-                    paths, parsed = [prefix + "/delay/time"], [float(values[0])]
                 else:
-                    raise ValueError("Unsupported main output node")
-                previous = dict(self.state.output_main[number])
+                    raise ValueError("Unsupported physical %s output node" % family)
+                previous = dict(collection[number])
                 if not all(self.state.update(path, value) for path, value in zip(paths, parsed)):
-                    self.state.output_main[number].update(previous)
-                    raise ValueError("Invalid physical main output value")
+                    collection[number].update(previous)
+                    raise ValueError("Invalid physical %s output value" % family)
             elif header.startswith("fx/"):
                 parts = header.split("/")
                 if len(parts) not in (2, 3, 4) or not parts[1].isdigit() or int(parts[1]) not in self.state.fx:
@@ -1255,29 +1253,32 @@ class Simulator:
                 return
 
         output_parts = header.split("/")
-        if (len(output_parts) in (3, 4) and output_parts[:2] == ["outputs", "main"]
-                and output_parts[2].isdigit() and int(output_parts[2]) in self.state.output_main):
+        if (len(output_parts) in (3, 4) and output_parts[0] == "outputs"
+                and output_parts[1] in ("main", "aux") and output_parts[2].isdigit()):
+            family = output_parts[1]
+            collection = self.state.output_main if family == "main" else self.state.output_aux
             number = int(output_parts[2])
-            prefix = "/outputs/main/%02d" % number
-            output = self.state.output_main[number]
-            positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
-            if len(output_parts) == 3:
-                response = ("%s/src %d\n%s/pos %s\n%s/invert %s\n" % (
-                    prefix, output["src"], prefix, positions[output["pos"]], prefix,
-                    ("OFF", "ON")[output["invert"]]))
-            elif output_parts[3] == "delay":
-                response = "%s/delay/on %s\n%s/delay/time %.1f\n" % (
-                    prefix, ("OFF", "ON")[output["delay_on"]], prefix, output["delay_time"])
-            elif output_parts[3] == "src": response = "%s/src %d\n" % (prefix, output["src"])
-            elif output_parts[3] == "pos": response = "%s/pos %s\n" % (prefix, positions[output["pos"]])
-            elif output_parts[3] == "invert": response = "%s/invert %s\n" % (prefix, ("OFF", "ON")[output["invert"]])
-            else: response = None
-            if response is not None:
-                self.send(client, "/node", response, outcome="node_response")
-                self.record("in", "handled_node_get", "/node", args, client,
-                            "Returned physical main output %02d %s node" % (number, output_parts[3] if len(output_parts) == 4 else "configuration"))
-                return
-        if len(output_parts) == 5 and output_parts[:2] == ["outputs", "main"] and output_parts[2].isdigit():
+            if number in collection:
+                prefix = "/outputs/%s/%02d" % (family, number)
+                output = collection[number]
+                positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
+                if len(output_parts) == 3:
+                    response = ("%s/src %d\n%s/pos %s\n%s/invert %s\n" % (
+                        prefix, output["src"], prefix, positions[output["pos"]], prefix,
+                        ("OFF", "ON")[output["invert"]]))
+                elif output_parts[3] == "delay" and family == "main":
+                    response = "%s/delay/on %s\n%s/delay/time %.1f\n" % (
+                        prefix, ("OFF", "ON")[output["delay_on"]], prefix, output["delay_time"])
+                elif output_parts[3] == "src": response = "%s/src %d\n" % (prefix, output["src"])
+                elif output_parts[3] == "pos": response = "%s/pos %s\n" % (prefix, positions[output["pos"]])
+                elif output_parts[3] == "invert": response = "%s/invert %s\n" % (prefix, ("OFF", "ON")[output["invert"]])
+                else: response = None
+                if response is not None:
+                    self.send(client, "/node", response, outcome="node_response")
+                    self.record("in", "handled_node_get", "/node", args, client,
+                                "Returned physical %s output %02d %s node" % (family, number, output_parts[3] if len(output_parts) == 4 else "configuration"))
+                    return
+        if len(output_parts) == 5 and output_parts[0] == "outputs" and output_parts[1] == "main" and output_parts[2].isdigit():
             number = int(output_parts[2])
             if number in self.state.output_main and output_parts[3:] in (["delay", "on"], ["delay", "time"]):
                 value = self.state.get("/" + header)
