@@ -1142,7 +1142,8 @@ class Simulator:
             # M32-Edit serialises audio frequencies in compact k notation
             # (for example 9k35 = 9350 Hz). Ordinary decimal values remain valid.
             return _parse_osc_frequency(token)
-        return int(token, 0)
+        # X32node uses a leading '%' for binary bitmaps in grouped nodes.
+        return int(token[1:], 2) if token.startswith("%") else int(token, 0)
 
     @staticmethod
     def _format_strip_node_value(spec, value):
