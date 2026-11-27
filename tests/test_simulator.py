@@ -2606,3 +2606,22 @@ def test_aes50_routing_node_set_accepts_m32_edit_aux_tb_alias():
     assert simulator.state.routing.get("/config/routing/AES50B/41-48") == 25
     assert simulator.snapshot(outcome="handled_node_set")["events"]
     assert not simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+def test_eq_gain_accepts_half_tenth_db_values_across_strip_families():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    for address, header in (
+        ("/ch/01/eq/2", "ch/01/eq/2"),
+        ("/bus/01/eq/2", "bus/01/eq/2"),
+        ("/mtx/01/eq/2", "mtx/01/eq/2"),
+    ):
+        simulator.handle(client, packet("/", header + " PEQ 479.8 -2.25 1.6"))
+        assert state.get(address + "/g") == -2.25
+        assert not simulator.snapshot(outcome="unhandled_set")["events"]
+
+    assert state.update("/main/st/eq/2/g", -2.25)
+    assert state.get("/main/st/eq/2/g") == -2.25
