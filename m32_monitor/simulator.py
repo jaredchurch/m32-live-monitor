@@ -873,7 +873,7 @@ class Simulator:
                     raise ValueError("Strip node %s requires %d values" % (header, len(fields)))
                 paths = [prefix + "/" + node + "/" + field for field in fields]
                 schema = self.state.main_node_schema if prefix in ("/main/st", "/main/m") else self.state.strip_node_schema[header.split("/")[0]]
-                parsed = [self._parse_strip_node_value(schema[node][field], token)
+                parsed = [self._parse_strip_node_value(schema[node][field], token, field)
                           for field, token in zip(fields, values)]
                 for path, value in zip(paths, parsed):
                     valid = (self.state._valid_main_node_value(path, value)
@@ -1121,7 +1121,7 @@ class Simulator:
         return None
 
     @staticmethod
-    def _parse_strip_node_value(spec, token):
+    def _parse_strip_node_value(spec, token, field=None):
         default, minimum, maximum, step, kind, labels = spec
         if kind == "string":
             return token
@@ -1136,6 +1136,21 @@ class Simulator:
                     raise ValueError("Enum index %d is out of range" % index)
                 return index
         if kind == "float":
+            # X32node represents faders as dB, while simulator state stores
+            # the console's normalised 0.0-1.0 fader position.
+            if field == "fader":
+                if token == "-oo":
+                    return 0.0
+                db = float(token)
+                if not -90.0 <= db <= 10.0:
+                    raise ValueError("Fader level must be between -90 and +10 dB")
+                if db < -60.0:
+                    return (db + 90.0) / 480.0
+                if db < -30.0:
+                    return (db + 70.0) / 160.0
+                if db < -10.0:
+                    return (db + 50.0) / 80.0
+                return (db + 30.0) / 40.0
             # X32node uses -oo to represent a fader at its bottom (silence).
             if token == "-oo":
                 return 0.0
