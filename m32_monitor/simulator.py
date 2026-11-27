@@ -766,7 +766,7 @@ class Simulator:
             return None
         family = parts[0]
         number = int(parts[1])
-        limit = {"ch": 32, "auxin": 8, "fxrtn": 8, "bus": 16}[family]
+        limit = {"ch": 32, "auxin": 8, "fxrtn": 8, "bus": 16, "mtx": 6}[family]
         if not 1 <= number <= limit:
             return None
         node = "/".join(parts[2:])
