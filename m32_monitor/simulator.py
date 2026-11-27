@@ -1710,6 +1710,28 @@ class Simulator:
                             "Routing mode switch was rejected")
             return
 
+        # M32-Edit uses the bank parent address for a colour-only OSC SET
+        # (for example, /config/userctrl/C "RD"), as well as the /color field.
+        userctrl_bank = address.rsplit("/", 1)[-1] if address.startswith("/config/userctrl/") else None
+        if userctrl_bank in ("A", "B", "C") and len(args) == 1:
+            colors = ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
+                      "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi")
+            try:
+                color = colors.index(args[0]) if isinstance(args[0], str) else None
+            except ValueError:
+                color = None
+            if color is not None and self.state.update(
+                    "/config/userctrl/%s/color" % userctrl_bank, color):
+                self.record("in", "handled_set", address, args, client,
+                            "Applied user control bank %s colour" % userctrl_bank)
+                for subscriber in tuple(self.clients):
+                    self.send(subscriber, "/config/userctrl/%s/color" % userctrl_bank,
+                              color, outcome="subscription_update")
+            else:
+                self.record("in", "unhandled_set", address, args, client,
+                            "Expected one of the 16 user control colour tokens")
+            return
+
         if address == "/config/routing" or address in (
                 "/config/routing/IN", "/config/routing/AES50A",
                 "/config/routing/AES50B", "/config/routing/CARD",
