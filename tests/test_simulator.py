@@ -31,7 +31,7 @@ def test_config_linkcfg_node_returns_four_link_preferences():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/config/linkcfg ON OFF ON ON\\n".replace("\\\\n", "\\n")]
+    assert response.params == ["/config/linkcfg ON OFF ON ON\n"]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
