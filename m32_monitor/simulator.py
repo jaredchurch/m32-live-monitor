@@ -421,7 +421,19 @@ class Simulator:
                 raise ValueError("Empty X32node text")
             header = tokens[0].lstrip("/")
             values = tokens[1:]
-            if header in ("config/userrout/out", "config/userrout/in"):
+            if header == "config/routing" or header in (
+                    "config/routing/IN", "config/routing/AES50A",
+                    "config/routing/AES50B", "config/routing/CARD",
+                    "config/routing/OUT", "config/routing/PLAY"):
+                from m32_monitor.routing import ROUTING_PATHS
+                prefix = "/" + header
+                paths = [path for path in ROUTING_PATHS
+                         if path.startswith(prefix + "/")
+                         and path.rsplit("/", 1)[-1] not in ("routswitch", "rootswitch", "outswitch")]
+                if len(values) != len(paths):
+                    raise ValueError("Routing node requires %d patch values" % len(paths))
+                parsed = [int(token, 0) for token in values]
+            elif header in ("config/userrout/out", "config/userrout/in"):
                 direction = header.rsplit("/", 1)[1]
                 slots = self.state.user_rout_out if direction == "out" else self.state.user_rout_in
                 expected = len(slots)
@@ -1671,6 +1683,34 @@ class Simulator:
             self.send(client, "/node", show_response, outcome="showdump_response")
             self.record("in", "handled_showdump", address, args, client,
                         "Returned empty show metadata (no stored show data is modelled)")
+            return
+
+        # Scene files send routing patch banks as ordered multi-value OSC
+        # messages. Keep their order identical to the documented X32node GET.
+        if address == "/config/routing" or address in (
+                "/config/routing/IN", "/config/routing/AES50A",
+                "/config/routing/AES50B", "/config/routing/CARD",
+                "/config/routing/OUT", "/config/routing/PLAY"):
+            from m32_monitor.routing import ROUTING_PATHS
+            prefix = address
+            paths = [path for path in ROUTING_PATHS
+                     if path.startswith(prefix + "/")
+                     and path.rsplit("/", 1)[-1] not in ("routswitch", "rootswitch", "outswitch")]
+            if (len(args) != len(paths) or any(
+                    isinstance(value, bool) or not isinstance(value, (int, float))
+                    or float(value) != int(value)
+                    or not 0 <= int(value) < len(ROUTING_PATHS[path][1])
+                    for path, value in zip(paths, args))):
+                self.record("in", "unhandled_set", address, args, client,
+                            "Expected %d integer patch values in documented enum ranges" % len(paths))
+                return
+            for path, value in zip(paths, args):
+                self.state.routing.update(path, int(value))
+                self.state.received.add(path)
+                for subscriber in tuple(self.clients):
+                    self.send(subscriber, path, int(value), outcome="subscription_update")
+            self.record("in", "handled_set", address, args, client,
+                        "Applied %d routing patch assignment(s)" % len(paths))
             return
 
         # Scene files and M32-Edit send each user-routing direction as one
