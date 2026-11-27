@@ -271,7 +271,7 @@ def test_simulator_udp_round_trip():
             )
             update = OscMessage(data)
             assert update.address == "/ch/01/config/name"
-            assert update.params == ["UDP integration test"]
+            assert update.params == ["UDP test"]
             assert state.channels[1].name == "UDP integration test"
         finally:
             client.close()
