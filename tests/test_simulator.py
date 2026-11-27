@@ -20,6 +20,29 @@ def packet(address, *args):
     return builder.build().dgram
 
 
+def test_config_mute_node_returns_all_six_group_states():
+    state = ConsoleState()
+    state.mute_groups[1] = True
+    state.mute_groups[4] = True
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "config/mute"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == [
+        "/config/mute/1 ON\\n"
+        "/config/mute/2 OFF\\n"
+        "/config/mute/3 OFF\\n"
+        "/config/mute/4 ON\\n"
+        "/config/mute/5 OFF\\n"
+        "/config/mute/6 OFF\\n"
+    ]
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
 def test_simulator_answers_parameter_get():
     state = ConsoleState()
     simulator = Simulator(state)
