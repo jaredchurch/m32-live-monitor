@@ -304,6 +304,11 @@ class ConsoleState:
             n: {"src": 0, "pos": 8, "iq_group": 0, "iq_speaker": 0}
             for n in range(1, 17)
         }
+        # Remote headamps: local XLR (000-031), AES50 A (032-079), AES50 B (080-127).
+        self.headamps = {
+            n: {"gain": 0.0, "phantom": 0}
+            for n in range(128)
+        }
         # Two AES50 output banks and two recording-card output banks.
         self.output_aes = {
             n: {"src": 0, "pos": 8, "invert": 0}
@@ -446,6 +451,28 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if len(parts) == 3 and parts[0] == "headamp" and parts[1].isdigit():
+                number = int(parts[1])
+                if number not in self.headamps or parts[2] not in ("gain", "phantom"):
+                    return False
+                if parts[2] == "gain":
+                    if (isinstance(value, bool) or not isinstance(value, (int, float))
+                            or not math.isfinite(float(value)) or not -12.0 <= float(value) <= 60.0
+                            or abs(float(value) * 2 - round(float(value) * 2)) > 1e-6):
+                        return False
+                    self.headamps[number]["gain"] = float(value)
+                else:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) not in (0.0, 1.0):
+                        return False
+                    self.headamps[number]["phantom"] = int(value)
+                self.received.add(address)
+                return True
+
+            if len(parts) == 3 and parts[0] == "headamp" and parts[1].isdigit():
+                number = int(parts[1])
+                if number not in self.headamps or parts[2] not in ("gain", "phantom"):
+                    return None
+                return self.headamps[number][parts[2]]
             if len(parts) >= 4 and parts[0] == "outputs" and parts[1] in ("main", "aux", "p16", "aes", "rec"):
                 collection = {"main": self.output_main, "aux": self.output_aux, "p16": self.output_p16, "aes": self.output_aes, "rec": self.output_rec}[parts[1]]
                 number = int(parts[2])
