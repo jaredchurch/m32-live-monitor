@@ -783,7 +783,7 @@ class Simulator:
                     raise ValueError("FX values must be finite")
             elif header.startswith("dca/"):
                 parts = header.split("/")
-                if len(parts) not in (2, 3) or not parts[1].isdigit() or int(parts[1]) not in self.state.dcas:
+                if len(parts) not in (2, 3, 4) or not parts[1].isdigit() or int(parts[1]) not in self.state.dcas:
                     raise ValueError("Unknown DCA node")
                 number = int(parts[1])
                 if len(parts) == 2:
@@ -820,9 +820,11 @@ class Simulator:
                     valid = (parsed[0] in (0, 1) and 0.0 <= parsed[1] <= 1.0
                              and len(parsed[2]) <= 12 and 1 <= parsed[3] <= 74
                              and 0 <= parsed[4] <= 15)
-                else:
+                elif len(parts) == 3 and parts[2] == "config":
                     valid = (len(parsed[0]) <= 12 and 1 <= parsed[1] <= 74
                              and 0 <= parsed[2] <= 15)
+                else:
+                    valid = True  # Individual fields are range-checked by ConsoleState.update.
                 if not valid:
                     raise ValueError("Invalid DCA node values")
                 for path, value in zip(paths, parsed):
