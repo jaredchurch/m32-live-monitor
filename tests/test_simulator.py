@@ -1340,6 +1340,19 @@ def test_userrout_out_individual_node_get_and_set():
     assert response.params == ["/config/userrout/out/08 167\n"]
     assert simulator.snapshot(outcome="handled_node_set")["events"]
 
+def test_channel_config_parent_node_returns_identity_and_routing_fields():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "ch/01/config"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ['/ch/01/config "CH 01" 1 YE 1\n']
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
 def test_channel_processing_node_reads_cover_delay_preamp_gate_dynamics_insert_and_eq():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
