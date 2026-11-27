@@ -578,7 +578,7 @@ class Simulator:
                 paths, parsed = [path], parsed
             elif header.startswith("outputs/main/"):
                 parts = header.split("/")
-                if len(parts) not in (3, 4) or not parts[2].isdigit() or int(parts[2]) not in self.state.output_main:
+                if len(parts) not in (3, 4, 5) or not parts[2].isdigit() or int(parts[2]) not in self.state.output_main:
                     raise ValueError("Unknown physical main output")
                 number = int(parts[2])
                 prefix = "/outputs/main/%02d" % number
@@ -597,6 +597,10 @@ class Simulator:
                     elif field == "pos": parsed = [("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST").index(values[0])]
                     else: parsed = [("OFF", "ON").index(values[0])]
                     paths = [prefix + "/" + field]
+                elif len(parts) == 5 and parts[3:5] == ["delay", "on"] and len(values) == 1:
+                    paths, parsed = [prefix + "/delay/on"], [("OFF", "ON").index(values[0])]
+                elif len(parts) == 5 and parts[3:5] == ["delay", "time"] and len(values) == 1:
+                    paths, parsed = [prefix + "/delay/time"], [float(values[0])]
                 else:
                     raise ValueError("Unsupported main output node")
                 previous = dict(self.state.output_main[number])
