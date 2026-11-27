@@ -397,7 +397,11 @@ class Simulator:
                 raise ValueError("Empty X32node text")
             header = tokens[0].lstrip("/")
             values = tokens[1:]
-            if header == "config/osc":
+            if header.startswith("config/userrout/out/") and len(values) == 1:
+                address = "/" + header
+                parsed = [int(values[0], 0)]
+                paths = [address]
+            elif header == "config/osc":
                 if len(values) != 6:
                     raise ValueError("Oscillator group requires level, F1, F2, selected frequency, type and destination")
                 parsed = [float(values[0]), float(values[1]), float(values[2]),
@@ -508,7 +512,7 @@ class Simulator:
             return
         self.record("in", "handled_node_set", "/", args, client,
                     "Applied %d %s configuration value(s)" % (
-                        len(paths), "talkback" if paths[0].startswith("/config/talk/") else "oscillator" if paths[0].startswith("/config/osc/") else "RTA preference"))
+                        len(paths), "talkback" if paths[0].startswith("/config/talk/") else "oscillator" if paths[0].startswith("/config/osc/") else "user output routing" if paths[0].startswith("/config/userrout/out/") else "RTA preference"))
         self.send(client, "/", args[0], outcome="node_set_echo")
         for subscriber in tuple(self.clients):
             self.send(subscriber, "/", args[0], outcome="subscription_update")
@@ -625,6 +629,26 @@ class Simulator:
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned all 17 solo-monitor configuration fields")
+            return
+
+        if header == "config/userrout/out":
+            response = "".join("/config/userrout/out/%02d %d\\n" % (slot, source)
+                               for slot, source in self.state.user_rout_out.items())
+            self.send(client, "/node", response, outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned all 48 user output routing assignments")
+            return
+
+        if header.startswith("config/userrout/out/"):
+            address = "/" + header
+            value = self.state.get(address)
+            if value is None:
+                self.record("in", "unhandled_command", "/node", args, client,
+                            "No user output routing slot is modelled for header %r" % header)
+                return
+            self.send(client, "/node", "%s %d\\n" % (address, value), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned individual user output routing assignment")
             return
 
         if header == "config/osc":
