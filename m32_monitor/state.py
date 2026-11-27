@@ -683,7 +683,9 @@ class ConsoleState:
                 if field == "level":
                     valid = -90.0 <= number <= 10.0 and abs((number + 90.0) / 0.625 - round((number + 90.0) / 0.625)) < 1e-6
                 elif field in ("f1", "f2"):
-                    valid = 20.0 <= number <= 20000.0 and abs(math.log(number / 20.0) / math.log(1000.0) * 120.0 - round(math.log(number / 20.0) / math.log(1000.0) * 120.0)) < 1e-4
+                    # Console frequency strings such as 1k00 need not land exactly on
+                    # the simulator's nominal slider grid.
+                    valid = 20.0 <= number <= 20000.0
                 elif field == "fsel":
                     valid = number in (0.0, 1.0)
                 elif field == "type":
