@@ -401,6 +401,78 @@ class Simulator:
                 address = "/" + header
                 parsed = [int(values[0], 0)]
                 paths = [address]
+            elif header.startswith("config/userctrl/"):
+                parts = header.split("/")
+                bank = parts[2]
+                if bank not in ("A", "B", "C"):
+                    raise ValueError("Unknown user control bank")
+                colors = ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
+                          "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi")
+                if len(parts) == 3:
+                    if len(values) != 13:
+                        raise ValueError("User control bank requires colour, four encoders and eight buttons")
+                    parsed = [colors.index(values[0])] + values[1:]
+                    paths = ["/config/userctrl/%s/color" % bank]
+                    paths += ["/config/userctrl/%s/enc/%d" % (bank, n) for n in range(1, 5)]
+                    paths += ["/config/userctrl/%s/btn/%d" % (bank, n) for n in range(5, 13)]
+                elif len(parts) == 4 and parts[3] in ("enc", "btn"):
+                    section = parts[3]
+                    expected = 4 if section == "enc" else 8
+                    if len(values) != expected:
+                        raise ValueError("User control %s node requires %d strings" % (section, expected))
+                    slots = range(1, 5) if section == "enc" else range(5, 13)
+                    paths = ["/config/userctrl/%s/%s/%d" % (bank, section, n) for n in slots]
+                    parsed = values
+                elif len(parts) == 4 and parts[3] == "color" and len(values) == 1:
+                    paths, parsed = ["/" + header], [colors.index(values[0])]
+                elif len(parts) == 5 and parts[3] in ("enc", "btn") and len(values) == 1:
+                    paths, parsed = ["/" + header], values
+                else:
+                    raise ValueError("Unsupported user control node")
+            elif header == "config/tape":
+                if len(values) != 3:
+                    raise ValueError("Tape node requires gainL, gainR and autoplay")
+                paths = ["/config/tape/gainL", "/config/tape/gainR", "/config/tape/autoplay"]
+                parsed = [float(values[0]), float(values[1]), ("OFF", "ON").index(values[2])]
+            elif header.startswith("config/tape/") and len(values) == 1:
+                field = header.rsplit("/", 1)[1]
+                parsed = [("OFF", "ON").index(values[0])] if field == "autoplay" else [float(values[0])]
+                paths = ["/" + header]
+            elif header == "config/amixenable":
+                if len(values) != 2:
+                    raise ValueError("Automix enable node requires X and Y states")
+                paths = ["/config/amixenable/X", "/config/amixenable/Y"]
+                parsed = [("OFF", "ON").index(v) for v in values]
+            elif header.startswith("config/amixenable/") and len(values) == 1:
+                paths, parsed = ["/" + header], [("OFF", "ON").index(values[0])]
+            elif header == "config/dp48":
+                if len(values) != 3:
+                    raise ValueError("DP48 node requires scope bitmap, broadcast and AES50 target")
+                scope = values[0]
+                parsed = [int(scope[1:], 2) if scope.startswith("%") else int(scope, 0),
+                          int(values[1], 0), ("AESA", "AESB").index(values[2])]
+                paths = ["/config/dp48/scope", "/config/dp48/broadcast", "/config/dp48/aesAB"]
+            elif header in ("config/dp48/link", "config/dp48/assign", "config/dp48/grpname"):
+                section = header.rsplit("/", 1)[1]
+                slots = {"link": range(1, 25), "assign": range(1, 49), "grpname": range(1, 13)}[section]
+                if len(values) != len(slots):
+                    raise ValueError("DP48 %s node requires %d values" % (section, len(slots)))
+                paths = ["/config/dp48/%s/%02d" % (section, n) for n in slots]
+                parsed = values if section == "grpname" else [int(v, 0) for v in values]
+            elif header.startswith("config/dp48/") and len(values) == 1:
+                parts = header.split("/")
+                if len(parts) == 3:
+                    field = parts[2]
+                    if field == "scope":
+                        token = values[0]
+                        parsed = [int(token[1:], 2) if token.startswith("%") else int(token, 0)]
+                    elif field == "aesAB":
+                        parsed = [("AESA", "AESB").index(values[0])]
+                    else:
+                        parsed = [int(values[0], 0)]
+                else:
+                    parsed = [values[0] if parts[2] == "grpname" else int(values[0], 0)]
+                paths = ["/" + header]
             elif header == "config/osc":
                 if len(values) != 6:
                     raise ValueError("Oscillator group requires level, F1, F2, selected frequency, type and destination")
@@ -497,6 +569,10 @@ class Simulator:
             old_talk = json.loads(json.dumps(self.state.talk_config))
             old_osc = dict(self.state.osc_config)
             old_status = dict(self.state.rta_status)
+            old_user_controls = json.loads(json.dumps(self.state.user_controls))
+            old_tape = dict(self.state.tape_config)
+            old_amix = dict(self.state.amix_enable)
+            old_dp48 = json.loads(json.dumps(self.state.dp48_config))
             old_received = set(self.state.received)
             for path, value in zip(paths, parsed):
                 if not self.state.update(path, value):
@@ -504,6 +580,10 @@ class Simulator:
                     self.state.talk_config = old_talk
                     self.state.osc_config.update(old_osc)
                     self.state.rta_status.update(old_status)
+                    self.state.user_controls = old_user_controls
+                    self.state.tape_config = old_tape
+                    self.state.amix_enable = old_amix
+                    self.state.dp48_config = old_dp48
                     self.state.received.clear()
                     self.state.received.update(old_received)
                     raise ValueError("Invalid value for %s: %r" % (path, value))
