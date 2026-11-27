@@ -593,6 +593,28 @@ class Simulator:
                                 parsed.append(float(token))
                             except ValueError:
                                 parsed.append(token)
+            elif header == "-urec":
+                fields = ("sessionmax", "markermax", "sessionlen", "sessionpos", "markerpos",
+                          "batterystate", "srate", "tracks", "sessionspan", "sessionoffs",
+                          "sd1state", "sd2state", "sd1info", "sd2info", "errormessage", "errorcode")
+                if len(values) != len(fields):
+                    raise ValueError("X-Live recorder node requires 16 ordered values")
+                enum_fields = {"batterystate": ("NONE", "GOOD", "LOW"),
+                               "sd1state": ("NONE", "READY", "PROTECT", "ERROR"),
+                               "sd2state": ("NONE", "READY", "PROTECT", "ERROR")}
+                paths = ["/-urec/" + field for field in fields]
+                parsed = []
+                for field, token in zip(fields, values):
+                    if field in enum_fields:
+                        parsed.append(enum_fields[field].index(token))
+                    elif field in ("sd1info", "sd2info", "errormessage"):
+                        parsed.append(token)
+                    else:
+                        parsed.append(int(token, 0))
+                previous = dict(self.state.urec)
+                if not all(self.state.update(path, value) for path, value in zip(paths, parsed)):
+                    self.state.urec.update(previous)
+                    raise ValueError("Invalid X-Live recorder node value")
             elif header.startswith("headamp/"):
                 parts = header.split("/")
                 if len(parts) not in (2, 3) or not parts[1].isdigit() or not 0 <= int(parts[1]) <= 127:
