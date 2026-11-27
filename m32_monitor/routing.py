@@ -94,7 +94,7 @@ class RoutingState:
             self.values[address] = int(value)
             return True
         if (address.startswith(("/config/routing/", "/outputs/", "/config/userrout/",
-                                  "/config/solo/", "/config/talk/",
+                                  "/fx/", "/config/solo/", "/config/talk/",
                                   "/main/m/mix/pan")) or
                 (address.startswith(("/ch/", "/auxin/", "/fxrtn/", "/bus/")) and
                  (address.endswith("/insert") or address.endswith("/mix/pan")))):
