@@ -818,6 +818,12 @@ class Simulator:
             old_tape = dict(self.state.tape_config)
             old_amix = dict(self.state.amix_enable)
             old_dp48 = json.loads(json.dumps(self.state.dp48_config))
+            old_config_links = json.loads(json.dumps(self.state.config_links))
+            old_link_config = dict(self.state.link_config)
+            old_mono_config = dict(self.state.mono_config)
+            old_solo_config = dict(self.state.solo_config)
+            old_mute_groups = dict(self.state.mute_groups)
+            old_urec = dict(self.state.urec)
             old_received = set(self.state.received)
             for path, value in zip(paths, parsed):
                 if not self.state.update(path, value):
@@ -829,6 +835,12 @@ class Simulator:
                     self.state.tape_config = old_tape
                     self.state.amix_enable = old_amix
                     self.state.dp48_config = old_dp48
+                    self.state.config_links = old_config_links
+                    self.state.link_config = old_link_config
+                    self.state.mono_config = old_mono_config
+                    self.state.solo_config = old_solo_config
+                    self.state.mute_groups = old_mute_groups
+                    self.state.urec = old_urec
                     self.state.received.clear()
                     self.state.received.update(old_received)
                     raise ValueError("Invalid value for %s: %r" % (path, value))
