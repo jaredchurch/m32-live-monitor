@@ -22,6 +22,11 @@ STRIP_NODE_SCHEMA = {
                 "auto": (0,0,1,1,"enum",("OFF","ON"))},
         "dyn/filter": {"on": (0,0,1,1,"enum",("OFF","ON")), "type": (0,0,8,1,"enum",("LC6","LC12","HC6","HC12","1.0","2.0","3.0","5.0","10.0")),
                         "f": (1000.0,20.0,20000.0,0,"float",None)},
+        "insert": {"on": (0,0,1,1,"enum",("OFF","ON")), "pos": (0,0,1,1,"enum",("PRE","POST")),
+                   "sel": (0,0,22,1,"enum",("OFF","FX1L","FX1R","FX2L","FX2R","FX3L","FX3R","FX4L","FX4R","FX5L","FX5R","FX6L","FX6R","FX7L","FX7R","FX8L","FX8R","AUX1","AUX2","AUX3","AUX4","AUX5","AUX6"))},
+        "eq": {"on": (0,0,1,1,"enum",("OFF","ON"))},
+        "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None)},
+        "grp": {"dca": (0,0,255,1,"int",None), "mute": (0,0,63,1,"int",None)},
     },
     "ch": {
         "config": {"name": (None, None, None, 0, "string", None), "icon": (1, 1, 74, 1, "int", None),
@@ -94,6 +99,17 @@ for _family in ("ch", "auxin", "fxrtn"):
                                  "panFollow": (0,0,1,1,"enum",("OFF","ON"))})
         STRIP_NODE_SCHEMA[_family]["mix/%02d" % _bus] = _send_fields
 
+# Bus output strips have six parametric EQ bands and six matrix-send nodes.
+for _band in range(1, 7):
+    STRIP_NODE_SCHEMA["bus"]["eq/%d" % _band] = {
+        "type": (2,0,5,1,"enum",("LCut","LShv","PEQ","VEQ","HShv","HCut")),
+        "f": (1000.0,20.0,20000.0,0,"float",None),
+        "g": (0.0,-15.0,15.0,0.25,"float",None),
+        "q": (1.0,0.3,10.0,0,"float",None)}
+for _matrix in range(1, 7):
+    STRIP_NODE_SCHEMA["bus"]["mix/%02d" % _matrix] = {
+        "on": (1,0,1,1,"enum",("OFF","ON")),
+        "level": (0.0,0.0,1.0,0,"float",None)}
 
 
 @dataclass
@@ -623,7 +639,7 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) >= 4 and parts[0] == "bus" and parts[2] != "config" and address in self.strip_nodes:
+            if len(parts) >= 4 and parts[0] == "bus" and parts[2] not in ("config", "mix", "grp") and address in self.strip_nodes:
                 if not self._valid_strip_node_value(address, value):
                     return False
                 self.strip_nodes[address] = value
@@ -821,7 +837,7 @@ class ConsoleState:
                 if parts[2:] == ["grp", "dca"]: return matrix["dca_mask"]
                 if parts[2:] == ["grp", "mute"]: return matrix["mute_mask"]
                 if parts[2:] == ["config", "name"]: return matrix["name"]
-            if len(parts) >= 4 and parts[0] == "bus" and parts[2] != "config" and address in self.strip_nodes:
+            if len(parts) >= 4 and parts[0] == "bus" and parts[2] not in ("config", "mix", "grp") and address in self.strip_nodes:
                 return self.strip_nodes.get(address)
             if len(parts) == 5 and parts[0] == "bus" and parts[2] == "mix":
                 return self.buses[int(parts[1])].get("matrix_sends", {}).get(int(parts[3]), {"on": True, "level": 0.0}).get(parts[4])
