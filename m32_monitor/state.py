@@ -294,6 +294,11 @@ class ConsoleState:
             n: {"src": 0, "pos": 8, "invert": 0, "delay_on": 0, "delay_time": 0.3}
             for n in range(1, 17)
         }
+        # Six physical 1/4-inch auxiliary output sockets.
+        self.output_aux = {
+            n: {"src": 0, "pos": 8, "invert": 0}
+            for n in range(1, 7)
+        }
         for prefix in ("/main/st", "/main/m"):
             for node, fields in MAIN_NODE_SCHEMA.items():
                 for field_name, spec in fields.items():
@@ -344,7 +349,7 @@ class ConsoleState:
                 if (isinstance(value, bool) or not isinstance(value, (int, float))
                         or float(value) != int(value) or not 0 <= int(value) < len(choices)):
                     return False
-        if not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/fx/", "/outputs/main/")) and self.routing.update(address, value):
+        if not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/fx/", "/outputs/main/", "/outputs/aux/")) and self.routing.update(address, value):
             self.received.add(address)
             return True
         parts = address.strip("/").split("/")
@@ -427,11 +432,12 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) >= 4 and parts[:2] == ["outputs", "main"]:
+            if len(parts) >= 4 and parts[0] == "outputs" and parts[1] in ("main", "aux"):
+                collection = self.output_main if parts[1] == "main" else self.output_aux
                 number = int(parts[2])
-                if number not in self.output_main:
+                if number not in collection:
                     return False
-                output = self.output_main[number]
+                output = collection[number]
                 field = parts[3:]
                 if field == ["src"]:
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 0 <= int(value) <= 76: return False
@@ -439,10 +445,13 @@ class ConsoleState:
                 elif field == ["pos"]:
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 0 <= int(value) <= 8: return False
                     output["pos"] = int(value)
-                elif field == ["invert"] or field == ["delay", "on"]:
+                elif field == ["invert"]:
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) not in (0.0, 1.0): return False
-                    output["invert" if field == ["invert"] else "delay_on"] = int(value)
-                elif field == ["delay", "time"]:
+                    output["invert"] = int(value)
+                elif parts[1] == "main" and field == ["delay", "on"]:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) not in (0.0, 1.0): return False
+                    output["delay_on"] = int(value)
+                elif parts[1] == "main" and field == ["delay", "time"]:
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or not 0.3 <= float(value) <= 500.0 or abs((float(value)-0.3)/0.1-round((float(value)-0.3)/0.1)) > 1e-6: return False
                     output["delay_time"] = float(value)
                 else:
@@ -1056,16 +1065,16 @@ class ConsoleState:
             if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
                 key = "main_st" if address.startswith("/main/st/") else "main_mono"
                 return self.outputs[key]["sends"].get(int(parts[3]), {"on": True, "level": 0.0}).get(parts[4])
-            if len(parts) >= 4 and parts[:2] == ["outputs", "main"]:
-                number = int(parts[2])
-                output = self.output_main.get(number)
+            if len(parts) >= 4 and parts[0] == "outputs" and parts[1] in ("main", "aux"):
+                collection = self.output_main if parts[1] == "main" else self.output_aux
+                output = collection.get(int(parts[2]))
                 if output is None: return None
                 field = parts[3:]
                 if field == ["src"]: return output["src"]
                 if field == ["pos"]: return output["pos"]
                 if field == ["invert"]: return output["invert"]
-                if field == ["delay", "on"]: return output["delay_on"]
-                if field == ["delay", "time"]: return output["delay_time"]
+                if parts[1] == "main" and field == ["delay", "on"]: return output["delay_on"]
+                if parts[1] == "main" and field == ["delay", "time"]: return output["delay_time"]
                 return None
             if len(parts) >= 3 and parts[0] == "dca":
                 dca = self.dcas.get(int(parts[1]))
