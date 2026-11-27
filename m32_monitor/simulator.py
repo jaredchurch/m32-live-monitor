@@ -856,6 +856,7 @@ class Simulator:
             old_dp48 = json.loads(json.dumps(self.state.dp48_config))
             old_card_preferences = dict(self.state.card_preferences)
             old_config_links = json.loads(json.dumps(self.state.config_links))
+            old_routing_values = dict(self.state.routing.values)
             old_link_config = dict(self.state.link_config)
             old_mono_config = dict(self.state.mono_config)
             old_solo_config = dict(self.state.solo_config)
@@ -874,6 +875,7 @@ class Simulator:
                     self.state.dp48_config = old_dp48
                     self.state.card_preferences = old_card_preferences
                     self.state.config_links = old_config_links
+                    self.state.routing.values = old_routing_values
                     self.state.link_config = old_link_config
                     self.state.mono_config = old_mono_config
                     self.state.solo_config = old_solo_config
