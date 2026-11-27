@@ -585,8 +585,18 @@ class Simulator:
                     parsed = [values[0], int(values[1], 0),
                               ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
                                "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi").index(values[2])]
-                if not all(self.state.update(path, value) for path, value in zip(paths, parsed)):
+                if len(parts) == 2:
+                    valid = (parsed[0] in (0, 1) and 0.0 <= parsed[1] <= 1.0
+                             and len(parsed[2]) <= 12 and 1 <= parsed[3] <= 74
+                             and 0 <= parsed[4] <= 15)
+                else:
+                    valid = (len(parsed[0]) <= 12 and 1 <= parsed[1] <= 74
+                             and 0 <= parsed[2] <= 15)
+                if not valid:
                     raise ValueError("Invalid DCA node values")
+                for path, value in zip(paths, parsed):
+                    if not self.state.update(path, value):
+                        raise ValueError("Invalid DCA node value for %s" % path)
             elif self._strip_node_header(header) is not None:
                 prefix, node, fields = self._strip_node_header(header)
                 if len(values) != len(fields):
