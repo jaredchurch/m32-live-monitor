@@ -449,6 +449,39 @@ class Simulator:
                     raise ValueError("%s node requires %d ON/OFF values" % (family, len(pairs)))
                 paths = ["/config/%s/%s" % (family, pair) for pair in pairs]
                 parsed = [("OFF", "ON").index(token) for token in values]
+            elif header == "config/linkcfg":
+                fields = ("hadly", "eq", "dyn", "fdrmute")
+                if len(values) != len(fields):
+                    raise ValueError("Link configuration node requires 4 ON/OFF values")
+                paths = ["/config/linkcfg/" + field for field in fields]
+                parsed = [("OFF", "ON").index(token) for token in values]
+            elif header == "config/mono":
+                if len(values) != 2:
+                    raise ValueError("Mono configuration node requires mode and link")
+                paths = ["/config/mono/mode", "/config/mono/link"]
+                parsed = [("LR+M", "LCR").index(values[0]), ("OFF", "ON").index(values[1])]
+            elif header == "config/solo":
+                fields = ("level", "source", "sourcetrim", "chmode", "busmode", "dcamode",
+                          "exclusive", "followsel", "followsolo", "dimatt", "dim", "mono",
+                          "delay", "delaytime", "masterctrl", "mute", "dimpfl")
+                if len(values) != len(fields):
+                    raise ValueError("Solo configuration node requires 17 ordered values")
+                source_values = ("OFF", "LR", "LR+C", "LRPFL", "LRAFL", "AUX56", "AUX78")
+                parsed = [float(values[0]), source_values.index(values[1]), float(values[2]),
+                          ("PFL", "AFL").index(values[3]), ("PFL", "AFL").index(values[4]),
+                          ("PFL", "AFL").index(values[5]),
+                          ("OFF", "ON").index(values[6]), ("OFF", "ON").index(values[7]),
+                          ("OFF", "ON").index(values[8]), float(values[9]),
+                          ("OFF", "ON").index(values[10]), ("OFF", "ON").index(values[11]),
+                          ("OFF", "ON").index(values[12]), float(values[13]),
+                          ("OFF", "ON").index(values[14]), ("OFF", "ON").index(values[15]),
+                          ("OFF", "ON").index(values[16])]
+                paths = ["/config/solo/" + field for field in fields]
+            elif header == "config/mute":
+                if len(values) != 6:
+                    raise ValueError("Mute group node requires six ON/OFF values")
+                paths = ["/config/mute/%d" % number for number in range(1, 7)]
+                parsed = [("OFF", "ON").index(token) for token in values]
             elif header == "config/tape":
                 if len(values) != 3:
                     raise ValueError("Tape node requires gainL, gainR and autoplay")
