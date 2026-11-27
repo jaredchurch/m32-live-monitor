@@ -72,6 +72,100 @@ ROUTING_PATHS["/config/routing/outswitch"] = ("Routing mode", ("Record", "Playba
 ROUTING_PATHS["/config/routing/routswitch"] = ("Routing mode", ("Record", "Playback"))
 ROUTING_PATHS["/config/routing/rootswitch"] = ("Routing mode", ("Record", "Playback"))
 
+# X32node scene text uses symbolic enum tokens, while direct OSC parameter
+# SETs use the corresponding integer enum indices. Keep protocol tokens
+# separate from the friendlier labels used by the routing dashboard.
+INPUT_PATCH_TOKENS = (
+    "AN1-8", "AN9-16", "AN17-24", "AN25-32",
+    "A1-8", "A9-16", "A17-24", "A25-32", "A33-40", "A41-48",
+    "B1-8", "B9-16", "B17-24", "B25-32", "B33-40", "B41-48",
+    "CARD1-8", "CARD9-16", "CARD17-24", "CARD25-32",
+    "UIN1-8", "UIN9-16", "UIN17-24", "UIN25-32",
+)
+AUX_INPUT_PATCH_TOKENS = (
+    "AUX1-4", "AN1-2", "AN1-4", "AN1-6", "A1-2", "A1-4", "A1-6",
+    "B1-2", "B1-4", "B1-6", "CARD1-2", "CARD1-4", "CARD1-6",
+    "UIN1-2", "UIN1-4", "UIN1-6",
+)
+AES50_OUTPUT_PATCH_TOKENS = (
+    "AN1-8", "AN9-16", "AN17-24", "AN25-32",
+    "A1-8", "A9-16", "A17-24", "A25-32", "A33-40", "A41-48",
+    "B1-8", "B9-16", "B17-24", "B25-32", "B33-40", "B41-48",
+    "CARD1-8", "CARD9-16", "CARD17-24", "CARD25-32",
+    "OUT1-8", "OUT9-16", "P161-8", "P169-16",
+    "AUX1-6/Mon", "AUXIN1-6/TB",
+    "UOUT1-8", "UOUT9-16", "UOUT17-24", "UOUT25-32", "UOUT33-40", "UOUT41-48",
+    "UIN1-8", "UIN9-16", "UIN17-24", "UIN25-32",
+)
+OUT_PATCH_TOKENS = {
+    "1-4": (
+        "AN1-4", "AN9-12", "AN17-20", "AN25-28",
+        "A1-4", "A9-12", "A17-20", "A25-28", "A33-36", "A41-44",
+        "B1-4", "B9-12", "B17-20", "B25-28", "B33-36", "B41-44",
+        "CARD1-4", "CARD9-12", "CARD17-20", "CARD25-28",
+        "OUT1-4", "OUT9-12", "P161-4", "P169-12", "AUX/CR", "AUX/TB",
+        "UOUT1-4", "UOUT9-12", "UOUT17-20", "UOUT25-28", "UOUT33-36", "UOUT41-44",
+        "UIN1-4", "UIN9-12", "UIN17-20", "UIN25-28",
+    ),
+    "5-8": (
+        "AN5-8", "AN13-16", "AN21-24", "AN29-32",
+        "A5-8", "A13-16", "A21-24", "A29-32", "A37-40", "A45-48",
+        "B5-8", "B13-16", "B21-24", "B29-32", "B37-40", "B45-48",
+        "CARD5-8", "CARD13-16", "CARD21-24", "CARD29-32",
+        "OUT5-8", "OUT13-16", "P165-8", "P1613-16", "AUX/CR", "AUX/TB",
+        "UOUT5-8", "UOUT13-16", "UOUT21-24", "UOUT29-32", "UOUT37-40", "UOUT45-48",
+        "UIN5-8", "UIN13-16", "UIN21-24", "UIN29-32",
+    ),
+}
+OUT_PATCH_TOKENS["9-12"] = OUT_PATCH_TOKENS["1-4"]
+OUT_PATCH_TOKENS["13-16"] = OUT_PATCH_TOKENS["5-8"]
+
+ROUTING_ENUM_TOKENS = {}
+for bank in ("1-8", "9-16", "17-24", "25-32"):
+    ROUTING_ENUM_TOKENS[f"/config/routing/IN/{bank}"] = INPUT_PATCH_TOKENS
+    ROUTING_ENUM_TOKENS[f"/config/routing/PLAY/{bank}"] = INPUT_PATCH_TOKENS
+ROUTING_ENUM_TOKENS["/config/routing/IN/AUX"] = AUX_INPUT_PATCH_TOKENS
+ROUTING_ENUM_TOKENS["/config/routing/PLAY/AUX"] = AUX_INPUT_PATCH_TOKENS
+for family in ("AES50A", "AES50B", "CARD"):
+    for bank in ("1-8", "9-16", "17-24", "25-32", "33-40", "41-48"):
+        path = f"/config/routing/{family}/{bank}"
+        if path in ROUTING_PATHS:
+            ROUTING_ENUM_TOKENS[path] = AES50_OUTPUT_PATCH_TOKENS
+for bank, tokens in OUT_PATCH_TOKENS.items():
+    ROUTING_ENUM_TOKENS[f"/config/routing/OUT/{bank}"] = tokens
+
+
+def routing_enum_index(address, value):
+    """Convert an X32node symbolic routing enum or numeric OSC enum to its index."""
+    tokens = ROUTING_ENUM_TOKENS.get(address)
+    if tokens is None:
+        raise ValueError("No routing enum token table for %s" % address)
+    if isinstance(value, bool):
+        raise ValueError("Boolean is not a routing enum")
+    if isinstance(value, int):
+        index = value
+    elif isinstance(value, float) and value.is_integer():
+        index = int(value)
+    elif isinstance(value, str):
+        try:
+            index = tokens.index(value)
+        except ValueError:
+            raise ValueError("Unknown routing enum token %r for %s" % (value, address))
+    else:
+        raise ValueError("Invalid routing enum value %r for %s" % (value, address))
+    if not 0 <= index < len(tokens):
+        raise ValueError("Routing enum index %d is out of range for %s" % (index, address))
+    return index
+
+
+def routing_enum_token(address, value):
+    """Return the protocol symbolic token for a stored routing enum index."""
+    tokens = ROUTING_ENUM_TOKENS.get(address)
+    if tokens is None:
+        return str(value)
+    index = routing_enum_index(address, value)
+    return tokens[index]
+
 def _enum_label(value, choices):
     try:
         index = int(value)
