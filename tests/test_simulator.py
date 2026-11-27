@@ -1820,3 +1820,63 @@ def test_fx_grouped_node_writes_and_invalid_values():
     assert not state.update("/fx/01/source/r", 18)
     assert not state.update("/fx/01/par/65", 0.5)
     assert not state.update("/fx/01/par/01", float("inf"))
+
+
+
+def test_physical_main_output_nodes_are_discoverable_readable_and_writable():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    for number in range(1, 17):
+        prefix = "outputs/main/%02d" % number
+        simulator.handle(client, packet("/node", prefix))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.params == [
+            "/%s/src 0\n/%s/pos POST\n/%s/invert OFF\n" % (prefix, prefix, prefix)
+        ]
+        simulator.handle(client, packet("/node", prefix + "/delay"))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.params == ["/%s/delay/on OFF\n/%s/delay/time 0.3\n" % (prefix, prefix)]
+
+    simulator.handle(client, packet("/", "outputs/main/01 18 PRE ON"))
+    assert state.get("/outputs/main/01/src") == 18
+    assert state.get("/outputs/main/01/pos") == 6
+    assert state.get("/outputs/main/01/invert") == 1
+    simulator.handle(client, packet("/", "outputs/main/01/delay ON 125.5"))
+    assert state.get("/outputs/main/01/delay/on") == 1
+    assert state.get("/outputs/main/01/delay/time") == 125.5
+
+    simulator.handle(client, packet("/node", "outputs/main/01/src"))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/outputs/main/01/src 18\n"]
+    simulator.handle(client, packet("/node", "outputs/main/01/delay/time"))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/outputs/main/01/delay/time 125.5\n"]
+
+    simulator.handle(client, packet("/outputs/main/02/src", 76))
+    assert state.get("/outputs/main/02/src") == 76
+    simulator.handle(client, packet("/outputs/main/02/pos", 0))
+    assert state.get("/outputs/main/02/pos") == 0
+
+
+@pytest.mark.parametrize(("address", "value"), [
+    ("/outputs/main/01/src", 77), ("/outputs/main/17/src", 1),
+    ("/outputs/main/01/pos", 9), ("/outputs/main/01/invert", 2),
+    ("/outputs/main/01/delay/on", -1),
+    ("/outputs/main/01/delay/time", 0.2),
+    ("/outputs/main/01/delay/time", 500.1),
+    ("/outputs/main/01/delay/time", 1.05),
+    ("/outputs/main/01/unknown", 1),
+])
+def test_physical_main_output_state_rejects_invalid_values(address, value):
+    assert not ConsoleState().update(address, value)
+
+
+def test_invalid_physical_main_output_node_write_is_atomic():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    before = dict(simulator.state.output_main[1])
+    simulator.handle(client, packet("/", "outputs/main/01 77 PRE ON"))
+    assert simulator.state.output_main[1] == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
