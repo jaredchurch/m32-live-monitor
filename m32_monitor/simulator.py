@@ -568,10 +568,14 @@ class Simulator:
                 if len(values) != len(fields):
                     raise ValueError("Strip node %s requires %d values" % (header, len(fields)))
                 paths = [prefix + "/" + node + "/" + field for field in fields]
-                parsed = [self._parse_strip_node_value(self.state.strip_node_schema[header.split("/")[0]][node][field], token)
+                schema = self.state.main_node_schema if prefix in ("/main/st", "/main/m") else self.state.strip_node_schema[header.split("/")[0]]
+                parsed = [self._parse_strip_node_value(schema[node][field], token)
                           for field, token in zip(fields, values)]
                 for path, value in zip(paths, parsed):
-                    if not self.state._valid_strip_node_value(path, value):
+                    valid = (self.state._valid_main_node_value(path, value)
+                             if path.startswith(("/main/st/", "/main/m/"))
+                             else self.state._valid_strip_node_value(path, value))
+                    if not valid:
                         raise ValueError("Invalid value for %s: %r" % (path, value))
             else:
                 raise ValueError("Unsupported X32node SET header %r" % header)
@@ -762,6 +766,16 @@ class Simulator:
 
     def _strip_node_header(self, header):
         parts = header.split("/")
+        if len(parts) >= 3 and parts[:2] in (["main", "st"], ["main", "m"]):
+            node = "/".join(parts[2:])
+            schema = self.state.main_node_schema
+            if node in schema:
+                return "/" + "/".join(parts[:2]), node, tuple(schema[node])
+            if len(parts) >= 4:
+                parent, field = "/".join(parts[2:-1]), parts[-1]
+                if parent in schema and field in schema[parent]:
+                    return "/" + "/".join(parts[:2]), parent, (field,)
+            return None
         if len(parts) < 3 or parts[0] not in self.state.strip_node_schema or not parts[1].isdigit():
             return None
         family = parts[0]
@@ -803,8 +817,9 @@ class Simulator:
         return str(int(value))
 
     def _strip_node_response(self, prefix, node, fields):
-        family = prefix.strip("/").split("/")[0]
-        specs = self.state.strip_node_schema[family][node]
+        family = prefix.strip("/")
+        schema = self.state.main_node_schema if family in ("main/st", "main/m") else self.state.strip_node_schema[family.split("/")[0]]
+        specs = schema[node]
         values = []
         for field in fields:
             address = prefix + "/" + node + "/" + field
@@ -1099,6 +1114,13 @@ class Simulator:
         # this route explicit rather than relying on the generic processing-node
         # resolver: it is part of the initial channel discovery handshake.
         config_parts = header.split("/")
+        if header in ("main/st/config", "main/m/config"):
+            prefix = "/" + header.rsplit("/", 1)[0]
+            response = self._strip_node_response(prefix, "config", tuple(self.state.main_node_schema["config"]))
+            self.send(client, "/node", response, outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned %s config discovery node" % header)
+            return
         if (len(config_parts) == 3 and config_parts[0] in self.state.strip_node_schema
                 and config_parts[1].isdigit() and config_parts[2] == "config"):
             family, number = config_parts[0], int(config_parts[1])
@@ -1117,7 +1139,8 @@ class Simulator:
             prefix, node, fields = strip_node
             if header != prefix.lstrip("/") + "/" + node:
                 field = fields[0]
-                spec = self.state.strip_node_schema[header.split("/")[0]][node][field]
+                schema = self.state.main_node_schema if prefix in ("/main/st", "/main/m") else self.state.strip_node_schema[header.split("/")[0]]
+                spec = schema[node][field]
                 value = self.state.get(prefix + "/" + node + "/" + field)
                 response = "%s %s\n" % ("/" + header, self._format_strip_node_value(spec, value))
             else:
