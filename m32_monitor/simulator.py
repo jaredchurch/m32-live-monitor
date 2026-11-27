@@ -394,7 +394,7 @@ class Simulator:
         options = "%" + format(int(p["rta/options"]), "06b")
         detector = ("RMS", "PEAK")[int(p["rta/det"])]
         decay = "%.2f" % (0.25 * math.exp(float(p["rta/decay"]) * math.log(16.0 / 0.25)))
-        peakhold = ("OFF", "1", "2", "3", "4", "5", "6", "7", "8")[int(p["rta/peakhold"])]
+        peakhold = ("OFF", "1s", "2s", "3s", "4s", "5s", "6s", "7s", "8s")[int(p["rta/peakhold"])]
         return "/-prefs/rta %s %s %s %s %s %s %s %s %s %s\n" % (
             visibility, gain, autogain, source, pos, mode, options, detector, decay, peakhold)
 
@@ -552,7 +552,7 @@ class Simulator:
                     int(values[6].lstrip("%"), 2),
                     ("RMS", "PEAK").index(values[7]),
                     math.log(float(values[8]) / 0.25) / math.log(16.0 / 0.25),
-                    ("OFF", "1", "2", "3", "4", "5", "6", "7", "8").index(values[9]),
+                    ("OFF", "1s", "2s", "3s", "4s", "5s", "6s", "7s", "8s").index(values[9]),
                 ]
             elif header.startswith("-prefs/rta/") and len(values) == 1:
                 key = header.rsplit("/", 1)[-1]
@@ -561,7 +561,7 @@ class Simulator:
                     "visibility": ("OFF", "25%", "30%", "35%", "40%", "45%", "50%", "55%", "60%", "65%", "70%", "75%", "80%"),
                     "autogain": ("OFF", "ON"), "pos": ("PRE", "POST"),
                     "mode": ("BAR", "SPEC"), "det": ("RMS", "PEAK"),
-                    "peakhold": ("OFF", "1", "2", "3", "4", "5", "6", "7", "8"),
+                    "peakhold": ("OFF", "1s", "2s", "3s", "4s", "5s", "6s", "7s", "8s"),
                 }
                 if key in enum_values:
                     parsed = [enum_values[key].index(values[0])]
