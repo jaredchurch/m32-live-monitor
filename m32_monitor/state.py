@@ -299,6 +299,11 @@ class ConsoleState:
             n: {"src": 0, "pos": 8, "invert": 0}
             for n in range(1, 7)
         }
+        # Sixteen Ultranet/P16 personal-monitor output assignments.
+        self.output_p16 = {
+            n: {"src": 0, "pos": 8, "iq_group": 0, "iq_speaker": 0}
+            for n in range(1, 17)
+        }
         for prefix in ("/main/st", "/main/m"):
             for node, fields in MAIN_NODE_SCHEMA.items():
                 for field_name, spec in fields.items():
@@ -349,7 +354,7 @@ class ConsoleState:
                 if (isinstance(value, bool) or not isinstance(value, (int, float))
                         or float(value) != int(value) or not 0 <= int(value) < len(choices)):
                     return False
-        if not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/fx/", "/outputs/main/", "/outputs/aux/")) and self.routing.update(address, value):
+        if not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/fx/", "/outputs/main/", "/outputs/aux/", "/outputs/p16/")) and self.routing.update(address, value):
             self.received.add(address)
             return True
         parts = address.strip("/").split("/")
@@ -432,8 +437,8 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) >= 4 and parts[0] == "outputs" and parts[1] in ("main", "aux"):
-                collection = self.output_main if parts[1] == "main" else self.output_aux
+            if len(parts) >= 4 and parts[0] == "outputs" and parts[1] in ("main", "aux", "p16"):
+                collection = {"main": self.output_main, "aux": self.output_aux, "p16": self.output_p16}[parts[1]]
                 number = int(parts[2])
                 if number not in collection:
                     return False
@@ -445,9 +450,15 @@ class ConsoleState:
                 elif field == ["pos"]:
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 0 <= int(value) <= 8: return False
                     output["pos"] = int(value)
-                elif field == ["invert"]:
+                elif field == ["invert"] and parts[1] in ("main", "aux"):
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) not in (0.0, 1.0): return False
                     output["invert"] = int(value)
+                elif parts[1] == "p16" and field == ["iQ", "group"]:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 0 <= int(value) <= 2: return False
+                    output["iq_group"] = int(value)
+                elif parts[1] == "p16" and field == ["iQ", "speaker"]:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 0 <= int(value) <= 6: return False
+                    output["iq_speaker"] = int(value)
                 elif parts[1] == "main" and field == ["delay", "on"]:
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) not in (0.0, 1.0): return False
                     output["delay_on"] = int(value)
@@ -1065,14 +1076,16 @@ class ConsoleState:
             if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
                 key = "main_st" if address.startswith("/main/st/") else "main_mono"
                 return self.outputs[key]["sends"].get(int(parts[3]), {"on": True, "level": 0.0}).get(parts[4])
-            if len(parts) >= 4 and parts[0] == "outputs" and parts[1] in ("main", "aux"):
-                collection = self.output_main if parts[1] == "main" else self.output_aux
+            if len(parts) >= 4 and parts[0] == "outputs" and parts[1] in ("main", "aux", "p16"):
+                collection = {"main": self.output_main, "aux": self.output_aux, "p16": self.output_p16}[parts[1]]
                 output = collection.get(int(parts[2]))
                 if output is None: return None
                 field = parts[3:]
                 if field == ["src"]: return output["src"]
                 if field == ["pos"]: return output["pos"]
-                if field == ["invert"]: return output["invert"]
+                if field == ["invert"] and parts[1] in ("main", "aux"): return output["invert"]
+                if parts[1] == "p16" and field == ["iQ", "group"]: return output["iq_group"]
+                if parts[1] == "p16" and field == ["iQ", "speaker"]: return output["iq_speaker"]
                 if parts[1] == "main" and field == ["delay", "on"]: return output["delay_on"]
                 if parts[1] == "main" and field == ["delay", "time"]: return output["delay_time"]
                 return None
