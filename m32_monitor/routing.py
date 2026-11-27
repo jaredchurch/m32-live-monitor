@@ -152,10 +152,17 @@ def routing_enum_index(address, value):
         try:
             index = tokens.index(value)
         except ValueError:
+            # M32-Edit uses the shorter AUX/TB spelling in some AES50
+            # routing scene dumps for the same enum slot documented as
+            # AUXIN1-6/TB by the protocol reference.
+            aliases = {"AUX/TB": "AUXIN1-6/TB"}
             try:
-                index = int(value, 0)
-            except ValueError:
-                raise ValueError("Unknown routing enum token %r for %s" % (value, address))
+                index = tokens.index(aliases[value])
+            except (KeyError, ValueError):
+                try:
+                    index = int(value, 0)
+                except ValueError:
+                    raise ValueError("Unknown routing enum token %r for %s" % (value, address))
     else:
         raise ValueError("Invalid routing enum value %r for %s" % (value, address))
     if not 0 <= index < len(tokens):
