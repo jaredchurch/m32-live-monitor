@@ -1102,7 +1102,7 @@ class Simulator:
                 field = fields[0]
                 spec = self.state.strip_node_schema[header.split("/")[0]][node][field]
                 value = self.state.get(prefix + "/" + node + "/" + field)
-                response = "%s %s\\n" % ("/" + header, self._format_strip_node_value(spec, value))
+                response = "%s %s\n" % ("/" + header, self._format_strip_node_value(spec, value))
             else:
                 response = self._strip_node_response(prefix, node, fields)
             self.send(client, "/node", response, outcome="node_response")
