@@ -57,7 +57,7 @@ def test_config_mono_node_returns_mode_and_link_settings():
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
     assert response.params == [
-        "/config/mono/mode LCR\\n/config/mono/link ON\\n"
+        "/config/mono/mode LCR\n/config/mono/link ON\n"
     ]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
