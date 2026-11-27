@@ -1,5 +1,6 @@
 """Shared console state and effective mute-path calculation."""
 from dataclasses import asdict, dataclass, field
+import math
 import struct
 import time
 from m32_monitor.routing import RoutingState
