@@ -86,8 +86,8 @@ OSC_CATALOGUE = [
         {"pattern":"/-urec/*, /-stat/urec/*","purpose":"X-Live SD recorder, sessions, markers and transport status","operations":"GET, /node"}
     ]},
     {"category":"Additional documented node families","support":"known-unsupported","items":[
-        {"pattern":"/config/userrout/out/{01...48}","purpose":"User-defined output routing source assignments","operations":"GET, SET, /node","note":"Implemented: all 48 output slots; integer sources 0-208."},
-        {"pattern":"/config/routing, /config/routing/{IN,AES50A,AES50B,CARD,OUT,PLAY}","purpose":"Grouped input, AES50, Card, output and playback patch configuration","operations":"/node","note":"Implemented: parent and bank-group reads return newline-delimited entries; unreceived values default to 0 in the simulator."},
+        {"pattern":"/config/userrout/out, /config/userrout/in, /config/userrout/{out/{01...48},in/{01...32}}","purpose":"User-defined output and input routing source assignments","operations":"GET, SET, /node","note":"Implemented: 48 output and 32 input slots; individual writes and ordered bulk writes with integer source validation."},
+        {"pattern":"/config/routing, /config/routing/{IN,AES50A,AES50B,CARD,OUT,PLAY}","purpose":"Grouped input, AES50, Card, output and playback patch configuration","operations":"GET, SET, /node","note":"Implemented: parent and bank-group reads plus ordered grouped writes; unreceived values default to 0 in the simulator."},
         {"pattern":"/config/userctrl/{A,B,C}/*","purpose":"User-assignment banks, encoder and button assignments","operations":"GET, SET, /node"},
         {"pattern":"/config/tape, /config/amixenable","purpose":"Tape gains/play mode and automix group X/Y enable flags","operations":"GET, SET, /node","note":"Implemented: grouped reads/writes and validated individual updates."},
         {"pattern":"/config/dp48/{scope,broadcast,aesAB,link,assign,grpname}","purpose":"DP48 personal monitor scope, broadcast, AES50 target, channel links, group assignments and names","operations":"GET, SET, /node","note":"Implemented: parent and link/assign/group-name node reads/writes plus validated individual updates."},
