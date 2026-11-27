@@ -578,7 +578,7 @@ class Simulator:
                 paths, parsed = [path], parsed
             elif header.startswith("fx/"):
                 parts = header.split("/")
-                if len(parts) not in (2, 3) or not parts[1].isdigit() or int(parts[1]) not in self.state.fx:
+                if len(parts) not in (2, 3, 4) or not parts[1].isdigit() or int(parts[1]) not in self.state.fx:
                     raise ValueError("Unknown FX slot")
                 number = int(parts[1])
                 type_names = TYPE_NAMES_FX_1_4 if number <= 4 else TYPE_NAMES_FX_5_8
@@ -587,17 +587,29 @@ class Simulator:
                         raise ValueError("FX type node requires one effect type")
                     paths = ["/fx/%02d/type" % number]
                     parsed = [type_names.index(values[0])]
-                elif parts[2] == "source":
+                elif len(parts) == 3 and parts[2] == "source":
                     if number > 4 or len(values) != 2:
                         raise ValueError("FX source node is only available on slots 1-4 and requires L/R sources")
                     source_names = ("INS",) + tuple("MIX%d" % n for n in range(1, 17)) + ("M/C",)
                     paths = ["/fx/%02d/source/l" % number, "/fx/%02d/source/r" % number]
                     parsed = [source_names.index(values[0]), source_names.index(values[1])]
-                elif parts[2] == "par":
+                elif len(parts) == 3 and parts[2] == "par":
                     if len(values) != 64:
                         raise ValueError("FX parameter node requires 64 values")
                     paths = ["/fx/%02d/par/%02d" % (number, n) for n in range(1, 65)]
                     parsed = [float(value) for value in values]
+                elif len(parts) == 4 and parts[2] == "par" and parts[3].isdigit() and len(values) == 1:
+                    parameter = int(parts[3])
+                    if not 1 <= parameter <= 64:
+                        raise ValueError("FX parameter index must be 01-64")
+                    paths = ["/fx/%02d/par/%02d" % (number, parameter)]
+                    parsed = [float(values[0])]
+                elif len(parts) == 4 and parts[2] == "source" and parts[3] in ("l", "r") and len(values) == 1:
+                    if number > 4:
+                        raise ValueError("FX source is only available on slots 1-4")
+                    source_names = ("INS",) + tuple("MIX%d" % n for n in range(1, 17)) + ("M/C",)
+                    paths = ["/fx/%02d/source/%s" % (number, parts[3])]
+                    parsed = [source_names.index(values[0])]
                 else:
                     raise ValueError("Unsupported FX node")
                 if not all(math.isfinite(float(value)) for value in parsed if isinstance(value, (int, float))):
