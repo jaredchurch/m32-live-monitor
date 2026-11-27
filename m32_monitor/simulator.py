@@ -560,7 +560,10 @@ class Simulator:
                     parsed = [int(values[0])]
                 elif key in ("options", "option"):
                     parsed = [int(values[0].lstrip("%"), 2) if values[0].startswith("%") else int(values[0], 0)]
-                elif self._strip_node_header(header) is not None:
+                else:
+                    raise ValueError("Unknown RTA preference")
+                paths, parsed = [path], parsed
+            elif self._strip_node_header(header) is not None:
                 prefix, node, fields = self._strip_node_header(header)
                 if len(values) != len(fields):
                     raise ValueError("Strip node %s requires %d values" % (header, len(fields)))
@@ -570,9 +573,6 @@ class Simulator:
                 for path, value in zip(paths, parsed):
                     if not self.state._valid_strip_node_value(path, value):
                         raise ValueError("Invalid value for %s: %r" % (path, value))
-            else:
-                    raise ValueError("Unknown RTA preference")
-                paths, parsed = [path], parsed
             else:
                 raise ValueError("Unsupported X32node SET header %r" % header)
             old_preferences = dict(self.state.preferences)
