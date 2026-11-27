@@ -1060,3 +1060,51 @@ def test_config_osc_individual_node_set_updates_enum_and_numeric_values():
     assert simulator.state.osc_config["fsel"] == 1
     assert simulator.state.osc_config["type"] == 1
     assert simulator.state.osc_config["dest"] == 25
+
+
+def test_userrout_out_node_returns_all_48_slots_in_order():
+    state = ConsoleState()
+    state.user_rout_out.update({1: 1, 8: 167, 48: 208})
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/node", "config/userrout/out"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    lines = response.params[0].splitlines()
+    assert len(lines) == 48
+    assert lines[0] == "/config/userrout/out/01 1"
+    assert lines[7] == "/config/userrout/out/08 167"
+    assert lines[-1] == "/config/userrout/out/48 208"
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+@pytest.mark.parametrize("slot,value", [(1, 0), (8, 167), (48, 208)])
+def test_userrout_out_individual_values_can_be_read_and_set(slot, value):
+    state = ConsoleState()
+    address = "/config/userrout/out/%02d" % slot
+    assert state.get(address) == 0
+    assert state.update(address, value)
+    assert state.get(address) == value
+
+
+@pytest.mark.parametrize("address,value", [
+    ("/config/userrout/out/00", 1), ("/config/userrout/out/49", 1),
+    ("/config/userrout/out/1", 1), ("/config/userrout/out/01", -1),
+    ("/config/userrout/out/01", 209), ("/config/userrout/out/01", 1.5),
+    ("/config/userrout/out/01", True),
+])
+def test_userrout_out_rejects_invalid_slots_and_sources(address, value):
+    assert not ConsoleState().update(address, value)
+
+
+def test_userrout_out_individual_node_get_and_set():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", "config/userrout/out/08 167"))
+    assert simulator.state.get("/config/userrout/out/08") == 167
+    simulator.handle(client, packet("/node", "config/userrout/out/08"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == ["/config/userrout/out/08 167\\n"]
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
