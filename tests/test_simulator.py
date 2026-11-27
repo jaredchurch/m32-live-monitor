@@ -1142,14 +1142,13 @@ def test_userctrl_bank_nodes_return_color_encoders_and_buttons():
 @pytest.mark.parametrize("address,value", [
     ("/config/userctrl/A/color", 15),
     ("/config/userctrl/B/enc/4", "F79"),
-    ("/config/userctrl/C/btn/12", "MN160127"),
+    ("/config/userctrl/C/btn/12", "MN60127"),
     ("/config/tape/gainL", 12.5),
     ("/config/tape/gainR", -6.0),
     ("/config/tape/autoplay", 1),
     ("/config/amixenable/X", 1),
     ("/config/amixenable/Y", 0),
     ("/config/dp48/scope", 15),
-    ("/config/dp48/broadcast", 1),
     ("/config/dp48/aesAB", 1),
     ("/config/dp48/link/24", 1),
     ("/config/dp48/assign/48", 12),
@@ -1176,6 +1175,12 @@ def test_extended_configuration_values_can_be_read_and_set(address, value):
     ("/config/dp48/assign/01", 13),
     ("/config/dp48/grpname/01", "TOO-LONG!!"),
 ])
+def test_dp48_broadcast_is_a_one_shot_command():
+    state = ConsoleState()
+    assert state.update("/config/dp48/broadcast", 1)
+    assert state.get("/config/dp48/broadcast") == 0
+
+
 def test_extended_configuration_rejects_out_of_spec_values(address, value):
     assert not ConsoleState().update(address, value)
 
