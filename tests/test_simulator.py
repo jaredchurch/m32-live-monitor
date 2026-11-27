@@ -1160,6 +1160,12 @@ def test_extended_configuration_values_can_be_read_and_set(address, value):
     assert state.get(address) == value
 
 
+def test_dp48_broadcast_is_a_one_shot_command():
+    state = ConsoleState()
+    assert state.update("/config/dp48/broadcast", 1)
+    assert state.get("/config/dp48/broadcast") == 0
+
+
 @pytest.mark.parametrize("address,value", [
     ("/config/userctrl/A/color", 16),
     ("/config/userctrl/A/enc/5", "F00"),
@@ -1175,12 +1181,6 @@ def test_extended_configuration_values_can_be_read_and_set(address, value):
     ("/config/dp48/assign/01", 13),
     ("/config/dp48/grpname/01", "TOO-LONG!!"),
 ])
-def test_dp48_broadcast_is_a_one_shot_command():
-    state = ConsoleState()
-    assert state.update("/config/dp48/broadcast", 1)
-    assert state.get("/config/dp48/broadcast") == 0
-
-
 def test_extended_configuration_rejects_out_of_spec_values(address, value):
     assert not ConsoleState().update(address, value)
 
