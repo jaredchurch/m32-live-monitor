@@ -1079,6 +1079,40 @@ def test_userrout_out_node_returns_all_48_slots_in_order():
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
+@pytest.mark.parametrize("slot,value", [(1, 1), (16, 80), (32, 168)])
+def test_userrout_in_individual_values_can_be_read_and_set(slot, value):
+    state = ConsoleState()
+    address = "/config/userrout/in/%02d" % slot
+    assert state.get(address) == 0
+    assert state.update(address, value)
+    assert state.get(address) == value
+
+
+def test_userrout_in_node_returns_all_32_slots_in_order():
+    state = ConsoleState()
+    state.user_rout_in.update({1: 1, 16: 80, 32: 168})
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/node", "config/userrout/in"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    lines = response.params[0].splitlines()
+    assert len(lines) == 32
+    assert lines[0] == "/config/userrout/in/01 1"
+    assert lines[15] == "/config/userrout/in/16 80"
+    assert lines[-1] == "/config/userrout/in/32 168"
+
+
+@pytest.mark.parametrize("address,value", [
+    ("/config/userrout/in/00", 1), ("/config/userrout/in/33", 1),
+    ("/config/userrout/in/1", 1), ("/config/userrout/in/01", -1),
+    ("/config/userrout/in/01", 169), ("/config/userrout/in/01", 1.5),
+    ("/config/userrout/in/01", True),
+])
+def test_userrout_in_rejects_invalid_slots_and_sources(address, value):
+    assert not ConsoleState().update(address, value)
+
+
 @pytest.mark.parametrize("slot,value", [(1, 0), (8, 167), (48, 208)])
 def test_userrout_out_individual_values_can_be_read_and_set(slot, value):
     state = ConsoleState()
