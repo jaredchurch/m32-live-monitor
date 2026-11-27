@@ -407,7 +407,7 @@ class ConsoleState:
 
             if len(parts) == 5 and parts[0] == "main" and parts[1] in ("st", "m") and parts[2] == "mix":
                 matrix = int(parts[3])
-                if not 1 <= matrix <= 6 or parts[4] not in ("on", "level") or not self._valid_strip_node_value(address, value):
+                if not 1 <= matrix <= 6 or parts[4] not in ("on", "level") or not self._valid_main_node_value(address, value):
                     return False
                 output_key = "main_st" if parts[1] == "st" else "main_mono"
                 send = self.outputs[output_key].setdefault("sends", {}).setdefault(matrix, {"on": True, "level": 0.0})
@@ -1134,12 +1134,8 @@ class ConsoleState:
             cells = {}
             for number in range(1, 7):
                 matrix = self.matrices[number]
-                send_prefix = source["prefix"] + "mix/%02d/" % number
                 send = source["sends"].get(number, {"on": True, "level": 0.0})
-                # The OSC node store is canonical for both bus and main sends.
-                # Keep the derived matrix view aligned with individual /node writes.
-                send_on = self.strip_nodes.get(send_prefix + "on", send["on"])
-                send_level = self.strip_nodes.get(send_prefix + "level", send["level"])
+                send_prefix = source["prefix"] + "mix/%02d/" % number
                 matrix_prefix = "/mtx/%02d/" % number
                 reasons, uncertain = [], []
                 for suffix, reason in (("mix/on", "source_muted"), ("mix/fader", "source_fader_zero")):
@@ -1170,8 +1166,8 @@ class ConsoleState:
                 uncertain.extend(matrix_uncertain)
                 cells["mtx_%02d" % number] = self._cell(
                     reasons, uncertain,
-                    send_on if self._known(send_prefix + "on") else True,
-                    send_level if self._known(send_prefix + "level") else 1.0,
+                    send["on"] if self._known(send_prefix + "on") else True,
+                    send["level"] if self._known(send_prefix + "level") else 1.0,
                     matrix["on"] if self._known(matrix_prefix + "mix/on") else True,
                     matrix["fader"] if self._known(matrix_prefix + "mix/fader") else 1.0,
                 )
