@@ -1192,12 +1192,18 @@ def test_config_osc_fields_can_be_read_and_set(field, value):
 
 @pytest.mark.parametrize("field,value", [
     ("level", 10.1), ("level", -90.1), ("level", -12.3),
-    ("f1", 19.9), ("f1", 20001.0), ("f1", 1001.0),
+    ("f1", 19.9), ("f1", 20001.0),
     ("f2", 0), ("fsel", 2), ("type", 3), ("dest", 26),
     ("dest", 1.5), ("type", True), ("unknown", 1),
 ])
 def test_config_osc_rejects_invalid_values(field, value):
     assert not ConsoleState().update("/config/osc/" + field, value)
+
+
+def test_config_osc_accepts_frequency_values_outside_nominal_slider_grid():
+    state = ConsoleState()
+    assert state.update("/config/osc/f1", 1000.0)
+    assert state.get("/config/osc/f1") == 1000.0
 
 
 def test_config_osc_individual_node_get_uses_enum_labels():
