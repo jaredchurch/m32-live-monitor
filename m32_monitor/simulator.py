@@ -829,10 +829,10 @@ class Simulator:
         """Render shared or A/B talkback settings in documented node order."""
         config = self.state.talk_config
         if section is None:
-            return "/config/talk %s %s\\n" % (
+            return "/config/talk %s %s\n" % (
                 ("OFF", "ON")[config["enable"]], ("INT", "EXT")[config["source"]])
         values = config[section]
-        return "/config/talk/%s %.1f %s %s %s\\n" % (
+        return "/config/talk/%s %.1f %s %s %s\n" % (
             section, values["level"], ("OFF", "ON")[values["dim"]],
             ("OFF", "ON")[values["latch"]], "%" + format(values["destmap"], "018b"))
 
@@ -1166,7 +1166,7 @@ class Simulator:
                 rendered = "%.3f" % float(value)
             else:
                 rendered = str(int(value))
-            self.send(client, "/node", "%s %s\\n" % (address, rendered), outcome="node_response")
+            self.send(client, "/node", "%s %s\n" % (address, rendered), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned individual oscillator configuration value")
             return
@@ -1186,7 +1186,7 @@ class Simulator:
                 rendered = "%" + format(int(value), "018b")
             else:
                 rendered = "%.1f" % float(value)
-            self.send(client, "/node", "%s %s\\n" % (address, rendered), outcome="node_response")
+            self.send(client, "/node", "%s %s\n" % (address, rendered), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned individual talkback configuration value")
             return
@@ -1293,11 +1293,11 @@ class Simulator:
                 prefix = "/headamp/%03d" % number
                 headamp = self.state.headamps[number]
                 if len(headamp_parts) == 2:
-                    response = "%s %+.1f %s\\n" % (prefix, headamp["gain"], ("OFF", "ON")[headamp["phantom"]])
+                    response = "%s %+.1f %s\n" % (prefix, headamp["gain"], ("OFF", "ON")[headamp["phantom"]])
                 elif headamp_parts[2] == "gain":
-                    response = "%s/gain %+.1f\\n" % (prefix, headamp["gain"])
+                    response = "%s/gain %+.1f\n" % (prefix, headamp["gain"])
                 else:
-                    response = "%s/phantom %s\\n" % (prefix, ("OFF", "ON")[headamp["phantom"]])
+                    response = "%s/phantom %s\n" % (prefix, ("OFF", "ON")[headamp["phantom"]])
                 self.send(client, "/node", response, outcome="node_response")
                 self.record("in", "handled_node_get", "/node", args, client,
                             "Returned headamp %03d %s node" % (number, "configuration" if len(headamp_parts) == 2 else headamp_parts[2]))
