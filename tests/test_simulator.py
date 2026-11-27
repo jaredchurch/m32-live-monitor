@@ -1979,3 +1979,60 @@ def test_invalid_p16_output_node_write_is_atomic():
     simulator.handle(client, packet("/", "outputs/p16/01 77 PRE"))
     assert simulator.state.output_p16[1] == before
     assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+@pytest.mark.parametrize("number", range(1, 3))
+def test_aes_output_node_get_set_and_direct_osc(number):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    prefix = "outputs/aes/%02d" % number
+
+    simulator.handle(client, packet("/node", prefix))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == [
+        "/%s/src 0\n/%s/pos POST\n/%s/invert OFF\n" % (prefix, prefix, prefix)
+    ]
+
+    simulator.handle(client, packet("/", prefix + " 33 PRE ON"))
+    assert state.get("/" + prefix + "/src") == 33
+    assert state.get("/" + prefix + "/pos") == 6
+    assert state.get("/" + prefix + "/invert") == 1
+
+    simulator.handle(client, packet("/node", prefix + "/invert"))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/%s/invert ON\n" % prefix]
+    simulator.handle(client, packet("/outputs/aes/%02d/src" % number, 12))
+    assert state.get("/" + prefix + "/src") == 12
+
+
+@pytest.mark.parametrize("number", range(1, 3))
+def test_recording_output_node_get_set_and_direct_osc(number):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    prefix = "outputs/rec/%02d" % number
+
+    simulator.handle(client, packet("/node", prefix))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == ["/%s/src 0\n/%s/pos POST\n" % (prefix, prefix)]
+
+    simulator.handle(client, packet("/", prefix + " 33 PRE"))
+    assert state.get("/" + prefix + "/src") == 33
+    assert state.get("/" + prefix + "/pos") == 6
+
+    simulator.handle(client, packet("/node", prefix + "/pos"))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/%s/pos PRE\n" % prefix]
+    simulator.handle(client, packet("/outputs/rec/%02d/src" % number, 12))
+    assert state.get("/" + prefix + "/src") == 12
+
+
+@pytest.mark.parametrize(("address", "value"), [
+    ("/outputs/aes/03/src", 1), ("/outputs/aes/01/src", 77),
+    ("/outputs/aes/01/pos", 9), ("/outputs/aes/01/invert", 2),
+    ("/outputs/rec/03/src", 1), ("/outputs/rec/01/src", 77),
+    ("/outputs/rec/01/pos", 9), ("/outputs/rec/01/invert", 1),
+])
+def test_aes_and_recording_outputs_reject_invalid_values(address, value):
+    assert not ConsoleState().update(address, value)
