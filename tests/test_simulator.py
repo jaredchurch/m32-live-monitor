@@ -1062,6 +1062,45 @@ def test_config_osc_individual_node_set_updates_enum_and_numeric_values():
     assert simulator.state.osc_config["dest"] == 25
 
 
+def test_config_routing_parent_node_returns_all_documented_routing_entries():
+    from m32_monitor.routing import ROUTING_PATHS
+
+    state = ConsoleState()
+    state.routing.update("/config/routing/IN/1-8", 3)
+    state.routing.update("/config/routing/AES50A/1-8", 5)
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "config/routing"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    lines = response.params[0].splitlines()
+    assert response.address == "/node"
+    assert len(lines) == len(ROUTING_PATHS) - 1
+    assert "/config/routing/IN/1-8 3" in lines
+    assert "/config/routing/AES50A/1-8 5" in lines
+    assert "/config/routing/outswitch 0" in lines
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+@pytest.mark.parametrize("header,expected", [
+    ("config/routing/IN", 5),
+    ("config/routing/AES50A", 6),
+    ("config/routing/AES50B", 6),
+    ("config/routing/CARD", 4),
+    ("config/routing/OUT", 4),
+    ("config/routing/PLAY", 5),
+])
+def test_config_routing_bank_nodes_return_their_documented_entries(header, expected):
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    simulator.handle(("127.0.0.1", 50123), packet("/node", header))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert len(response.params[0].splitlines()) == expected
+
+
 def test_userrout_out_node_returns_all_48_slots_in_order():
     state = ConsoleState()
     state.user_rout_out.update({1: 1, 8: 167, 48: 208})
