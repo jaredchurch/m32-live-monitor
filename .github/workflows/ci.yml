@@ -1,8 +1,10 @@
 name: CI
 
 on:
+  # Run the full suite on feature branches as well as main. Work packages are
+  # developed directly on branches, so CI must validate them before handoff.
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
     branches: [main]
 
