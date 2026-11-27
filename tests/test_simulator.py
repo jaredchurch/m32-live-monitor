@@ -2668,3 +2668,19 @@ def test_channel_group_node_accepts_percent_binary_dca_and_mute_masks():
     assert state.get("/ch/01/grp/dca") == 64
     assert state.get("/ch/01/grp/mute") == 0
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
+def test_channel_mix_node_accepts_fader_level_in_db():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "ch/03/mix OFF -4.3 ON +0 OFF -oo"))
+
+    assert state.get("/ch/03/mix/on") == 0
+    assert state.get("/ch/03/mix/fader") == pytest.approx(((-4.3 + 30.0) / 40.0))
+    assert state.get("/ch/03/mix/st") == 1
+    assert state.get("/ch/03/mix/pan") == 0.0
+    assert state.get("/ch/03/mix/mono") == 0
+    assert state.get("/ch/03/mix/mlevel") == 0.0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
