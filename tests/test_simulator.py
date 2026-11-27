@@ -2036,3 +2036,46 @@ def test_recording_output_node_get_set_and_direct_osc(number):
 ])
 def test_aes_and_recording_outputs_reject_invalid_values(address, value):
     assert not ConsoleState().update(address, value)
+
+
+@pytest.mark.parametrize("number", [0, 31, 32, 79, 80, 127])
+def test_headamp_node_get_set_and_direct_osc(number):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    prefix = "headamp/%03d" % number
+
+    simulator.handle(client, packet("/node", prefix))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/%s +0.0 OFF\\n" % prefix]
+
+    simulator.handle(client, packet("/", prefix + " 24.5 ON"))
+    assert state.get("/" + prefix + "/gain") == 24.5
+    assert state.get("/" + prefix + "/phantom") == 1
+
+    simulator.handle(client, packet("/node", prefix + "/gain"))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/%s/gain +24.5\\n" % prefix]
+    simulator.handle(client, packet("/", prefix + "/phantom OFF"))
+    assert state.get("/" + prefix + "/phantom") == 0
+
+    simulator.handle(client, packet("/headamp/%03d/gain" % number, 18.0))
+    assert state.get("/" + prefix + "/gain") == 18.0
+
+
+@pytest.mark.parametrize(("address", "value"), [
+    ("/headamp/128/gain", 0.0), ("/headamp/000/gain", -12.5),
+    ("/headamp/000/gain", 60.5), ("/headamp/000/gain", 1.2),
+    ("/headamp/000/phantom", 2), ("/headamp/000/unknown", 1),
+])
+def test_headamp_rejects_invalid_values(address, value):
+    assert not ConsoleState().update(address, value)
+
+
+def test_invalid_headamp_node_write_is_atomic():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    before = dict(simulator.state.headamps[0])
+    simulator.handle(client, packet("/", "headamp/000 61 ON"))
+    assert simulator.state.headamps[0] == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
