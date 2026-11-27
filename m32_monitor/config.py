@@ -31,7 +31,7 @@ def get_settings() -> Settings:
         osc_listen_port=int(os.getenv("OSC_LISTEN_PORT","10024")),
         simulator_host=os.getenv("SIMULATOR_HOST","0.0.0.0"),
         simulator_port=int(os.getenv("SIMULATOR_PORT","10023")),
-        simulator_name=os.getenv("SIMULATOR_NAME","M32-Live-Monitor"),
+        simulator_name=os.getenv("SIMULATOR_NAME","M32-Simulation"),
         simulator_model=os.getenv("SIMULATOR_MODEL","M32"),
         simulator_firmware=os.getenv("SIMULATOR_FIRMWARE","4.06"),
         simulator_server_version=os.getenv("SIMULATOR_SERVER_VERSION","V2.07"),
