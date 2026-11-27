@@ -599,7 +599,9 @@ class Simulator:
                     paths = [prefix + "/" + field]
                 else:
                     raise ValueError("Unsupported main output node")
+                previous = dict(self.state.output_main[number])
                 if not all(self.state.update(path, value) for path, value in zip(paths, parsed)):
+                    self.state.output_main[number].update(previous)
                     raise ValueError("Invalid physical main output value")
             elif header.startswith("fx/"):
                 parts = header.split("/")
