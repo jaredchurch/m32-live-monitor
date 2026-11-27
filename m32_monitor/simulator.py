@@ -1314,7 +1314,7 @@ class Simulator:
                 value = ("OFF", "A", "B")[output["iq_group"]]
             else:
                 value = ("none", "iQ8", "iQ10", "iQ12", "iQ15", "iQ15B", "iQ18B")[output["iq_speaker"]]
-            self.send(client, "/node", "/%s %s\\n" % (header, value), outcome="node_response")
+            self.send(client, "/node", "/%s %s\n" % (header, value), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client, "Returned P16 iQ setting")
             return
         fx_parts = header.split("/")
