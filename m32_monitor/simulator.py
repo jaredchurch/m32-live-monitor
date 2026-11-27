@@ -844,7 +844,7 @@ class Simulator:
                     field = "/".join(parts[2:])
                     paths = ["/dca/%d/%s" % (number, field)]
                     if field == "on": parsed = [("OFF", "ON").index(values[0])]
-                    elif field == "fader" and fader_db: parsed = [float(values[0])]
+                    elif field == "fader": parsed = [float(values[0])]
                     elif field == "config/name": parsed = [values[0]]
                     elif field == "config/icon": parsed = [int(values[0], 0)]
                     elif field == "config/color":
@@ -875,7 +875,7 @@ class Simulator:
                 schema = self.state.main_node_schema if prefix in ("/main/st", "/main/m") else self.state.strip_node_schema[header.split("/")[0]]
                 parsed = [self._parse_strip_node_value(
                     schema[node][field], token, field,
-                    fader_db=(prefix == "/ch" and node == "mix" and field == "fader"))
+                    fader_db=(prefix.startswith("/ch/") and node == "mix" and field == "fader"))
                           for field, token in zip(fields, values)]
                 for path, value in zip(paths, parsed):
                     valid = (self.state._valid_main_node_value(path, value)
