@@ -2642,3 +2642,18 @@ def test_channel_mix_node_set_accepts_negative_infinity_fader_token():
     assert state.get("/ch/01/mix/mono") == 0
     assert state.get("/ch/01/mix/mlevel") == 0.0
     assert not simulator.snapshot(outcome="unhandled_set")["events"]
+
+def test_channel_bus_send_node_accepts_numeric_pan_follow_enum_and_silent_level():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "ch/01/mix/01 OFF -oo +0 PRE 0"))
+
+    assert state.get("/ch/01/mix/01/on") == 0
+    assert state.get("/ch/01/mix/01/level") == 0.0
+    assert state.get("/ch/01/mix/01/pan") == 0.0
+    assert state.get("/ch/01/mix/01/type") == 3
+    assert state.get("/ch/01/mix/01/panFollow") == 0
+    assert not simulator.snapshot(outcome="unhandled_set")["events"]
