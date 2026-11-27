@@ -1101,6 +1101,84 @@ def test_config_routing_bank_nodes_return_their_documented_entries(header, expec
     assert len(response.params[0].splitlines()) == expected
 
 
+def test_userctrl_bank_nodes_return_color_encoders_and_buttons():
+    state = ConsoleState()
+    state.update("/config/userctrl/A/color", 3)
+    state.update("/config/userctrl/A/enc/1", "F00")
+    state.update("/config/userctrl/A/btn/5", "MN05003")
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "config/userctrl/A"))
+    lines = OscMessage(simulator.transport.sent[-1][0]).params[0].splitlines()
+    assert len(lines) == 13
+    assert lines[0] == "/config/userctrl/A/color YE"
+    assert lines[1] == "/config/userctrl/A/enc/1 F00"
+    assert lines[5] == "/config/userctrl/A/btn/5 MN05003"
+
+    simulator.handle(client, packet("/node", "config/userctrl/B/enc"))
+    lines = OscMessage(simulator.transport.sent[-1][0]).params[0].splitlines()
+    assert len(lines) == 4
+    simulator.handle(client, packet("/node", "config/userctrl/C/btn"))
+    lines = OscMessage(simulator.transport.sent[-1][0]).params[0].splitlines()
+    assert len(lines) == 8
+
+
+@pytest.mark.parametrize("address,value", [
+    ("/config/userctrl/A/color", 15),
+    ("/config/userctrl/B/enc/4", "F79"),
+    ("/config/userctrl/C/btn/12", "MN160127"),
+    ("/config/tape/gainL", 12.5),
+    ("/config/tape/gainR", -6.0),
+    ("/config/tape/autoplay", 1),
+    ("/config/amixenable/X", 1),
+    ("/config/amixenable/Y", 0),
+    ("/config/dp48/scope", 15),
+    ("/config/dp48/broadcast", 1),
+    ("/config/dp48/aesAB", 1),
+    ("/config/dp48/link/24", 1),
+    ("/config/dp48/assign/48", 12),
+    ("/config/dp48/grpname/12", "Choir"),
+])
+def test_extended_configuration_values_can_be_read_and_set(address, value):
+    state = ConsoleState()
+    assert state.update(address, value)
+    assert state.get(address) == value
+
+
+@pytest.mark.parametrize("address,value", [
+    ("/config/userctrl/A/color", 16),
+    ("/config/userctrl/A/enc/5", "F00"),
+    ("/config/userctrl/A/enc/1", "TOO-LONG"),
+    ("/config/userctrl/A/btn/4", "MN05003"),
+    ("/config/tape/gainL", 24.5),
+    ("/config/tape/gainR", 0.25),
+    ("/config/tape/autoplay", 2),
+    ("/config/amixenable/Z", 1),
+    ("/config/dp48/scope", 16),
+    ("/config/dp48/broadcast", 2),
+    ("/config/dp48/link/25", 1),
+    ("/config/dp48/assign/01", 13),
+    ("/config/dp48/grpname/01", "TOO-LONG!!"),
+])
+def test_extended_configuration_rejects_out_of_spec_values(address, value):
+    assert not ConsoleState().update(address, value)
+
+
+def test_tape_amix_and_dp48_node_groups_return_documented_entries():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    for header, count in (("config/tape", 3), ("config/amixenable", 2),
+                          ("config/dp48", 87), ("config/dp48/link", 24),
+                          ("config/dp48/assign", 48), ("config/dp48/grpname", 12)):
+        simulator.handle(client, packet("/node", header))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.address == "/node"
+        assert len(response.params[0].splitlines()) == count
+
+
 def test_userrout_out_node_returns_all_48_slots_in_order():
     state = ConsoleState()
     state.user_rout_out.update({1: 1, 8: 167, 48: 208})
