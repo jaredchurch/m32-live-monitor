@@ -19,6 +19,19 @@ from pythonosc.osc_message_builder import OscMessageBuilder
 logger = logging.getLogger(__name__)
 
 
+TYPE_NAMES_FX_1_4 = ("HALL", "AMBI", "RPLT", "ROOM", "CHAM", "PLAT", "VREV", "VRM",
+    "GATE", "RVRS", "DLY", "3TAP", "4TAP", "CRS", "FLNG", "PHAS", "DIMC", "FILT",
+    "ROTA", "PAN", "SUB", "D/RV", "CR/R", "FL/R", "D/CR", "D/FL", "MODD", "GEQ2",
+    "GEQ", "TEQ2", "TEQ", "DES2", "DES", "P1A", "P1A2", "PQ5", "PQ5S", "WAVD",
+    "LIM", "CMB", "CMB2", "FAC", "FAC1M", "FAC2", "LEC", "LEC2", "ULC", "ULC2",
+    "ENH2", "ENH", "EXC2", "EXC", "IMG", "EDI", "SON", "AMP2", "AMP", "DRV2",
+    "DRV", "PIT2", "PIT")
+TYPE_NAMES_FX_5_8 = ("GEQ2", "GEQ", "TEQ2", "TEQ", "DES2", "DES", "P1A", "P1A2",
+    "PQ5", "PQ5S", "WAVD", "LIM", "FAC", "FAC1M", "FAC2", "LEC", "LEC2", "ULC",
+    "ULC2", "ENH2", "ENH", "EXC2", "EXC", "IMG", "EDI", "SON", "AMP2", "AMP",
+    "DRV2", "DRV", "PHAS", "FILT", "PAN", "SUB")
+
+
 class Simulator:
     def __init__(self, state, host="0.0.0.0", port=10023, log_limit=3000,
                  name="M32-Simulation", model="M32", firmware="4.06",
@@ -563,6 +576,32 @@ class Simulator:
                 else:
                     raise ValueError("Unknown RTA preference")
                 paths, parsed = [path], parsed
+            elif header.startswith("fx/"):
+                parts = header.split("/")
+                if len(parts) not in (2, 3) or not parts[1].isdigit() or int(parts[1]) not in self.state.fx:
+                    raise ValueError("Unknown FX slot")
+                number = int(parts[1])
+                type_names = TYPE_NAMES_FX_1_4 if number <= 4 else TYPE_NAMES_FX_5_8
+                if len(parts) == 2:
+                    if len(values) != 1:
+                        raise ValueError("FX node requires one effect type")
+                    paths = ["/fx/%02d/type" % number]
+                    parsed = [type_names.index(values[0])]
+                elif parts[2] == "source":
+                    if number > 4 or len(values) != 2:
+                        raise ValueError("FX source node is only available on slots 1-4 and requires L/R sources")
+                    source_names = ("INS",) + tuple("MIX%d" % n for n in range(1, 17)) + ("M/C",)
+                    paths = ["/fx/%02d/source/l" % number, "/fx/%02d/source/r" % number]
+                    parsed = [source_names.index(values[0]), source_names.index(values[1])]
+                elif parts[2] == "par":
+                    if len(values) != 64:
+                        raise ValueError("FX parameter node requires 64 values")
+                    paths = ["/fx/%02d/par/%02d" % (number, n) for n in range(1, 65)]
+                    parsed = [float(value) for value in values]
+                else:
+                    raise ValueError("Unsupported FX node")
+                if not all(math.isfinite(float(value)) for value in parsed if isinstance(value, (int, float))):
+                    raise ValueError("FX values must be finite")
             elif header.startswith("dca/"):
                 parts = header.split("/")
                 if len(parts) not in (2, 3) or not parts[1].isdigit() or int(parts[1]) not in self.state.dcas:
@@ -1168,6 +1207,44 @@ class Simulator:
                             "Returned %s %02d config discovery node" % (family, number))
                 return
 
+        fx_parts = header.split("/")
+        if (len(fx_parts) in (2, 3) and fx_parts[0] == "fx"
+                and fx_parts[1].isdigit() and int(fx_parts[1]) in self.state.fx):
+            number = int(fx_parts[1])
+            prefix = "/fx/%02d" % number
+            fx = self.state.fx[number]
+            type_names = TYPE_NAMES_FX_1_4 if number <= 4 else TYPE_NAMES_FX_5_8
+            source_names = ("INS",) + tuple("MIX%d" % n for n in range(1, 17)) + ("M/C",)
+            if len(fx_parts) == 2 or fx_parts[2] == "type":
+                response = "%s/type %s\n" % (prefix, type_names[fx["type"]])
+            elif fx_parts[2] == "source" and number <= 4:
+                response = "%s/source %s %s\n" % (
+                    prefix, source_names[fx["source_l"]], source_names[fx["source_r"]])
+            elif fx_parts[2] == "par":
+                response = "".join("%s/par/%02d %.6f\n" % (prefix, n, fx["par"][n])
+                                   for n in range(1, 65))
+            else:
+                response = None
+            if response is not None:
+                self.send(client, "/node", response, outcome="node_response")
+                self.record("in", "handled_node_get", "/node", args, client,
+                            "Returned FX slot %d %s node" % (number, fx_parts[2] if len(fx_parts) == 3 else "type"))
+                return
+        if len(fx_parts) == 4 and fx_parts[0] == "fx" and fx_parts[1].isdigit():
+            number = int(fx_parts[1])
+            if number in self.state.fx and fx_parts[2] == "par" and fx_parts[3].isdigit():
+                parameter = int(fx_parts[3])
+                if 1 <= parameter <= 64:
+                    value = self.state.fx[number]["par"][parameter]
+                    self.send(client, "/node", "%s %.6f\n" % ("/" + header, value), outcome="node_response")
+                    self.record("in", "handled_node_get", "/node", args, client, "Returned FX parameter")
+                    return
+            if number in self.state.fx and fx_parts[2] == "source" and fx_parts[3] in ("l", "r") and number <= 4:
+                value = self.state.fx[number]["source_" + fx_parts[3]]
+                source_names = ("INS",) + tuple("MIX%d" % n for n in range(1, 17)) + ("M/C",)
+                self.send(client, "/node", "%s %s\n" % ("/" + header, source_names[value]), outcome="node_response")
+                self.record("in", "handled_node_get", "/node", args, client, "Returned FX source field")
+                return
         dca_parts = header.split("/")
         if (len(dca_parts) in (2, 3) and dca_parts[0] == "dca"
                 and dca_parts[1].isdigit() and int(dca_parts[1]) in self.state.dcas):
