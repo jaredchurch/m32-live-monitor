@@ -1329,6 +1329,32 @@ def test_config_routing_bank_nodes_return_their_documented_entries(header, expec
     assert len(response.params[0].splitlines()) == expected
 
 
+def test_userctrl_bank_parent_address_accepts_colour_only_osc_set():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/config/userctrl/C", "RD"))
+
+    assert state.get("/config/userctrl/C/color") == 1
+    event = simulator.snapshot(outcome="handled_set")["events"][-1]
+    assert event["address"] == "/config/userctrl/C"
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
+@pytest.mark.parametrize("token", ["INVALID", "16", ""])
+def test_userctrl_bank_parent_address_rejects_invalid_colour_token(token):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+
+    simulator.handle(("127.0.0.1", 50123), packet("/config/userctrl/C", token))
+
+    assert state.get("/config/userctrl/C/color") == 0
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
 def test_userctrl_bank_nodes_return_color_encoders_and_buttons():
     state = ConsoleState()
     state.update("/config/userctrl/A/color", 3)
