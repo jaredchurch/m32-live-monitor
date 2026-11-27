@@ -1095,6 +1095,23 @@ class Simulator:
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client, detail)
             return
+        # M32-Edit explicitly requests each strip's config parent node. Keep
+        # this route explicit rather than relying on the generic processing-node
+        # resolver: it is part of the initial channel discovery handshake.
+        config_parts = header.split("/")
+        if (len(config_parts) == 3 and config_parts[0] in self.state.strip_node_schema
+                and config_parts[1].isdigit() and config_parts[2] == "config"):
+            family, number = config_parts[0], int(config_parts[1])
+            limit = {"ch": 32, "auxin": 8, "fxrtn": 8}[family]
+            if 1 <= number <= limit:
+                prefix = "/" + family + "/" + config_parts[1]
+                fields = tuple(self.state.strip_node_schema[family]["config"])
+                response = self._strip_node_response(prefix, "config", fields)
+                self.send(client, "/node", response, outcome="node_response")
+                self.record("in", "handled_node_get", "/node", args, client,
+                            "Returned %s %02d config discovery node" % (family, number))
+                return
+
         strip_node = self._strip_node_header(header)
         if strip_node is not None:
             prefix, node, fields = strip_node
