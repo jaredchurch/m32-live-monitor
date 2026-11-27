@@ -118,6 +118,7 @@ STRIP_NODE_SCHEMA["mtx"] = {
                "icon": (1, 1, 74, 1, "int", None),
                "color": (1, 0, 15, 1, "enum", ("OFF","RD","GN","YE","BL","MG","CY","WH","OFFi","RDi","GNi","YEi","BLi","MGi","CYi","WHi"))},
     "preamp": {"invert": (0,0,1,1,"enum",("OFF","ON"))},
+    "config/preamp": {"invert": (0,0,1,1,"enum",("OFF","ON"))},
     "dyn": {"on": (0,0,1,1,"enum",("OFF","ON")), "mode": (0,0,1,1,"enum",("COMP","EXP")),
             "det": (0,0,1,1,"enum",("PEAK","RMS")), "env": (0,0,1,1,"enum",("LIN","LOG")),
             "thr": (-24.0,-60.0,0.0,0.5,"float",None),
@@ -389,6 +390,10 @@ class ConsoleState:
                 if field_path == ["config", "name"]: matrix["name"] = value
                 elif field_path == ["config", "icon"]: matrix["icon"] = int(value)
                 elif field_path == ["config", "color"]: matrix["colour"] = int(value)
+                elif field_path in (["preamp", "invert"], ["config", "preamp", "invert"]):
+                    alias = "/mtx/%02d/" % number
+                    self.strip_nodes[alias + "preamp/invert"] = int(value)
+                    self.strip_nodes[alias + "config/preamp/invert"] = int(value)
                 elif field_path == ["mix", "on"]: matrix["on"] = self._bool(value)
                 elif field_path == ["mix", "fader"]: matrix["fader"] = float(value)
                 elif field_path == ["grp", "dca"]: matrix["dca_mask"] = int(value)
@@ -869,6 +874,8 @@ class ConsoleState:
                 if parts[2:] == ["config", "name"]: return matrix["name"]
                 if parts[2:] == ["config", "icon"]: return matrix["icon"]
                 if parts[2:] == ["config", "color"]: return matrix["colour"]
+                if parts[2:] in (["preamp", "invert"], ["config", "preamp", "invert"]):
+                    return self.strip_nodes.get("/mtx/%02d/preamp/invert" % int(parts[1]), 0)
                 if parts[2:] == ["mix", "on"]: return matrix["on"]
                 if parts[2:] == ["mix", "fader"]: return matrix["fader"]
                 if parts[2:] == ["grp", "dca"]: return matrix["dca_mask"]
