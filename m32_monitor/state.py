@@ -375,6 +375,22 @@ class ConsoleState:
             return True
         parts = address.strip("/").split("/")
         try:
+            if len(parts) == 2 and parts[0] == "-urec":
+                field = parts[1]
+                if field not in self.urec:
+                    return False
+                if field in ("sd1info", "sd2info", "errormessage"):
+                    if not isinstance(value, str) or len(value) > 256:
+                        return False
+                else:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) != int(value) or int(value) < 0:
+                        return False
+                    if field in ("batterystate", "sd1state", "sd2state") and int(value) not in range(4 if field != "batterystate" else 3):
+                        return False
+                    value = int(value)
+                self.urec[field] = value
+                self.received.add(address)
+                return True
             if len(parts) >= 4 and parts[0] in ("ch", "auxin", "fxrtn"):
                 collection = {"ch": self.channels, "auxin": self.auxins, "fxrtn": self.fx_returns}[parts[0]]
                 channel = collection[int(parts[1])]
