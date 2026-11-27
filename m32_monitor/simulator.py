@@ -593,7 +593,7 @@ class Simulator:
     def _config_osc_node_group(self):
         """Render the six oscillator generator settings in protocol order."""
         values = self.state.osc_config
-        return "/config/osc %.1f %.3f %.3f %s %s %d\\n" % (
+        return "/config/osc %.1f %.3f %.3f %s %s %d\n" % (
             values["level"], values["f1"], values["f2"],
             ("F1", "F2")[values["fsel"]],
             ("SINE", "PINK", "WHITE")[values["type"]], values["dest"])
@@ -632,7 +632,7 @@ class Simulator:
             return
 
         if header == "config/userrout/out":
-            response = "".join("/config/userrout/out/%02d %d\\n" % (slot, source)
+            response = "".join("/config/userrout/out/%02d %d\n" % (slot, source)
                                for slot, source in self.state.user_rout_out.items())
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
@@ -646,7 +646,7 @@ class Simulator:
                 self.record("in", "unhandled_command", "/node", args, client,
                             "No user output routing slot is modelled for header %r" % header)
                 return
-            self.send(client, "/node", "%s %d\\n" % (address, value), outcome="node_response")
+            self.send(client, "/node", "%s %d\n" % (address, value), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned individual user output routing assignment")
             return
