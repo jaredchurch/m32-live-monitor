@@ -1368,7 +1368,7 @@ def test_channel_processing_node_reads_cover_delay_preamp_gate_dynamics_insert_a
         simulator.handle(client, packet("/node", header))
         response = OscMessage(simulator.transport.sent[-1][0])
         assert response.address == "/node"
-        assert len(response.params[0].split()) - 1 == count + 1
+        assert len(response.params[0].split()) == count + 1
         assert response.params[0].startswith("/" + header + " ")
 
 
@@ -1516,7 +1516,7 @@ def test_bus_insert_eq_mix_and_group_nodes_are_discoverable_and_writable():
         simulator.handle(client, packet("/node", "bus/01/" + node))
         response = OscMessage(simulator.transport.sent[-1][0])
         assert response.address == "/node"
-        assert len(response.params[0].split()) == count
+        assert len(response.params[0].split()) - 1 == count
         assert response.params[0].startswith("/bus/01/" + node + " ")
 
     simulator.handle(client, packet("/", "bus/01/insert ON POST FX3L"))
