@@ -442,6 +442,13 @@ class Simulator:
                     paths, parsed = ["/" + header], values
                 else:
                     raise ValueError("Unsupported user control node")
+            elif header in ("config/chlink", "config/auxlink", "config/fxlink", "config/buslink", "config/mtxlink"):
+                family = header.split("/", 1)[1]
+                pairs = tuple(self.state.config_links[family])
+                if len(values) != len(pairs):
+                    raise ValueError("%s node requires %d ON/OFF values" % (family, len(pairs)))
+                paths = ["/config/%s/%s" % (family, pair) for pair in pairs]
+                parsed = [("OFF", "ON").index(token) for token in values]
             elif header == "config/tape":
                 if len(values) != 3:
                     raise ValueError("Tape node requires gainL, gainR and autoplay")
