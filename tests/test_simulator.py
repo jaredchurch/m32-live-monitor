@@ -2493,3 +2493,31 @@ def test_rta_peakhold_accepts_console_duration_labels(token, expected):
     simulator.handle(client, packet("/node", "-prefs/rta/peakhold"))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.params == ["/-prefs/rta/peakhold " + token + "\n"]
+
+
+@pytest.mark.parametrize("token,expected", [("REC", 0), ("PLAY", 1)])
+def test_config_routing_parent_address_accepts_routing_mode_switch_node_write(token, expected):
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "config/routing " + token))
+
+    assert simulator.state.routing.get("/config/routing/outswitch") == expected
+    assert "/config/routing/outswitch" in simulator.state.received
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+    assert not simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+@pytest.mark.parametrize("token,expected", [("REC", 0), ("PLAY", 1)])
+def test_direct_config_routing_parent_address_accepts_routing_mode_switch(token, expected):
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/config/routing", token))
+
+    assert simulator.state.routing.get("/config/routing/outswitch") == expected
+    assert "/config/routing/outswitch" in simulator.state.received
+    assert simulator.snapshot(outcome="handled_set")["events"]
+    assert not simulator.snapshot(outcome="unhandled_set")["events"]
