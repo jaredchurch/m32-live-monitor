@@ -6,6 +6,82 @@ import time
 from m32_monitor.routing import ROUTING_PATHS, RoutingState
 
 
+# Ordered X32node schemas for input strips. Values are (default, minimum, maximum,
+# step, kind, enum labels). The community protocol reference is unofficial.
+STRIP_NODE_SCHEMA = {
+    "ch": {
+        "config": {"name": (None, None, None, 0, "string", None), "icon": (1, 1, 74, 1, "int", None),
+                   "color": (1, 0, 15, 1, "enum", ("OFF","RD","GN","YE","BL","MG","CY","WH","OFFi","RDi","GNi","YEi","BLi","MGi","CYi","WHi")),
+                   "source": (0, 0, 64, 1, "int", None)},
+        "delay": {"on": (0,0,1,1,"enum",("OFF","ON")), "time": (0.3,0.3,500.0,0.1,"float",None)},
+        "preamp": {"trim": (0.0,-18.0,18.0,0.25,"float",None), "invert": (0,0,1,1,"enum",("OFF","ON")),
+                   "hpon": (0,0,1,1,"enum",("OFF","ON")), "hpslope": (1,0,2,1,"enum",("12","18","24")),
+                   "hpf": (20.0,20.0,400.0,0,"float",None)},
+        "gate": {"on": (0,0,1,1,"enum",("OFF","ON")), "mode": (0,0,4,1,"enum",("EXP2","EXP3","EXP4","GATE","DUCK")),
+                 "thr": (-40.0,-80.0,0.0,0.5,"float",None), "range": (60.0,3.0,60.0,1.0,"float",None),
+                 "attack": (0.0,0.0,120.0,1.0,"float",None), "hold": (10.0,0.02,2000.0,0,"float",None),
+                 "release": (100.0,5.0,4000.0,0,"float",None), "keysrc": (0,0,64,1,"int",None)},
+        "gate/filter": {"on": (0,0,1,1,"enum",("OFF","ON")), "type": (0,0,8,1,"enum",("LC6","LC12","HC6","HC12","1.0","2.0","3.0","5.0","10.0")),
+                        "f": (1000.0,20.0,20000.0,0,"float",None)},
+        "dyn": {"on": (0,0,1,1,"enum",("OFF","ON")), "mode": (0,0,1,1,"enum",("COMP","EXP")),
+                "det": (0,0,1,1,"enum",("PEAK","RMS")), "env": (0,0,1,1,"enum",("LIN","LOG")),
+                "thr": (-24.0,-60.0,0.0,0.5,"float",None), "ratio": (6,0,11,1,"enum",("1.1","1.3","1.5","2.0","2.5","3.0","4.0","5.0","7.0","10","20","100")),
+                "knee": (0.0,0.0,5.0,1.0,"float",None), "mgain": (0.0,0.0,24.0,0.5,"float",None),
+                "attack": (10.0,0.0,120.0,1.0,"float",None), "hold": (10.0,0.02,2000.0,0,"float",None),
+                "release": (100.0,5.0,4000.0,0,"float",None), "pos": (0,0,1,1,"enum",("PRE","POST")),
+                "keysrc": (0,0,64,1,"int",None), "mix": (100.0,0.0,100.0,5.0,"float",None),
+                "auto": (0,0,1,1,"enum",("OFF","ON"))},
+        "dyn/filter": {"on": (0,0,1,1,"enum",("OFF","ON")), "type": (0,0,8,1,"enum",("LC6","LC12","HC6","HC12","1.0","2.0","3.0","5.0","10.0")),
+                        "f": (1000.0,20.0,20000.0,0,"float",None)},
+        "insert": {"on": (0,0,1,1,"enum",("OFF","ON")), "pos": (0,0,1,1,"enum",("PRE","POST")),
+                   "sel": (0,0,22,1,"enum",("OFF","FX1L","FX1R","FX2L","FX2R","FX3L","FX3R","FX4L","FX4R","FX5L","FX5R","FX6L","FX6R","FX7L","FX7R","FX8L","FX8R","AUX1","AUX2","AUX3","AUX4","AUX5","AUX6"))},
+        "eq": {"on": (0,0,1,1,"enum",("OFF","ON"))},
+        "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None),
+                "st": (1,0,1,1,"enum",("OFF","ON")), "pan": (0.0,-100.0,100.0,2.0,"float",None),
+                "mono": (0,0,1,1,"enum",("OFF","ON")), "mlevel": (0.75,0.0,1.0,0,"float",None)},
+        "grp": {"dca": (0,0,255,1,"int",None), "mute": (0,0,63,1,"int",None)},
+        "automix": {"group": (0,0,2,1,"enum",("OFF","X","Y")), "weight": (0.0,-12.0,12.0,0.5,"float",None)}
+    },
+    "auxin": {
+        "config": {"name": (None,None,None,0,"string",None), "icon": (1,1,74,1,"int",None),
+                   "color": (1,0,15,1,"enum",("OFF","RD","GN","YE","BL","MG","CY","WH","OFFi","RDi","GNi","YEi","BLi","MGi","CYi","WHi")),
+                   "source": (0,0,64,1,"int",None)},
+        "preamp": {"trim": (0.0,-18.0,18.0,0.25,"float",None), "invert": (0,0,1,1,"enum",("OFF","ON"))},
+        "eq": {"on": (0,0,1,1,"enum",("OFF","ON"))},
+        "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None),
+                "st": (1,0,1,1,"enum",("OFF","ON")), "pan": (0.0,-100.0,100.0,2.0,"float",None),
+                "mono": (0,0,1,1,"enum",("OFF","ON")), "mlevel": (0.75,0.0,1.0,0,"float",None)},
+        "grp": {"dca": (0,0,255,1,"int",None), "mute": (0,0,63,1,"int",None)}
+    },
+    "fxrtn": {
+        "config": {"name": (None,None,None,0,"string",None), "icon": (1,1,74,1,"int",None),
+                   "color": (1,0,15,1,"enum",("OFF","RD","GN","YE","BL","MG","CY","WH","OFFi","RDi","GNi","YEi","BLi","MGi","CYi","WHi"))},
+        "eq": {"on": (0,0,1,1,"enum",("OFF","ON"))},
+        "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None),
+                "st": (1,0,1,1,"enum",("OFF","ON")), "pan": (0.0,-100.0,100.0,2.0,"float",None),
+                "mono": (0,0,1,1,"enum",("OFF","ON")), "mlevel": (0.75,0.0,1.0,0,"float",None)},
+        "grp": {"dca": (0,0,255,1,"int",None), "mute": (0,0,63,1,"int",None)}
+    }
+}
+for _family in ("ch", "auxin", "fxrtn"):
+    _bands = 4
+    for _band in range(1, _bands + 1):
+        STRIP_NODE_SCHEMA[_family]["eq/%d" % _band] = {
+            "type": (2,0,5,1,"enum",("LCut","LShv","PEQ","VEQ","HShv","HCut")),
+            "f": (1000.0,20.0,20000.0,0,"float",None),
+            "g": (0.0,-15.0,15.0,0.25,"float",None),
+            "q": (1.0,0.3,10.0,0,"float",None)}
+    for _bus in range(1, 17):
+        _send_fields = {"on": (1,0,1,1,"enum",("OFF","ON")),
+                        "level": (0.0,0.0,1.0,0,"float",None)}
+        if _bus % 2:
+            _send_fields.update({"pan": (0.0,-100.0,100.0,2.0,"float",None),
+                                 "type": (3,0,5,1,"enum",("IN/LC","<-EQ","EQ->","PRE","POST","GRP")),
+                                 "panFollow": (0,0,1,1,"enum",("OFF","ON"))})
+        STRIP_NODE_SCHEMA[_family]["mix/%02d" % _bus] = _send_fields
+
+
+
 @dataclass
 class ChannelState:
     number: int
@@ -99,6 +175,16 @@ class ConsoleState:
         self.last_seen = time.monotonic()
         self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 32 + n, False) for n in range(1, 9)}
         self.fx_returns = {n: ChannelState(n, "FX RTN %02d" % n, 0.72, False, 1, 0, False) for n in range(1, 9)}
+        self.strip_node_schema = STRIP_NODE_SCHEMA
+        self.strip_nodes = {}
+        for family, nodes in STRIP_NODE_SCHEMA.items():
+            counts = {"ch": 32, "auxin": 8, "fxrtn": 8}[family]
+            for number in range(1, counts + 1):
+                for node, fields in nodes.items():
+                    for field_name, spec in fields.items():
+                        default = spec[0]
+                        if default is not None:
+                            self.strip_nodes["/%s/%02d/%s/%s" % (family, number, node, field_name)] = default
         self.dcas = {
             n: {"number": n, "name": "DCA %d" % n, "on": True, "fader": 0.75}
             for n in range(1, 9)
@@ -203,7 +289,9 @@ class ConsoleState:
                     else:
                         return False
                 else:
-                    return False
+                    if address not in self.strip_nodes or not self._valid_strip_node_value(address, value):
+                        return False
+                    self.strip_nodes[address] = value
                 if parts[0] == "fxrtn" and path == "config/color":
                     channel.connected = channel.colour != 0
                 self.received.add(address)
@@ -574,6 +662,31 @@ class ConsoleState:
             return False
         return False
 
+    @staticmethod
+    def _valid_strip_node_value(address, value):
+        parts = address.strip("/").split("/")
+        if len(parts) < 4:
+            return False
+        family, node = parts[0], "/".join(parts[2:-1])
+        field_name = parts[-1]
+        try:
+            spec = STRIP_NODE_SCHEMA[family][node][field_name]
+        except KeyError:
+            return False
+        default, minimum, maximum, step, kind, labels = spec
+        if kind == "string":
+            return isinstance(value, str) and len(value) <= 12
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return False
+        if kind in ("int", "enum") and float(value) != int(value):
+            return False
+        numeric = float(value)
+        if minimum is not None and numeric < minimum or maximum is not None and numeric > maximum:
+            return False
+        if step and minimum is not None and abs((numeric - minimum) / step - round((numeric - minimum) / step)) > 1e-6:
+            return False
+        return True
+
     def get(self, address):
         routed = self.routing.get(address)
         if routed is not None:
@@ -599,6 +712,7 @@ class ConsoleState:
                 if len(parts) == 5 and parts[2] == "mix" and parts[3].isdigit():
                     send = channel.sends.get(int(parts[3]), {"on": True, "level": 0.0})
                     return send.get(parts[4])
+                return self.strip_nodes.get(address)
             if parts[:1] == ["-urec"] and len(parts) == 2:
                 return self.urec.get(parts[1])
             if len(parts) == 4 and parts[0] == "-urec" and parts[1] == "session" and parts[3] == "name":
