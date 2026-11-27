@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def _parse_osc_frequency(token):
-    """Parse console frequency notation such as 1k00 (1.00 kHz)."""
+    """Parse console frequency notation such as 1k00 (1.00 kHz), as well as plain Hz."""
     text = str(token).strip().lower()
     if "k" in text:
         if text.count("k") != 1:
