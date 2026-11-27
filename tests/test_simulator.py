@@ -1772,7 +1772,7 @@ def test_fx_slot_nodes_are_readable_and_writable(number):
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.params == ["/fx/%02d/type HALL\n" % number] if number <= 4 else ["/fx/%02d/type GEQ2\n" % number]
 
-    simulator.handle(client, packet("/", "fx/%02d/type %d" % (number, type_count - 1)))
+    simulator.handle(client, packet("/fx/%02d/type" % number, type_count - 1))
     assert state.get("/fx/%02d/type" % number) == type_count - 1
 
     if number <= 4:
