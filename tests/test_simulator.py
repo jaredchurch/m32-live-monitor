@@ -1482,7 +1482,7 @@ def test_bus_dynamics_node_reads_and_writes_group_and_individual_fields():
 
     simulator.handle(client, packet("/node", "bus/01/dyn/thr"))
     response = OscMessage(simulator.transport.sent[-1][0])
-    assert response.params == ["/bus/01/dyn/thr -24.000\\n"]
+    assert response.params == ["/bus/01/dyn/thr -24.000\n"]
 
 
 def test_bus_dynamics_reject_invalid_values():
