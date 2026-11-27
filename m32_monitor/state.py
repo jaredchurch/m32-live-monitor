@@ -183,8 +183,7 @@ class ConsoleState:
                 for node, fields in nodes.items():
                     for field_name, spec in fields.items():
                         default = spec[0]
-                        if default is not None:
-                            self.strip_nodes["/%s/%02d/%s/%s" % (family, number, node, field_name)] = default
+                        self.strip_nodes["/%s/%02d/%s/%s" % (family, number, node, field_name)] = default
         self.dcas = {
             n: {"number": n, "name": "DCA %d" % n, "on": True, "fader": 0.75}
             for n in range(1, 9)
@@ -254,11 +253,13 @@ class ConsoleState:
                 collection = {"ch": self.channels, "auxin": self.auxins, "fxrtn": self.fx_returns}[parts[0]]
                 channel = collection[int(parts[1])]
                 path = "/".join(parts[2:])
-                if path == "config/name" and isinstance(value, str):
+                if address in self.strip_nodes and not self._valid_strip_node_value(address, value):
+                    return False
+                if path == "config/name" and isinstance(value, str) and len(value) <= 12:
                     channel.name = value
-                elif path == "config/color" and isinstance(value, (int, float)):
+                elif path == "config/color" and isinstance(value, (int, float)) and not isinstance(value, bool) and float(value).is_integer() and 0 <= int(value) <= 15:
                     channel.colour = int(value)
-                elif path == "config/source" and isinstance(value, (int, float)) and parts[0] != "fxrtn":
+                elif path == "config/source" and isinstance(value, (int, float)) and not isinstance(value, bool) and float(value).is_integer() and 0 <= int(value) <= 64 and parts[0] != "fxrtn":
                     channel.source = int(value)
                     channel.connected = channel.source > 0
                 elif path == "mix/fader" and isinstance(value, (int, float)):
@@ -286,6 +287,8 @@ class ConsoleState:
                         send["level"] = max(0.0, min(1.0, float(value)))
                     elif parts[4] == "on" and isinstance(value, (int, float)):
                         send["on"] = self._bool(value)
+                    elif address in self.strip_nodes:
+                        self.strip_nodes[address] = value
                     else:
                         return False
                 else:
@@ -711,7 +714,8 @@ class ConsoleState:
                     return channel.send_types.get(int(parts[3]), 4)
                 if len(parts) == 5 and parts[2] == "mix" and parts[3].isdigit():
                     send = channel.sends.get(int(parts[3]), {"on": True, "level": 0.0})
-                    return send.get(parts[4])
+                    return send.get(parts[4], self.strip_nodes.get(address))
+                return self.strip_nodes.get(address)
                 return self.strip_nodes.get(address)
             if parts[:1] == ["-urec"] and len(parts) == 2:
                 return self.urec.get(parts[1])
