@@ -639,6 +639,21 @@ class Simulator:
                                 parsed.append(float(token))
                             except ValueError:
                                 parsed.append(token)
+            elif header.startswith("-urec/") and len(values) == 1:
+                field = header.rsplit("/", 1)[1]
+                enum_values = {"batterystate": ("NONE", "GOOD", "LOW"),
+                               "sd1state": ("NONE", "READY", "PROTECT", "ERROR"),
+                               "sd2state": ("NONE", "READY", "PROTECT", "ERROR")}
+                if field in enum_values:
+                    parsed = [enum_values[field].index(values[0])]
+                elif field in ("sd1info", "sd2info", "errormessage"):
+                    parsed = [values[0]]
+                elif field in ("sessionmax", "markermax", "sessionlen", "sessionpos", "markerpos",
+                               "srate", "tracks", "sessionspan", "sessionoffs", "errorcode"):
+                    parsed = [int(values[0], 0)]
+                else:
+                    raise ValueError("Unknown X-Live recorder field")
+                paths = ["/" + header]
             elif header == "-urec":
                 fields = ("sessionmax", "markermax", "sessionlen", "sessionpos", "markerpos",
                           "batterystate", "srate", "tracks", "sessionspan", "sessionoffs",
@@ -780,14 +795,27 @@ class Simulator:
                     parsed = [("OFF", "ON").index(values[0]), float(values[1]), values[2],
                               int(values[3], 0), ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
                               "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi").index(values[4])]
-                else:
-                    if parts[2] != "config" or len(values) != 3:
+                elif parts[2] == "config":
+                    if len(values) != 3:
                         raise ValueError("DCA config node requires name, icon and colour")
                     paths = ["/dca/%d/config/name" % number, "/dca/%d/config/icon" % number,
                              "/dca/%d/config/color" % number]
                     parsed = [values[0], int(values[1], 0),
                               ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
                                "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi").index(values[2])]
+                elif len(parts) == 3 and len(values) == 1:
+                    field = parts[2]
+                    paths = ["/dca/%d/%s" % (number, field)]
+                    if field == "on": parsed = [("OFF", "ON").index(values[0])]
+                    elif field == "fader": parsed = [float(values[0])]
+                    elif field == "config/name": parsed = [values[0]]
+                    elif field == "config/icon": parsed = [int(values[0], 0)]
+                    elif field == "config/color":
+                        parsed = [("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
+                                   "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi").index(values[0])]
+                    else: raise ValueError("Unknown DCA field")
+                else:
+                    raise ValueError("Unsupported DCA node")
                 if len(parts) == 2:
                     valid = (parsed[0] in (0, 1) and 0.0 <= parsed[1] <= 1.0
                              and len(parsed[2]) <= 12 and 1 <= parsed[3] <= 74
@@ -1505,13 +1533,23 @@ class Simulator:
                                 prefix, "ON" if dca["on"] else "OFF", prefix, dca["fader"],
                                 prefix, json.dumps(dca["name"], ensure_ascii=False), prefix,
                                 dca["icon"], prefix, colour_names[dca["colour"]]))
-            else:
+            elif dca_parts[2] == "config":
                 response = "%s/config %s %d %s\n" % (
                     prefix, json.dumps(dca["name"], ensure_ascii=False), dca["icon"],
                     colour_names[dca["colour"]])
-            self.send(client, "/node", response, outcome="node_response")
+            else:
+                field = dca_parts[2]
+                if field == "on": rendered = ("OFF", "ON")[int(dca["on"])]
+                elif field == "fader": rendered = "%.3f" % dca["fader"]
+                elif field == "config/name": rendered = json.dumps(dca["name"], ensure_ascii=False)
+                elif field == "config/icon": rendered = str(dca["icon"])
+                elif field == "config/color": rendered = colour_names[dca["colour"]]
+                else: rendered = None
+                response = "%s/%s %s\n" % (prefix, field, rendered) if rendered is not None else None
+            if response is not None:
+                self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
-                        "Returned DCA %d %s node" % (number, "complete" if len(dca_parts) == 2 else "config"))
+                        "Returned DCA %d %s node" % (number, "complete" if len(dca_parts) == 2 else dca_parts[2]))
             return
         strip_node = self._strip_node_header(header)
         if strip_node is not None:
