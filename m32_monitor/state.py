@@ -422,21 +422,6 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) >= 3 and parts[0] == "fx":
-                number = int(parts[1])
-                fx = self.fx.get(number)
-                if fx is None:
-                    return None
-                field = parts[2:]
-                if field == ["type"]:
-                    return fx["type"]
-                if field == ["source", "l"]:
-                    return fx["source_l"]
-                if field == ["source", "r"]:
-                    return fx["source_r"]
-                if len(field) == 2 and field[0] == "par" and field[1].isdigit():
-                    return fx["par"].get(int(field[1]))
-                return None
             if len(parts) >= 3 and parts[0] == "dca":
                 number = int(parts[1])
                 if number not in self.dcas:
