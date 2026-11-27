@@ -46,7 +46,7 @@ OSC_CATALOGUE = [
         {"pattern":"/fxrtn/{01...08}/mix/*, /fxrtn/{01...08}/grp/*","purpose":"FX return fader, mute, sends and groups","operations":"GET, SET, /node","note":"Documented parent mix, send and group nodes are modelled."}
     ]},
     {"category":"Buses, matrices and main outputs","support":"partial","items":[
-        {"pattern":"/bus/{01...16}/config/*, /bus/{01...16}/mix/*","purpose":"Bus name, processing, fader, mute and sends to matrices","operations":"GET, SET, /node","note":"Core output mute/fader/name and Matrix sends are modelled."},
+        {"pattern":"/bus/{01...16}/config/*, /bus/{01...16}/mix/*","purpose":"Bus name, processing, fader, mute and sends to matrices","operations":"GET, SET, /node","note":"Bus config node returns name, icon and colour; core output mute/fader and Matrix sends are modelled."},
         {"pattern":"/mtx/{01...06}/config/*, /mtx/{01...06}/mix/*, /mtx/{01...06}/grp/*","purpose":"Matrix output processing, fader, mute and group assignments","operations":"GET, SET, /node","note":"Core name/fader/mute/group fields are modelled."},
         {"pattern":"/main/st/{config,mix,eq,dyn,insert}/*","purpose":"Main stereo output","operations":"GET, SET, /node","note":"Core fader/mute/group/send fields are modelled."},
         {"pattern":"/main/m/{config,mix,eq,dyn,insert}/*","purpose":"Main mono/centre output","operations":"GET, SET, /node","note":"Core fader/mute/group/send fields are modelled."}
