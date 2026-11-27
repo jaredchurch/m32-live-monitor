@@ -20,6 +20,31 @@ def packet(address, *args):
     return builder.build().dgram
 
 
+def test_config_linkcfg_node_returns_four_link_preferences():
+    state = ConsoleState()
+    state.link_config.update({"hadly": 1, "eq": 0, "dyn": 1, "fdrmute": 1})
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "config/linkcfg"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ["/config/linkcfg ON OFF ON ON\\n".replace("\\\\n", "\\n")]
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+def test_config_linkcfg_individual_get_set_and_validation():
+    state = ConsoleState()
+    assert state.get("/config/linkcfg/hadly") == 0
+    assert state.update("/config/linkcfg/hadly", 1)
+    assert state.get("/config/linkcfg/hadly") == 1
+    assert not state.update("/config/linkcfg/hadly", 2)
+    assert not state.update("/config/linkcfg/unknown", 1)
+    assert not state.update("/config/linkcfg/eq", True)
+
+
 def test_config_mute_node_returns_all_six_group_states():
     state = ConsoleState()
     state.mute_groups[1] = True
