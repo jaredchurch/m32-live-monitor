@@ -289,6 +289,11 @@ class ConsoleState:
             "main_st": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0, "sends": {}},
             "main_mono": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0, "sends": {}},
         }
+        # Sixteen physical XLR output sockets, independently patchable.
+        self.output_main = {
+            n: {"src": 0, "pos": 8, "invert": 0, "delay_on": 0, "delay_time": 0.3}
+            for n in range(1, 17)
+        }
         for prefix in ("/main/st", "/main/m"):
             for node, fields in MAIN_NODE_SCHEMA.items():
                 for field_name, spec in fields.items():
@@ -417,6 +422,29 @@ class ConsoleState:
                             or not isinstance(value, (int, float)) or not math.isfinite(float(value))):
                         return False
                     fx["par"][parameter] = float(value)
+                else:
+                    return False
+                self.received.add(address)
+                return True
+
+            if len(parts) >= 4 and parts[:2] == ["outputs", "main"]:
+                number = int(parts[2])
+                if number not in self.output_main:
+                    return False
+                output = self.output_main[number]
+                field = parts[3:]
+                if field == ["src"]:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 0 <= int(value) <= 76: return False
+                    output["src"] = int(value)
+                elif field == ["pos"]:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 0 <= int(value) <= 8: return False
+                    output["pos"] = int(value)
+                elif field == ["invert"] or field == ["delay", "on"]:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) not in (0.0, 1.0): return False
+                    output["invert" if field == ["invert"] else "delay_on"] = int(value)
+                elif field == ["delay", "time"]:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or not 0.3 <= float(value) <= 500.0 or abs((float(value)-0.3)/0.1-round((float(value)-0.3)/0.1)) > 1e-6: return False
+                    output["delay_time"] = float(value)
                 else:
                     return False
                 self.received.add(address)
@@ -1028,6 +1056,17 @@ class ConsoleState:
             if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
                 key = "main_st" if address.startswith("/main/st/") else "main_mono"
                 return self.outputs[key]["sends"].get(int(parts[3]), {"on": True, "level": 0.0}).get(parts[4])
+            if len(parts) >= 4 and parts[:2] == ["outputs", "main"]:
+                number = int(parts[2])
+                output = self.output_main.get(number)
+                if output is None: return None
+                field = parts[3:]
+                if field == ["src"]: return output["src"]
+                if field == ["pos"]: return output["pos"]
+                if field == ["invert"]: return output["invert"]
+                if field == ["delay", "on"]: return output["delay_on"]
+                if field == ["delay", "time"]: return output["delay_time"]
+                return None
             if len(parts) >= 3 and parts[0] == "dca":
                 dca = self.dcas.get(int(parts[1]))
                 if dca is None:
