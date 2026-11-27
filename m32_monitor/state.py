@@ -159,6 +159,12 @@ MAIN_NODE_SCHEMA = {
 for _band in range(1, 7):
     MAIN_NODE_SCHEMA["eq/%d" % _band] = STRIP_NODE_SCHEMA["bus"]["eq/%d" % _band]
 
+# Main L/R and Mono/Centre can each feed Matrix outputs 1–6.
+for _matrix in range(1, 7):
+    MAIN_NODE_SCHEMA["mix/%02d" % _matrix] = {
+        "on": (1,0,1,1,"enum",("OFF","ON")),
+        "level": (0.0,0.0,1.0,0,"float",None)}
+
 
 @dataclass
 class ChannelState:
@@ -396,6 +402,17 @@ class ConsoleState:
                     self.dcas[number]["name"] = value
                 else:
                     return False
+                self.received.add(address)
+                return True
+
+            if len(parts) == 5 and parts[0] == "main" and parts[1] in ("st", "m") and parts[2] == "mix":
+                matrix = int(parts[3])
+                if not 1 <= matrix <= 6 or parts[4] not in ("on", "level") or not self._valid_strip_node_value(address, value):
+                    return False
+                output_key = "main_st" if parts[1] == "st" else "main_mono"
+                send = self.outputs[output_key].setdefault("sends", {}).setdefault(matrix, {"on": True, "level": 0.0})
+                send[parts[4]] = int(value) if parts[4] == "on" else float(value)
+                self.strip_nodes[address] = value
                 self.received.add(address)
                 return True
 
