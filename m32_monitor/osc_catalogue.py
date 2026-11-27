@@ -58,7 +58,7 @@ OSC_CATALOGUE = [
     ]},
     {"category":"Effects, outputs and headamps","support":"known-unsupported","items":[
         {"pattern":"/fx/{1...8}, /fx/{1...8}/type, /fx/{1...4}/source/{l,r}, /fx/{1...8}/par/{01...64}","purpose":"FX rack effect type, stereo source routing and 64 effect parameters","operations":"GET, SET, /node","note":"Implemented across all eight slots. Slots 1-4 support effect types 0-60 and stereo source L/R; slots 5-8 support their restricted effect list 0-33 and have no source node. All slots expose 64 stored parameter values."},
-        {"pattern":"/outputs/*","purpose":"Output patching and physical output configuration","operations":"GET, SET, /node"},
+        {"pattern":"/outputs/main/{01...16}, /outputs/main/{01...16}/delay","purpose":"Sixteen physical main output patches: source, tap position, polarity and delay","operations":"GET, SET, /node","note":"Implemented: grouped and individual reads/writes with source, tap-position and delay validation."},
         {"pattern":"/headamp/{1...N}","purpose":"Remote headamp gain and phantom state","operations":"GET, SET, /node"},
         {"pattern":"/-insert/*","purpose":"Insert routing and insert device configuration","operations":"GET, SET, /node"}
     ]},
