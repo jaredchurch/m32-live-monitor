@@ -486,7 +486,7 @@ class Simulator:
     def _config_link_node_group(self, family):
         """Render a complete stereo-link configuration node."""
         links = self.state.config_links[family]
-        return "".join("/config/%s/%s %s\\n" % (
+        return "".join("/config/%s/%s %s\n" % (
             family, pair, "ON" if enabled else "OFF")
             for pair, enabled in links.items())
 
