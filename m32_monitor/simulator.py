@@ -504,6 +504,22 @@ class Simulator:
         link = ("OFF", "ON")[int(self.state.mono_config["link"])]
         return "/config/mono/mode %s\n/config/mono/link %s\n" % (mode, link)
 
+    def _config_solo_node_group(self):
+        """Render the 17-field solo-monitor configuration node."""
+        values = self.state.solo_config
+        source = ("OFF", "LR", "LR+C", "LRPFL", "LRAFL", "AUX56", "AUX78")[int(values["source"])]
+        pfl_afl = lambda field: ("PFL", "AFL")[int(values[field])]
+        on_off = lambda field: ("OFF", "ON")[int(values[field])]
+        ordered = (
+            "%.1f" % values["level"], source, "%.1f" % values["sourcetrim"],
+            pfl_afl("chmode"), pfl_afl("busmode"), pfl_afl("dcamode"),
+            on_off("exclusive"), on_off("followsel"), on_off("followsolo"),
+            "%.1f" % values["dimatt"], on_off("dim"), on_off("mono"),
+            on_off("delay"), "%.1f" % values["delaytime"],
+            on_off("masterctrl"), on_off("mute"), on_off("dimpfl"),
+        )
+        return "/config/solo " + " ".join(ordered) + "\n"
+
     def _config_mute_node_group(self):
         """Render all six mute-group selection states."""
         return "".join("/config/mute/%d %s\n" % (
@@ -528,6 +544,13 @@ class Simulator:
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned mono/centre output mode and Main L/R link settings")
+            return
+
+        if header == "config/solo":
+            response = self._config_solo_node_group()
+            self.send(client, "/node", response, outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned all 17 solo-monitor configuration fields")
             return
 
         if header == "config/mute":
