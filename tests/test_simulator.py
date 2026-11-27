@@ -1329,6 +1329,23 @@ def test_config_routing_bank_nodes_return_their_documented_entries(header, expec
     assert len(response.params[0].splitlines()) == expected
 
 
+@pytest.mark.parametrize("bank,token,colour", [("B", "GN", 2), ("C", "RD", 1)])
+def test_userctrl_bank_parent_node_set_accepts_colour_only_write(bank, token, colour):
+    state = ConsoleState()
+    state.update("/config/userctrl/%s/enc/1" % bank, "F00")
+    state.update("/config/userctrl/%s/btn/5" % bank, "MN05003")
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+
+    simulator.handle(("127.0.0.1", 50123),
+                     packet("/node", "/config/userctrl/%s %s" % (bank, token)))
+
+    assert state.get("/config/userctrl/%s/color" % bank) == colour
+    assert state.get("/config/userctrl/%s/enc/1" % bank) == "F00"
+    assert state.get("/config/userctrl/%s/btn/5" % bank) == "MN05003"
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
 def test_userctrl_bank_parent_address_accepts_colour_only_osc_set():
     state = ConsoleState()
     simulator = Simulator(state)
