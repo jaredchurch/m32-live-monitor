@@ -84,12 +84,19 @@ class RoutingState:
         self.values = {}
 
     def update(self, address, value):
+        if address in CONFIG_LINK_ADDRESSES:
+            # Stereo-link controls are binary. Keep them in the routing inventory,
+            # but do not let this generic inventory path bypass ConsoleState validation.
+            if (not isinstance(value, (int, float)) or isinstance(value, bool)
+                    or float(value) not in (0.0, 1.0)):
+                return False
+            self.values[address] = int(value)
+            return True
         if (address.startswith(("/config/routing/", "/outputs/", "/config/userrout/",
                                   "/fx/", "/config/solo/", "/config/talk/",
                                   "/main/m/mix/pan", "/main/st/insert", "/main/m/insert")) or
                 (address.startswith(("/ch/", "/auxin/", "/fxrtn/", "/bus/", "/mtx/")) and
-                 ("/insert" in address or address.endswith("/mix/pan"))) or
-                address in CONFIG_LINK_ADDRESSES):
+                 ("/insert" in address or address.endswith("/mix/pan")))):
             self.values[address] = value
             return True
         return False
