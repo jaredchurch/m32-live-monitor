@@ -56,7 +56,7 @@ OSC_CATALOGUE = [
         {"pattern":"/config/mute/{1...6}","purpose":"Mute group active state","operations":"GET, SET, /node"},
         {"pattern":"/-prefs/dcamute, /-prefs/hardmute","purpose":"DCA mute and hard-mute behaviour preferences","operations":"GET"}
     ]},
-    {"category":"Effects, outputs and headamps","support":"known-unsupported","items":[
+    {"category":"Effects, outputs and headamps","support":"partial","items":[
         {"pattern":"/fx/{1...8}, /fx/{1...8}/type, /fx/{1...4}/source/{l,r}, /fx/{1...8}/par/{01...64}","purpose":"FX rack effect type, stereo source routing and 64 effect parameters","operations":"GET, SET, /node","note":"Implemented across all eight slots. Slots 1-4 support effect types 0-60 and stereo source L/R; slots 5-8 support their restricted effect list 0-33 and have no source node. All slots expose 64 stored parameter values."},
         {"pattern":"/outputs/main/{01...16}, /outputs/main/{01...16}/delay","purpose":"Sixteen physical main output patches: source, tap position, polarity and delay","operations":"GET, SET, /node","note":"Implemented: grouped and individual reads/writes with source, tap-position and delay validation."},
         {"pattern":"/headamp/{1...N}","purpose":"Remote headamp gain and phantom state","operations":"GET, SET, /node"},
