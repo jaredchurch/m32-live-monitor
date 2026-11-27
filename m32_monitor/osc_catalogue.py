@@ -25,6 +25,7 @@ OSC_CATALOGUE = [
         {"pattern":"/config/solo/*, /config/talk/*, /config/osc/*","purpose":"Solo, talkback and oscillator configuration","operations":"GET, SET","note":"Known protocol families; not yet fully simulated."},
         {"pattern":"/config/mono/{mode,link}","purpose":"Main mono/centre output mode and Main L/R dependency","operations":"GET, SET, /node","note":"Mode and link settings are simulated."},
         {"pattern":"/config/solo/{level,source,sourcetrim,chmode,busmode,dcamode,exclusive,followsel,followsolo,dimatt,dim,mono,delay,delaytime,masterctrl,mute,dimpfl}","purpose":"Solo monitor source, level, PFL/AFL modes, dimming and delay","operations":"GET, SET, /node","note":"All 17 documented solo-monitor fields are simulated."},
+        {"pattern":"/config/talk/{enable,source}, /config/talk/{A,B}/{level,dim,latch,destmap}","purpose":"Talkback enable, source, A/B levels, dim/latch and destination routing masks","operations":"GET, SET, /node","note":"Shared, A and B node reads/writes plus individual field access are simulated."},
         {"pattern":"/config/routing/*","purpose":"Input, AES50, Card, output and playback routing banks","operations":"GET, SET, /node","note":"Routing snapshot covers selected assignments; complete node read/write coverage is outstanding."},
         {"pattern":"/config/userctrl/*, /config/dp48/*","purpose":"User controls and DP48 configuration","operations":"GET, SET, /node","note":"Known protocol families; not yet fully simulated."}
     ]},
