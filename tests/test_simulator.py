@@ -1500,3 +1500,48 @@ def test_simulator_default_discovery_name_is_m32_simulation():
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/xinfo"
     assert response.params[1] == "M32-Simulation"
+
+
+def test_bus_insert_eq_mix_and_group_nodes_are_discoverable_and_writable():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    expected_counts = {
+        "insert": 3, "eq": 1, "eq/6": 4, "mix": 2,
+        "mix/06": 2, "grp": 2,
+    }
+    for node, count in expected_counts.items():
+        simulator.handle(client, packet("/node", "bus/01/" + node))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.address == "/node"
+        assert len(response.params[0].split()) == count
+        assert response.params[0].startswith("/bus/01/" + node + " ")
+
+    simulator.handle(client, packet("/", "bus/01/insert ON POST FX3L"))
+    simulator.handle(client, packet("/", "bus/01/eq/6 PEQ 2500 -3.0 1.2"))
+    simulator.handle(client, packet("/", "bus/01/mix ON 0.65"))
+    simulator.handle(client, packet("/", "bus/01/mix/06 ON 0.50"))
+    simulator.handle(client, packet("/", "bus/01/grp 3 5"))
+
+    assert state.get("/bus/01/insert/on") == 1
+    assert state.get("/bus/01/insert/pos") == 1
+    assert state.get("/bus/01/insert/sel") == 4
+    assert state.get("/bus/01/eq/6/type") == 2
+    assert state.get("/bus/01/eq/6/f") == 2500.0
+    assert state.get("/bus/01/eq/6/g") == -3.0
+    assert state.get("/bus/01/mix/on") == 1
+    assert state.get("/bus/01/mix/fader") == 0.65
+    assert state.get("/bus/01/mix/06/on") == 1
+    assert state.get("/bus/01/mix/06/level") == 0.5
+    assert state.get("/bus/01/grp/dca") == 3
+    assert state.get("/bus/01/grp/mute") == 5
+
+
+def test_bus_insert_eq_and_matrix_send_validation():
+    state = ConsoleState()
+    assert not state.update("/bus/01/insert/sel", 23)
+    assert not state.update("/bus/01/eq/6/g", 15.25)
+    assert not state.update("/bus/01/mix/06/level", 1.1)
+    assert not state.update("/bus/01/grp/mute", 64)
