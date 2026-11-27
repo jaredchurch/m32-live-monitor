@@ -583,17 +583,17 @@ class Simulator:
         """Render shared or A/B talkback settings in documented node order."""
         config = self.state.talk_config
         if section is None:
-            return "/config/talk %s %s\n" % (
+            return "/config/talk %s %s\\n" % (
                 ("OFF", "ON")[config["enable"]], ("INT", "EXT")[config["source"]])
         values = config[section]
-        return "/config/talk/%s %.1f %s %s %s\n" % (
+        return "/config/talk/%s %.1f %s %s %s\\n" % (
             section, values["level"], ("OFF", "ON")[values["dim"]],
             ("OFF", "ON")[values["latch"]], "%" + format(values["destmap"], "018b"))
 
     def _config_osc_node_group(self):
         """Render the six oscillator generator settings in protocol order."""
         values = self.state.osc_config
-        return "/config/osc %.1f %.3f %.3f %s %s %d\n" % (
+        return "/config/osc %.1f %.3f %.3f %s %s %d\\n" % (
             values["level"], values["f1"], values["f2"],
             ("F1", "F2")[values["fsel"]],
             ("SINE", "PINK", "WHITE")[values["type"]], values["dest"])
@@ -717,7 +717,7 @@ class Simulator:
                 rendered = "%.3f" % float(value)
             else:
                 rendered = str(int(value))
-            self.send(client, "/node", "%s %s\n" % (address, rendered), outcome="node_response")
+            self.send(client, "/node", "%s %s\\n" % (address, rendered), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned individual oscillator configuration value")
             return
