@@ -662,7 +662,7 @@ class Simulator:
         if section == "grpname":
             return "".join("/config/dp48/grpname/%02d %s\n" % (n, values["grpname"][n])
                            for n in range(1, 13))
-        return ("/config/dp48/scope %%%04d\n/config/dp48/broadcast %d\n"
+        return ("/config/dp48/scope %s\n/config/dp48/broadcast %d\n"
                 "/config/dp48/aesAB %s\n" %
                 ("%" + format(int(values["scope"]), "04b"), values["broadcast"], ("AESA", "AESB")[values["aesAB"]]) +
                 self._config_dp48_node_group("link") +
