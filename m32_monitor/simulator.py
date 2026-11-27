@@ -421,7 +421,15 @@ class Simulator:
                 raise ValueError("Empty X32node text")
             header = tokens[0].lstrip("/")
             values = tokens[1:]
-            if header.startswith(("config/userrout/out/", "config/userrout/in/")) and len(values) == 1:
+            if header in ("config/userrout/out", "config/userrout/in"):
+                direction = header.rsplit("/", 1)[1]
+                slots = self.state.user_rout_out if direction == "out" else self.state.user_rout_in
+                expected = len(slots)
+                if len(values) != expected:
+                    raise ValueError("User routing %s node requires %d source values" % (direction, expected))
+                paths = ["/config/userrout/%s/%02d" % (direction, slot) for slot in slots]
+                parsed = [int(token, 0) for token in values]
+            elif header.startswith(("config/userrout/out/", "config/userrout/in/")) and len(values) == 1:
                 address = "/" + header
                 parsed = [int(values[0], 0)]
                 paths = [address]
@@ -862,6 +870,8 @@ class Simulator:
             old_osc = dict(self.state.osc_config)
             old_status = dict(self.state.rta_status)
             old_user_controls = json.loads(json.dumps(self.state.user_controls))
+            old_user_rout_out = dict(self.state.user_rout_out)
+            old_user_rout_in = dict(self.state.user_rout_in)
             old_tape = dict(self.state.tape_config)
             old_amix = dict(self.state.amix_enable)
             old_dp48 = json.loads(json.dumps(self.state.dp48_config))
@@ -881,6 +891,8 @@ class Simulator:
                     self.state.osc_config.update(old_osc)
                     self.state.rta_status.update(old_status)
                     self.state.user_controls = old_user_controls
+                    self.state.user_rout_out = old_user_rout_out
+                    self.state.user_rout_in = old_user_rout_in
                     self.state.tape_config = old_tape
                     self.state.amix_enable = old_amix
                     self.state.dp48_config = old_dp48
@@ -1659,6 +1671,29 @@ class Simulator:
             self.send(client, "/node", show_response, outcome="showdump_response")
             self.record("in", "handled_showdump", address, args, client,
                         "Returned empty show metadata (no stored show data is modelled)")
+            return
+
+        # Scene files and M32-Edit send each user-routing direction as one
+        # bulk OSC message: 48 output sources or 32 input sources.
+        if address in ("/config/userrout/out", "/config/userrout/in") and args:
+            direction = address.rsplit("/", 1)[1]
+            slots = self.state.user_rout_out if direction == "out" else self.state.user_rout_in
+            maximum = 208 if direction == "out" else 168
+            if (len(args) != len(slots) or any(
+                    isinstance(value, bool) or not isinstance(value, (int, float))
+                    or float(value) != int(value) or not 0 <= int(value) <= maximum
+                    for value in args)):
+                self.record("in", "unhandled_set", address, args, client,
+                            "Expected %d integer source values in range 0-%d" % (len(slots), maximum))
+                return
+            for slot, value in zip(slots, args):
+                path = "/config/userrout/%s/%02d" % (direction, slot)
+                slots[slot] = int(value)
+                self.state.received.add(path)
+                for subscriber in tuple(self.clients):
+                    self.send(subscriber, path, int(value), outcome="subscription_update")
+            self.record("in", "handled_set", address, args, client,
+                        "Applied all %d user %s routing assignments" % (len(slots), direction))
             return
 
         if args:
