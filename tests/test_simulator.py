@@ -1886,3 +1886,47 @@ def test_invalid_physical_main_output_node_write_is_atomic():
     simulator.handle(client, packet("/", "outputs/main/01 77 PRE ON"))
     assert simulator.state.output_main[1] == before
     assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+@pytest.mark.parametrize("number", range(1, 7))
+def test_physical_aux_output_node_get_set_and_direct_osc(number):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    prefix = "outputs/aux/%02d" % number
+
+    simulator.handle(client, packet("/node", prefix))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == [
+        "/%s/src 0\\n/%s/pos POST\\n/%s/invert OFF\\n" % (prefix, prefix, prefix)
+    ]
+
+    simulator.handle(client, packet("/", prefix + " 33 PRE ON"))
+    assert state.get("/" + prefix + "/src") == 33
+    assert state.get("/" + prefix + "/pos") == 6
+    assert state.get("/" + prefix + "/invert") == 1
+
+    simulator.handle(client, packet("/node", prefix + "/src"))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/%s/src 33\\n" % prefix]
+    simulator.handle(client, packet("/outputs/aux/%02d/pos" % number, 0))
+    assert state.get("/" + prefix + "/pos") == 0
+
+
+@pytest.mark.parametrize(("address", "value"), [
+    ("/outputs/aux/01/src", 77), ("/outputs/aux/07/src", 1),
+    ("/outputs/aux/01/pos", 9), ("/outputs/aux/01/invert", 2),
+    ("/outputs/aux/01/delay/on", 1), ("/outputs/aux/01/unknown", 1),
+])
+def test_physical_aux_output_rejects_invalid_values(address, value):
+    assert not ConsoleState().update(address, value)
+
+
+def test_invalid_physical_aux_output_node_write_is_atomic():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    before = dict(simulator.state.output_aux[1])
+    simulator.handle(client, packet("/", "outputs/aux/01 77 PRE ON"))
+    assert simulator.state.output_aux[1] == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
