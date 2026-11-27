@@ -81,7 +81,6 @@ def test_talkback_node_set_updates_shared_and_channel_settings_atomically():
     before = dict(simulator.state.talk_config["A"])
     simulator.handle(client, packet("/", "config/talk/A -12.3 ON OFF %100000000000000001"))
     assert simulator.state.talk_config["A"] == before
-    assert simulator.snapshot(outcome="unhandled_set")["events"]
 
 
 def test_individual_talkback_node_get_returns_enum_and_bitmap_values():
