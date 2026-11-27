@@ -45,6 +45,36 @@ def test_config_linkcfg_individual_get_set_and_validation():
     assert not state.update("/config/linkcfg/eq", True)
 
 
+def test_config_mono_node_returns_mode_and_link_settings():
+    state = ConsoleState()
+    state.mono_config.update({"mode": 1, "link": 1})
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "config/mono"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == [
+        "/config/mono/mode LCR\\n/config/mono/link ON\\n"
+    ]
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+def test_config_mono_individual_get_set_and_validation():
+    state = ConsoleState()
+    assert state.get("/config/mono/mode") == 0
+    assert state.get("/config/mono/link") == 0
+    assert state.update("/config/mono/mode", 1)
+    assert state.update("/config/mono/link", 1)
+    assert state.get("/config/mono/mode") == 1
+    assert state.get("/config/mono/link") == 1
+    assert not state.update("/config/mono/mode", 2)
+    assert not state.update("/config/mono/link", True)
+    assert not state.update("/config/mono/unknown", 1)
+
+
 def test_config_mute_node_returns_all_six_group_states():
     state = ConsoleState()
     state.mute_groups[1] = True
