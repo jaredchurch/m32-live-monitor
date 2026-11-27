@@ -929,7 +929,6 @@ def test_config_link_rejects_unknown_pair_and_invalid_value():
     assert "/config/chlink/1-2" not in state.routing.values
 
 
-@pytest.mark.parametrize("value", [2, -1, 0.5, float("nan"), True, "1", None])
 @pytest.mark.parametrize("address,value", [
     ("/config/routing/IN/1-8", 24),
     ("/config/routing/AES50A/1-8", 36),
@@ -944,6 +943,7 @@ def test_routing_enum_values_are_validated_against_protocol(address, value):
     assert not ConsoleState().update(address, value)
 
 
+@pytest.mark.parametrize("value", [2, -1, 0.5, float("nan"), True, "1", None])
 def test_routing_inventory_rejects_non_binary_stereo_link_values(value):
     state = ConsoleState()
     assert not state.routing.update("/config/chlink/1-2", value)
