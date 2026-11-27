@@ -98,6 +98,19 @@ OSC_CATALOGUE = [
         {"pattern":"/-usb/{path,title,dir,dirpos,maxpos,dir/{000...999}/*}","purpose":"USB player/recorder file browser and metadata","operations":"GET, SET, /node"},
         {"pattern":"/-stat/{selidx,chfaderbank,grpfaderbank,sendsonfader,bussenbank,eqband,userbank,autosave,lock,usbmounted,remote,xcardtype,xcardsync,geq*,screen*,aes50*,solosw*,talk*,osc*,tape*}","purpose":"Surface, screen, AES50, solo, talkback, oscillator and tape status","operations":"GET, /node"}
     ]},
+    {"category":"Additional documented X32node headers","support":"known-unsupported","items":[
+        {"pattern":"/config/routing/routswitch, /config/routing/PLAY","purpose":"Routing record/playback switch and playback source banks","operations":"/node, GET, SET"},
+        {"pattern":"/config/userout/in/{01...32}, /config/userout/out/{01...48}","purpose":"User-defined input and output routing assignments","operations":"/node, GET, SET"},
+        {"pattern":"/config/dp48, /config/dp48/assign, /config/dp48/grpname","purpose":"DP48 personal-monitor assignments, links and group names","operations":"/node, GET, SET"},
+        {"pattern":"/config/amixenable","purpose":"Automix enable configuration","operations":"/node, GET, SET"},
+        {"pattern":"/-show/prepos, /-show/prepos/current","purpose":"Show-file preposition and current show position","operations":"/node, GET"},
+        {"pattern":"/-prefs/iq, /-prefs/iq/{01...16}","purpose":"Turbosound iQ speaker preferences","operations":"/node, GET, SET"},
+        {"pattern":"/outputs/p16/{01...16}/iQ","purpose":"P16 output speaker metadata and iQ control","operations":"/node, GET, SET"},
+        {"pattern":"/-stat/screen/*, /-stat/screen/*/page","purpose":"Surface screen, selected page and display state","operations":"/node, GET"},
+        {"pattern":"/-stat/tape/*, /-stat/aes50/*","purpose":"USB/tape transport and AES50 link state","operations":"/node, GET"},
+        {"pattern":"/-stat/solosw/{01...80}","purpose":"Solo-switch status across channels, buses, matrices and DCAs","operations":"/node, GET"},
+        {"pattern":"/-libs/{ch,fx,r,mon}/{001...100}/*","purpose":"Channel, effects, routing and monitor preset metadata","operations":"/node, GET, SET"}
+    ]},
     {"category":"Actions and undo","support":"known-unsupported","items":[
         {"pattern":"/-action/*","purpose":"Console action and surface control events","operations":"COMMAND"},
         {"pattern":"/-undo/*","purpose":"Undo history and action control","operations":"COMMAND"}
