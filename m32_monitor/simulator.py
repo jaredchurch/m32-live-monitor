@@ -576,6 +576,31 @@ class Simulator:
                 else:
                     raise ValueError("Unknown RTA preference")
                 paths, parsed = [path], parsed
+            elif header.startswith("outputs/main/"):
+                parts = header.split("/")
+                if len(parts) not in (3, 4) or not parts[2].isdigit() or int(parts[2]) not in self.state.output_main:
+                    raise ValueError("Unknown physical main output")
+                number = int(parts[2])
+                prefix = "/outputs/main/%02d" % number
+                if len(parts) == 3:
+                    if len(values) != 3: raise ValueError("Main output node requires source, position and invert")
+                    positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
+                    paths = [prefix + "/src", prefix + "/pos", prefix + "/invert"]
+                    parsed = [int(values[0], 0), positions.index(values[1]), ("OFF", "ON").index(values[2])]
+                elif parts[3] == "delay":
+                    if len(values) != 2: raise ValueError("Main output delay node requires enable and time")
+                    paths = [prefix + "/delay/on", prefix + "/delay/time"]
+                    parsed = [("OFF", "ON").index(values[0]), float(values[1])]
+                elif len(parts) == 4 and parts[3] in ("src", "pos", "invert") and len(values) == 1:
+                    field = parts[3]
+                    if field == "src": parsed = [int(values[0], 0)]
+                    elif field == "pos": parsed = [("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST").index(values[0])]
+                    else: parsed = [("OFF", "ON").index(values[0])]
+                    paths = [prefix + "/" + field]
+                else:
+                    raise ValueError("Unsupported main output node")
+                if not all(self.state.update(path, value) for path, value in zip(paths, parsed)):
+                    raise ValueError("Invalid physical main output value")
             elif header.startswith("fx/"):
                 parts = header.split("/")
                 if len(parts) not in (2, 3, 4) or not parts[1].isdigit() or int(parts[1]) not in self.state.fx:
@@ -1219,6 +1244,37 @@ class Simulator:
                             "Returned %s %02d config discovery node" % (family, number))
                 return
 
+        output_parts = header.split("/")
+        if (len(output_parts) in (3, 4) and output_parts[:2] == ["outputs", "main"]
+                and output_parts[2].isdigit() and int(output_parts[2]) in self.state.output_main):
+            number = int(output_parts[2])
+            prefix = "/outputs/main/%02d" % number
+            output = self.state.output_main[number]
+            positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
+            if len(output_parts) == 3:
+                response = ("%s/src %d\n%s/pos %s\n%s/invert %s\n" % (
+                    prefix, output["src"], prefix, positions[output["pos"]], prefix,
+                    ("OFF", "ON")[output["invert"]]))
+            elif output_parts[3] == "delay":
+                response = "%s/delay/on %s\n%s/delay/time %.1f\n" % (
+                    prefix, ("OFF", "ON")[output["delay_on"]], prefix, output["delay_time"])
+            elif output_parts[3] == "src": response = "%s/src %d\n" % (prefix, output["src"])
+            elif output_parts[3] == "pos": response = "%s/pos %s\n" % (prefix, positions[output["pos"]])
+            elif output_parts[3] == "invert": response = "%s/invert %s\n" % (prefix, ("OFF", "ON")[output["invert"]])
+            else: response = None
+            if response is not None:
+                self.send(client, "/node", response, outcome="node_response")
+                self.record("in", "handled_node_get", "/node", args, client,
+                            "Returned physical main output %02d %s node" % (number, output_parts[3] if len(output_parts) == 4 else "configuration"))
+                return
+        if len(output_parts) == 5 and output_parts[:2] == ["outputs", "main"] and output_parts[2].isdigit():
+            number = int(output_parts[2])
+            if number in self.state.output_main and output_parts[3:] in (["delay", "on"], ["delay", "time"]):
+                value = self.state.get("/" + header)
+                rendered = ("OFF", "ON")[int(value)] if output_parts[-1] == "on" else "%.1f" % value
+                self.send(client, "/node", "/%s %s\n" % (header, rendered), outcome="node_response")
+                self.record("in", "handled_node_get", "/node", args, client, "Returned physical output delay field")
+                return
         fx_parts = header.split("/")
         if (len(fx_parts) in (2, 3) and fx_parts[0] == "fx"
                 and fx_parts[1].isdigit() and int(fx_parts[1]) in self.state.fx):
