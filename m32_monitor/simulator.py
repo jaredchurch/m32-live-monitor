@@ -628,42 +628,42 @@ class Simulator:
         color_names = ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
                        "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi")
         if section == "enc":
-            return "".join("/config/userctrl/%s/enc/%d %s\\n" %
+            return "".join("/config/userctrl/%s/enc/%d %s\n" %
                            (bank, n, values["enc"][n]) for n in range(1, 5))
         if section == "btn":
-            return "".join("/config/userctrl/%s/btn/%d %s\\n" %
+            return "".join("/config/userctrl/%s/btn/%d %s\n" %
                            (bank, n, values["btn"][n]) for n in range(5, 13))
-        lines = ["/config/userctrl/%s/color %s\\n" % (bank, color_names[values["color"]])]
-        lines.extend("/config/userctrl/%s/enc/%d %s\\n" % (bank, n, values["enc"][n])
+        lines = ["/config/userctrl/%s/color %s\n" % (bank, color_names[values["color"]])]
+        lines.extend("/config/userctrl/%s/enc/%d %s\n" % (bank, n, values["enc"][n])
                      for n in range(1, 5))
-        lines.extend("/config/userctrl/%s/btn/%d %s\\n" % (bank, n, values["btn"][n])
+        lines.extend("/config/userctrl/%s/btn/%d %s\n" % (bank, n, values["btn"][n])
                      for n in range(5, 13))
         return "".join(lines)
 
     def _config_tape_node_group(self):
         values = self.state.tape_config
-        return ("/config/tape/gainL %.1f\\n/config/tape/gainR %.1f\\n"
-                "/config/tape/autoplay %s\\n" %
+        return ("/config/tape/gainL %.1f\n/config/tape/gainR %.1f\n"
+                "/config/tape/autoplay %s\n" %
                 (values["gainL"], values["gainR"], ("OFF", "ON")[values["autoplay"]]))
 
     def _config_amixenable_node_group(self):
         values = self.state.amix_enable
-        return "".join("/config/amixenable/%s %s\\n" % (group, ("OFF", "ON")[values[group]])
+        return "".join("/config/amixenable/%s %s\n" % (group, ("OFF", "ON")[values[group]])
                        for group in ("X", "Y"))
 
     def _config_dp48_node_group(self, section=None):
         values = self.state.dp48_config
         if section == "link":
-            return "".join("/config/dp48/link/%02d %d\\n" % (n, values["link"][n])
+            return "".join("/config/dp48/link/%02d %d\n" % (n, values["link"][n])
                            for n in range(1, 25))
         if section == "assign":
-            return "".join("/config/dp48/assign/%02d %d\\n" % (n, values["assign"][n])
+            return "".join("/config/dp48/assign/%02d %d\n" % (n, values["assign"][n])
                            for n in range(1, 49))
         if section == "grpname":
-            return "".join("/config/dp48/grpname/%02d %s\\n" % (n, values["grpname"][n])
+            return "".join("/config/dp48/grpname/%02d %s\n" % (n, values["grpname"][n])
                            for n in range(1, 13))
-        return ("/config/dp48/scope %%%04d\\n/config/dp48/broadcast %d\\n"
-                "/config/dp48/aesAB %s\\n" %
+        return ("/config/dp48/scope %%%04d\n/config/dp48/broadcast %d\n"
+                "/config/dp48/aesAB %s\n" %
                 (int(values["scope"]), values["broadcast"], ("AESA", "AESB")[values["aesAB"]]) +
                 self._config_dp48_node_group("link") +
                 self._config_dp48_node_group("assign") +
@@ -780,7 +780,7 @@ class Simulator:
                 value = str(int(value))
             elif isinstance(value, float):
                 value = "%.1f" % value
-            self.send(client, "/node", "%s %s\\n" % (address, value), outcome="node_response")
+            self.send(client, "/node", "%s %s\n" % (address, value), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned individual configuration value")
             return
