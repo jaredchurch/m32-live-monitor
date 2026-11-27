@@ -701,7 +701,7 @@ def test_rta_integer_preferences_and_status_are_node_readable(path, value):
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    expected_value = {"/-prefs/rta/det": "PEAK", "/-prefs/rta/peakhold": "8", "/-prefs/rta/options": "%100001", "/-prefs/rta/option": "%100001", "/-stat/rtamodeeq": "SPEC", "/-stat/rtamodegeq": "SPEC", "/-stat/rtaeqpre": "ON", "/-stat/rtageqpost": "ON"}.get(path, str(value))
+    expected_value = {"/-prefs/rta/det": "PEAK", "/-prefs/rta/peakhold": "8s", "/-prefs/rta/options": "%100001", "/-prefs/rta/option": "%100001", "/-stat/rtamodeeq": "SPEC", "/-stat/rtamodegeq": "SPEC", "/-stat/rtaeqpre": "ON", "/-stat/rtageqpost": "ON"}.get(path, str(value))
     assert response.params == [f"{path} {expected_value}\n"]
 
 
@@ -780,7 +780,7 @@ def test_rta_node_group_set_updates_all_ten_preferences():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
     client = ("127.0.0.1", 50123)
-    simulator.handle(client, packet("/", "-prefs/rta 35% 18 ON 12 POST SPEC %100001 PEAK 2.00 4"))
+    simulator.handle(client, packet("/", "-prefs/rta 35% 18 ON 12 POST SPEC %100001 PEAK 2.00 4s"))
     p = simulator.state.preferences
     assert p["rta/visibility"] == 3
     assert p["rta/gain"] == pytest.approx(0.3)
@@ -2123,3 +2123,22 @@ def test_unknown_root_node_set_reports_actual_header_for_enum_diagnostics():
     event = simulator.snapshot(outcome="unhandled_set")["events"][-1]
     assert event["address"] == "/config/tape/autoplay"
     assert "tuple.index(x)" in event["detail"]
+
+
+
+@pytest.mark.parametrize("token,expected", [
+    ("OFF", 0), ("1s", 1), ("2s", 2), ("3s", 3), ("4s", 4),
+    ("5s", 5), ("6s", 6), ("7s", 7), ("8s", 8),
+])
+def test_rta_peakhold_accepts_console_duration_labels(token, expected):
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "-prefs/rta/peakhold " + token))
+
+    assert simulator.state.get("/-prefs/rta/peakhold") == expected
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+    simulator.handle(client, packet("/node", "-prefs/rta/peakhold"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == ["/-prefs/rta/peakhold " + token + "\\n"]
