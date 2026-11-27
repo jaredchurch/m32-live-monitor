@@ -1599,7 +1599,7 @@ def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
             simulator.handle(client, packet("/node", header))
             response = OscMessage(simulator.transport.sent[-1][0])
             assert response.address == "/node"
-            assert response.params == ["/%s ON 0.000\\n" % header]
+            assert response.params == ["/%s ON 0.000\n" % header]
 
             simulator.handle(client, packet("/", header + " OFF 0.65"))
             assert state.get("/%s/on" % header) == 0
@@ -1609,7 +1609,7 @@ def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
 
             simulator.handle(client, packet("/node", header))
             response = OscMessage(simulator.transport.sent[-1][0])
-            assert response.params == ["/%s OFF 0.650\\n" % header]
+            assert response.params == ["/%s OFF 0.650\n" % header]
 
 
 @pytest.mark.parametrize(("address", "value"), [
