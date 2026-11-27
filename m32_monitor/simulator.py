@@ -563,6 +563,30 @@ class Simulator:
                 else:
                     raise ValueError("Unknown RTA preference")
                 paths, parsed = [path], parsed
+            elif header.startswith("dca/"):
+                parts = header.split("/")
+                if len(parts) not in (2, 3) or not parts[1].isdigit() or int(parts[1]) not in self.state.dcas:
+                    raise ValueError("Unknown DCA node")
+                number = int(parts[1])
+                if len(parts) == 2:
+                    if len(values) != 5:
+                        raise ValueError("DCA node requires on, fader, name, icon and colour")
+                    paths = ["/dca/%d/on" % number, "/dca/%d/fader" % number,
+                             "/dca/%d/config/name" % number, "/dca/%d/config/icon" % number,
+                             "/dca/%d/config/color" % number]
+                    parsed = [("OFF", "ON").index(values[0]), float(values[1]), values[2],
+                              int(values[3], 0), ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
+                              "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi").index(values[4])]
+                else:
+                    if parts[2] != "config" or len(values) != 3:
+                        raise ValueError("DCA config node requires name, icon and colour")
+                    paths = ["/dca/%d/config/name" % number, "/dca/%d/config/icon" % number,
+                             "/dca/%d/config/color" % number]
+                    parsed = [values[0], int(values[1], 0),
+                              ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
+                               "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi").index(values[2])]
+                if not all(self.state.update(path, value) for path, value in zip(paths, parsed)):
+                    raise ValueError("Invalid DCA node values")
             elif self._strip_node_header(header) is not None:
                 prefix, node, fields = self._strip_node_header(header)
                 if len(values) != len(fields):
@@ -1134,6 +1158,28 @@ class Simulator:
                             "Returned %s %02d config discovery node" % (family, number))
                 return
 
+        dca_parts = header.split("/")
+        if (len(dca_parts) in (2, 3) and dca_parts[0] == "dca"
+                and dca_parts[1].isdigit() and int(dca_parts[1]) in self.state.dcas):
+            number = int(dca_parts[1])
+            prefix = "/dca/%d" % number
+            dca = self.state.dcas[number]
+            colour_names = ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
+                            "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi")
+            if len(dca_parts) == 2:
+                response = ("%s/on %s\n%s/fader %.3f\n%s/config/name %s\n"
+                            "%s/config/icon %d\n%s/config/color %s\n" % (
+                                prefix, "ON" if dca["on"] else "OFF", prefix, dca["fader"],
+                                prefix, json.dumps(dca["name"], ensure_ascii=False), prefix,
+                                dca["icon"], prefix, colour_names[dca["colour"]]))
+            else:
+                response = "%s/config %s %d %s\n" % (
+                    prefix, json.dumps(dca["name"], ensure_ascii=False), dca["icon"],
+                    colour_names[dca["colour"]])
+            self.send(client, "/node", response, outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned DCA %d %s node" % (number, "complete" if len(dca_parts) == 2 else "config"))
+            return
         strip_node = self._strip_node_header(header)
         if strip_node is not None:
             prefix, node, fields = strip_node
