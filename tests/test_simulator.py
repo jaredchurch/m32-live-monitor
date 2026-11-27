@@ -957,6 +957,62 @@ def test_config_link_group_set_rejects_wrong_count_and_invalid_enum_atomically()
     assert len(simulator.snapshot(outcome="unhandled_set")["events"]) == 2
 
 
+@pytest.mark.parametrize("header,payload,expected", [
+    ("config/linkcfg", "ON OFF ON OFF", [1, 0, 1, 0]),
+    ("config/mono", "LCR ON", [1, 1]),
+    ("config/solo", "0 LR 0 PFL AFL PFL ON OFF ON -20 OFF ON OFF 10 ON OFF ON",
+     [0.0, 1, 0.0, 0, 1, 0, 1, 0, 1, -20.0, 0, 1, 0, 10.0, 1, 0, 1]),
+    ("config/mute", "OFF ON OFF ON OFF ON", [0, 1, 0, 1, 0, 1]),
+])
+def test_configuration_group_sets_update_all_fields(header, payload, expected):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", header + " " + payload))
+
+    if header == "config/linkcfg":
+        actual = list(state.link_config.values())
+    elif header == "config/mono":
+        actual = list(state.mono_config.values())
+    elif header == "config/solo":
+        actual = list(state.solo_config.values())
+    else:
+        actual = [int(value) for value in state.mute_groups.values()]
+    assert actual == expected
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+@pytest.mark.parametrize("header,payload", [
+    ("config/linkcfg", "ON OFF"),
+    ("config/mono", "INVALID ON"),
+    ("config/solo", "0 LR 0 PFL AFL PFL ON OFF ON -20 OFF ON OFF 10 ON OFF INVALID"),
+    ("config/mute", "OFF ON OFF"),
+])
+def test_configuration_group_sets_reject_invalid_payloads_atomically(header, payload):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    before = {
+        "config/linkcfg": dict(state.link_config),
+        "config/mono": dict(state.mono_config),
+        "config/solo": dict(state.solo_config),
+        "config/mute": dict(state.mute_groups),
+    }[header]
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", header + " " + payload))
+
+    after = {
+        "config/linkcfg": state.link_config,
+        "config/mono": state.mono_config,
+        "config/solo": state.solo_config,
+        "config/mute": state.mute_groups,
+    }[header]
+    assert after == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
 def test_config_link_parameters_can_be_read_and_set():
     state = ConsoleState()
     simulator = Simulator(state)
