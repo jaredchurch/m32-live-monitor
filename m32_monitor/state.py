@@ -12,6 +12,16 @@ STRIP_NODE_SCHEMA = {
     "bus": {
         "config": {"name": (None, None, None, 0, "string", None), "icon": (1, 1, 74, 1, "int", None),
                    "color": (1, 0, 15, 1, "enum", ("OFF","RD","GN","YE","BL","MG","CY","WH","OFFi","RDi","GNi","YEi","BLi","MGi","CYi","WHi"))},
+        "dyn": {"on": (0,0,1,1,"enum",("OFF","ON")), "mode": (0,0,1,1,"enum",("COMP","EXP")),
+                "det": (0,0,1,1,"enum",("PEAK","RMS")), "env": (0,0,1,1,"enum",("LIN","LOG")),
+                "thr": (-24.0,-60.0,0.0,0.5,"float",None), "ratio": (6,0,11,1,"enum",("1.1","1.3","1.5","2.0","2.5","3.0","4.0","5.0","7.0","10","20","100")),
+                "knee": (0.0,0.0,5.0,1.0,"float",None), "mgain": (0.0,0.0,24.0,0.5,"float",None),
+                "attack": (10.0,0.0,120.0,1.0,"float",None), "hold": (10.0,0.02,2000.0,0,"float",None),
+                "release": (100.0,5.0,4000.0,0,"float",None), "pos": (0,0,1,1,"enum",("PRE","POST")),
+                "keysrc": (0,0,64,1,"int",None), "mix": (100.0,0.0,100.0,5.0,"float",None),
+                "auto": (0,0,1,1,"enum",("OFF","ON"))},
+        "dyn/filter": {"on": (0,0,1,1,"enum",("OFF","ON")), "type": (0,0,8,1,"enum",("LC6","LC12","HC6","HC12","1.0","2.0","3.0","5.0","10.0")),
+                        "f": (1000.0,20.0,20000.0,0,"float",None)},
     },
     "ch": {
         "config": {"name": (None, None, None, 0, "string", None), "icon": (1, 1, 74, 1, "int", None),
@@ -613,6 +623,13 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if len(parts) >= 4 and parts[0] == "bus" and parts[2] != "config" and address in self.strip_nodes:
+                if not self._valid_strip_node_value(address, value):
+                    return False
+                self.strip_nodes[address] = value
+                self.received.add(address)
+                return True
+
             if len(parts) == 5 and parts[0] == "bus" and parts[2] == "mix":
                 number, matrix = int(parts[1]), int(parts[3])
                 if number not in self.buses or not 1 <= matrix <= 6 or parts[4] not in ("on", "level"):
@@ -804,6 +821,8 @@ class ConsoleState:
                 if parts[2:] == ["grp", "dca"]: return matrix["dca_mask"]
                 if parts[2:] == ["grp", "mute"]: return matrix["mute_mask"]
                 if parts[2:] == ["config", "name"]: return matrix["name"]
+            if len(parts) >= 4 and parts[0] == "bus" and parts[2] != "config" and address in self.strip_nodes:
+                return self.strip_nodes.get(address)
             if len(parts) == 5 and parts[0] == "bus" and parts[2] == "mix":
                 return self.buses[int(parts[1])].get("matrix_sends", {}).get(int(parts[3]), {"on": True, "level": 0.0}).get(parts[4])
             if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
