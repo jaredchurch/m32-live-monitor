@@ -1106,5 +1106,5 @@ def test_userrout_out_individual_node_get_and_set():
     assert simulator.state.get("/config/userrout/out/08") == 167
     simulator.handle(client, packet("/node", "config/userrout/out/08"))
     response = OscMessage(simulator.transport.sent[-1][0])
-    assert response.params == ["/config/userrout/out/08 167\\n"]
+    assert response.params == ["/config/userrout/out/08 167\n"]
     assert simulator.snapshot(outcome="handled_node_set")["events"]
