@@ -490,6 +490,14 @@ class Simulator:
             family, pair, "ON" if enabled else "OFF")
             for pair, enabled in links.items())
 
+
+    def _config_linkcfg_node_group(self):
+        """Render linked-channel parameter coupling flags in protocol order."""
+        fields = ("hadly", "eq", "dyn", "fdrmute")
+        values = " ".join("ON" if self.state.link_config[field] else "OFF"
+                          for field in fields)
+        return "/config/linkcfg " + values + "\n"
+
     def _config_mute_node_group(self):
         """Render all six mute-group selection states."""
         return "".join("/config/mute/%d %s\n" % (
@@ -502,6 +510,13 @@ class Simulator:
                         "Expected exactly one X32node header string")
             return
         header = args[0].lstrip("/")
+        if header == "config/linkcfg":
+            response = self._config_linkcfg_node_group()
+            self.send(client, "/node", response, outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned linked-channel configuration flags")
+            return
+
         if header == "config/mute":
             response = self._config_mute_node_group()
             self.send(client, "/node", response, outcome="node_response")
