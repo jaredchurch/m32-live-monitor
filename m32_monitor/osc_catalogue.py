@@ -52,7 +52,7 @@ OSC_CATALOGUE = [
         {"pattern":"/main/m/{config,dyn,dyn/filter,insert,eq,eq/{1...6},mix,grp}/*","purpose":"Main mono/centre output processing and control","operations":"GET, SET, /node","note":"Implemented config, dynamics/filter, insert, six-band EQ, fader/mute and group fields."}
     ]},
     {"category":"DCA and mute groups","support":"partial","items":[
-        {"pattern":"/dca/{1...8}/{config,mix}/*","purpose":"DCA name, fader and mute","operations":"GET, SET, /node","note":"Core name/fader/mute are modelled."},
+        {"pattern":"/dca/{1...8}, /dca/{1...8}/config, /dca/{1...8}/{on,fader,config/{name,icon,color}}","purpose":"DCA on/off, fader and configuration (name, icon and colour)","operations":"GET, SET, /node","note":"Implemented for all eight DCAs: complete parent and config node reads/writes, individual parameter access and range validation."},
         {"pattern":"/config/mute/{1...6}","purpose":"Mute group active state","operations":"GET, SET, /node"},
         {"pattern":"/-prefs/dcamute, /-prefs/hardmute","purpose":"DCA mute and hard-mute behaviour preferences","operations":"GET"}
     ]},
