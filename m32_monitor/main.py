@@ -33,7 +33,7 @@ async def lifespan(_app):
         await runtime.stop()
         runtime=None
 
-app=FastAPI(title="M32 Live Monitor",version="0.2.0",
+app=FastAPI(title="M32 Simulation",version="0.2.0",
             description="Local-first, read-only monitoring for a Midas M32.",lifespan=lifespan)
 
 @app.get("/")
@@ -47,7 +47,7 @@ def health():
 @app.get("/api/status")
 def status():
     online=state.online
-    return {"application":"M32 Live Monitor","mode":state.mode,
+    return {"application":"M32 Simulation","mode":state.mode,
             "m32_host":settings.m32_host if settings.mode=="hardware" else None,
             "m32_port":settings.m32_port,"osc_listen_port":settings.osc_listen_port,
             "connection":"connected" if online else "waiting for console",
