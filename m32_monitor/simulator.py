@@ -576,6 +576,23 @@ class Simulator:
                 else:
                     raise ValueError("Unknown RTA preference")
                 paths, parsed = [path], parsed
+            elif header.startswith(("-show/", "-prefs/", "-action/")):
+                if not values:
+                    raise ValueError("Show, preference and action nodes require at least one value")
+                paths = ["/" + header + ("/" + str(index + 1) if len(values) > 1 else "")
+                         for index in range(len(values))]
+                parsed = []
+                for token in values:
+                    if token in ("OFF", "ON"):
+                        parsed.append(1 if token == "ON" else 0)
+                    else:
+                        try:
+                            parsed.append(int(token, 0))
+                        except ValueError:
+                            try:
+                                parsed.append(float(token))
+                            except ValueError:
+                                parsed.append(token)
             elif header.startswith("headamp/"):
                 parts = header.split("/")
                 if len(parts) not in (2, 3) or not parts[1].isdigit() or not 0 <= int(parts[1]) <= 127:
@@ -754,7 +771,7 @@ class Simulator:
                     self.state.received.update(old_received)
                     raise ValueError("Invalid value for %s: %r" % (path, value))
         except (ValueError, IndexError, ZeroDivisionError) as exc:
-            self.record("in", "unhandled_set", "/", args, client, str(exc))
+            self.record("in", "unhandled_set", "/" + header if "header" in locals() else "/", args, client, "%s; values=%r" % (exc, values if "values" in locals() else []))
             return
         self.record("in", "handled_node_set", "/", args, client,
                     "Applied %d %s configuration value(s)" % (
