@@ -490,12 +490,25 @@ class Simulator:
             family, pair, "ON" if enabled else "OFF")
             for pair, enabled in links.items())
 
+    def _config_mute_node_group(self):
+        """Render all six mute-group selection states."""
+        return "".join("/config/mute/%d %s\n" % (
+            number, "ON" if enabled else "OFF")
+            for number, enabled in self.state.mute_groups.items())
+
     def _handle_node(self, client, args):
         if len(args) != 1 or not isinstance(args[0], str):
             self.record("in", "unhandled_command", "/node", args, client,
                         "Expected exactly one X32node header string")
             return
         header = args[0].lstrip("/")
+        if header == "config/mute":
+            response = self._config_mute_node_group()
+            self.send(client, "/node", response, outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned all six mute-group selection states")
+            return
+
         if header in ("config/chlink", "config/auxlink", "config/fxlink",
                       "config/buslink", "config/mtxlink"):
             family = header.split("/", 1)[1]
