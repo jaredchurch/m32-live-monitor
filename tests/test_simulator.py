@@ -1527,7 +1527,7 @@ def test_bus_insert_eq_mix_and_group_nodes_are_discoverable_and_writable():
 
     assert state.get("/bus/01/insert/on") == 1
     assert state.get("/bus/01/insert/pos") == 1
-    assert state.get("/bus/01/insert/sel") == 4
+    assert state.get("/bus/01/insert/sel") == 5
     assert state.get("/bus/01/eq/6/type") == 2
     assert state.get("/bus/01/eq/6/f") == 2500.0
     assert state.get("/bus/01/eq/6/g") == -3.0
