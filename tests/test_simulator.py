@@ -2667,4 +2667,4 @@ def test_channel_group_node_accepts_percent_binary_dca_and_mute_masks():
 
     assert state.get("/ch/01/grp/dca") == 64
     assert state.get("/ch/01/grp/mute") == 0
-    assert not [event for event in simulator.events if event.get("outcome") == "unhandled_set"]
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
