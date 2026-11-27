@@ -1431,3 +1431,31 @@ def test_channel_processing_node_writes_reject_invalid_groups_atomically():
     assert not state.update("/ch/01/preamp/trim", 18.25)
     assert not state.update("/ch/01/delay/time", 500.1)
     assert not state.update("/auxin/01/gate/on", 1)
+
+ 
+def test_bus_config_parent_node_returns_name_icon_and_colour():
+    state = ConsoleState()
+    state.buses[1].update({"name": "Vocal Bus", "icon": 12, "colour": 3})
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/node", "bus/01/config"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ['/bus/01/config "Vocal Bus" 12 YE\n']
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+def test_bus_config_fields_can_be_read_and_set_with_validation():
+    state = ConsoleState()
+    assert state.get("/bus/01/config/icon") == 1
+    assert state.get("/bus/01/config/color") == 1
+    assert state.update("/bus/01/config/name", "Monitor")
+    assert state.update("/bus/01/config/icon", 74)
+    assert state.update("/bus/01/config/color", 15)
+    assert state.get("/bus/01/config/name") == "Monitor"
+    assert state.get("/bus/01/config/icon") == 74
+    assert state.get("/bus/01/config/color") == 15
+    assert not state.update("/bus/01/config/icon", 75)
+    assert not state.update("/bus/01/config/color", 16)
+    assert not state.update("/bus/01/config/name", "Name is too long")
