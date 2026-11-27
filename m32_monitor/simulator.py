@@ -1142,7 +1142,7 @@ class Simulator:
         if kind == "float":
             # Channel mix faders and channel-to-bus send levels arrive in dB;
             # other node families use the simulator's normalised representation.
-            if field in ("fader", "level") and fader_db:
+            if field in ("fader", "level", "mlevel") and fader_db:
                 if token == "-oo":
                     return 0.0
                 db = float(token)
