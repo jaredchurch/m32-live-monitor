@@ -19,6 +19,16 @@ from pythonosc.osc_message_builder import OscMessageBuilder
 logger = logging.getLogger(__name__)
 
 
+def _parse_osc_frequency(token):
+    """Parse console frequency notation such as 1k00 (1.00 kHz)."""
+    text = str(token).strip().lower()
+    if "k" in text:
+        if text.count("k") != 1:
+            raise ValueError("Invalid oscillator frequency: %s" % token)
+        return float(text.replace("k", ".")) * 1000.0
+    return float(text)
+
+
 TYPE_NAMES_FX_1_4 = ("HALL", "AMBI", "RPLT", "ROOM", "CHAM", "PLAT", "VREV", "VRM",
     "GATE", "RVRS", "DLY", "3TAP", "4TAP", "CRS", "FLNG", "PHAS", "DIMC", "FILT",
     "ROTA", "PAN", "SUB", "D/RV", "CR/R", "FL/R", "D/CR", "D/FL", "MODD", "GEQ2",
@@ -529,7 +539,7 @@ class Simulator:
             elif header == "config/osc":
                 if len(values) != 6:
                     raise ValueError("Oscillator group requires level, F1, F2, selected frequency, type and destination")
-                parsed = [float(values[0]), float(values[1]), float(values[2]),
+                parsed = [float(values[0]), _parse_osc_frequency(values[1]), _parse_osc_frequency(values[2]),
                           ("F1", "F2").index(values[3]),
                           ("SINE", "PINK", "WHITE").index(values[4]), int(values[5], 0)]
                 paths = ["/config/osc/" + field for field in ("level", "f1", "f2", "fsel", "type", "dest")]
@@ -570,7 +580,7 @@ class Simulator:
                 elif field == "type":
                     parsed = [("SINE", "PINK", "WHITE").index(values[0])]
                 elif field in ("level", "f1", "f2"):
-                    parsed = [float(values[0])]
+                    parsed = [_parse_osc_frequency(values[0]) if field in ("f1", "f2") else float(values[0])]
                 elif field == "dest":
                     parsed = [int(values[0], 0)]
                 else:
