@@ -988,19 +988,19 @@ def test_config_solo_fields_reject_invalid_values(field, value):
 
 def test_config_osc_node_returns_all_six_fields_in_protocol_order():
     state = ConsoleState()
-    state.osc_config.update({"level": -12.5, "f1": 1000.0, "f2": 2000.0,
+    state.osc_config.update({"level": -12.5, "f1": 2000.0, "f2": 632.456,
                              "fsel": 1, "type": 2, "dest": 24})
     simulator = Simulator(state)
     simulator.transport = FakeTransport()
     simulator.handle(("127.0.0.1", 50123), packet("/node", "config/osc"))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/config/osc -12.5 1000.0 2000.0 F2 WHITE 24\\n"]
+    assert response.params == ["/config/osc -12.5 2000.000 632.456 F2 WHITE 24\\n"]
 
 
 @pytest.mark.parametrize("field,value", [
     ("level", -90.0), ("level", 10.0), ("f1", 20.0), ("f1", 20000.0),
-    ("f2", 1000.0), ("fsel", 1), ("type", 2), ("dest", 25),
+    ("f2", 2000.0), ("fsel", 1), ("type", 2), ("dest", 25),
 ])
 def test_config_osc_fields_can_be_read_and_set(field, value):
     state = ConsoleState()
@@ -1039,13 +1039,13 @@ def test_config_osc_node_set_updates_all_fields_atomically():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
     client = ("127.0.0.1", 50123)
-    simulator.handle(client, packet("/", "config/osc -12.5 1000 2000 F2 WHITE 24"))
+    simulator.handle(client, packet("/", "config/osc -12.5 2000 632.456 F2 WHITE 24"))
     assert simulator.state.osc_config == {
-        "level": -12.5, "f1": 1000.0, "f2": 2000.0,
+        "level": -12.5, "f1": 2000.0, "f2": 632.456,
         "fsel": 1, "type": 2, "dest": 24,
     }
     before = dict(simulator.state.osc_config)
-    simulator.handle(client, packet("/", "config/osc -12.3 1000 2000 F2 WHITE 24"))
+    simulator.handle(client, packet("/", "config/osc -12.3 2000 632.456 F2 WHITE 24"))
     assert simulator.state.osc_config == before
     assert simulator.snapshot(outcome="unhandled_set")["events"]
 
