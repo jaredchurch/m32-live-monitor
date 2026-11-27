@@ -206,7 +206,7 @@ class ConsoleState:
 
             if len(parts) == 3 and parts[0] == "config" and parts[1] in self.config_links:
                 family, pair = parts[1], parts[2]
-                if pair not in self.config_links[family] or not isinstance(value, (int, float)) or int(value) not in (0, 1) or float(value) != int(value):
+                if pair not in self.config_links[family] or isinstance(value, bool) or not isinstance(value, (int, float)) or int(value) not in (0, 1) or float(value) != int(value):
                     return False
                 self.config_links[family][pair] = int(value)
                 self.received.add(address)
