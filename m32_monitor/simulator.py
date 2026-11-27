@@ -433,13 +433,6 @@ class Simulator:
                 else:
                     raise ValueError("Unknown talkback field")
                 paths = ["/" + header]
-            elif header == "config/osc":
-                if len(values) != 6:
-                    raise ValueError("Oscillator group requires level, F1, F2, selected frequency, type and destination")
-                parsed = [float(values[0]), float(values[1]), float(values[2]),
-                          ("F1", "F2").index(values[3]),
-                          ("SINE", "PINK", "WHITE").index(values[4]), int(values[5], 0)]
-                paths = ["/config/osc/" + field for field in ("level", "f1", "f2", "fsel", "type", "dest")]
             elif header.startswith("config/osc/") and len(values) == 1:
                 field = header.rsplit("/", 1)[1]
                 path = "/" + header
