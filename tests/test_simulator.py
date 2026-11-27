@@ -995,7 +995,7 @@ def test_config_osc_node_returns_all_six_fields_in_protocol_order():
     simulator.handle(("127.0.0.1", 50123), packet("/node", "config/osc"))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/config/osc -12.5 2000.000 632.456 F2 WHITE 24\\n"]
+    assert response.params == ["/config/osc -12.5 2000.000 632.456 F2 WHITE 24\n"]
 
 
 @pytest.mark.parametrize("field,value", [
