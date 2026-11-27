@@ -803,8 +803,8 @@ class Simulator:
                     parsed = [values[0], int(values[1], 0),
                               ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
                                "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi").index(values[2])]
-                elif len(parts) == 3 and len(values) == 1:
-                    field = parts[2]
+                elif len(parts) in (3, 4) and len(values) == 1:
+                    field = "/".join(parts[2:])
                     paths = ["/dca/%d/%s" % (number, field)]
                     if field == "on": parsed = [("OFF", "ON").index(values[0])]
                     elif field == "fader": parsed = [float(values[0])]
@@ -1520,7 +1520,7 @@ class Simulator:
                 self.record("in", "handled_node_get", "/node", args, client, "Returned FX source field")
                 return
         dca_parts = header.split("/")
-        if (len(dca_parts) in (2, 3) and dca_parts[0] == "dca"
+        if (len(dca_parts) in (2, 3, 4) and dca_parts[0] == "dca"
                 and dca_parts[1].isdigit() and int(dca_parts[1]) in self.state.dcas):
             number = int(dca_parts[1])
             prefix = "/dca/%d" % number
@@ -1538,7 +1538,7 @@ class Simulator:
                     prefix, json.dumps(dca["name"], ensure_ascii=False), dca["icon"],
                     colour_names[dca["colour"]])
             else:
-                field = dca_parts[2]
+                field = "/".join(dca_parts[2:])
                 if field == "on": rendered = ("OFF", "ON")[int(dca["on"])]
                 elif field == "fader": rendered = "%.3f" % dca["fader"]
                 elif field == "config/name": rendered = json.dumps(dca["name"], ensure_ascii=False)
