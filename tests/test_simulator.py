@@ -1803,6 +1803,8 @@ def test_eq_frequency_node_writes_accept_compact_khz_notation(header, expected_p
     simulator.handle(("127.0.0.1", 50123), packet("/", header))
 
     assert state.get(expected_path) == 9350.0
+    if " HShv " in header:
+        assert state.get(expected_path.rsplit("/", 1)[0] + "/g") == -11.7
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
 
