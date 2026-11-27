@@ -82,7 +82,7 @@ OSC_CATALOGUE = [
         {"pattern":"/-urec/*, /-stat/urec/*","purpose":"X-Live SD recorder, sessions, markers and transport status","operations":"GET, /node"}
     ]},
     {"category":"Additional documented node families","support":"known-unsupported","items":[
-        {"pattern":"/config/userout/{in,out}/{01...48}","purpose":"User-defined input/output routing maps","operations":"GET, SET, /node"},
+        {"pattern":"/config/userrout/out/{01...48}","purpose":"User-defined output routing source assignments","operations":"GET, SET, /node","note":"All 48 output slots support validated integer sources 0-208 and grouped node reads."},
         {"pattern":"/config/userctrl/{A,B,C}/*","purpose":"User-assignment banks, encoder and button assignments","operations":"GET, SET, /node"},
         {"pattern":"/config/tape, /config/amixenable","purpose":"Tape and automix enable configuration","operations":"GET, SET, /node"},
         {"pattern":"/config/dp48/*","purpose":"DP48 personal monitor assignment, links and group names","operations":"GET, SET, /node"},
@@ -103,7 +103,7 @@ OSC_CATALOGUE = [
     ]},
     {"category":"Additional documented X32node headers","support":"known-unsupported","items":[
         {"pattern":"/config/routing/routswitch, /config/routing/PLAY","purpose":"Routing record/playback switch and playback source banks","operations":"/node, GET, SET"},
-        {"pattern":"/config/userout/in/{01...32}, /config/userout/out/{01...48}","purpose":"User-defined input and output routing assignments","operations":"/node, GET, SET"},
+        {"pattern":"/config/userrout/in/{01...32}","purpose":"User-defined input routing assignments","operations":"/node, GET, SET","note":"Not yet simulated."},
         {"pattern":"/config/dp48, /config/dp48/assign, /config/dp48/grpname","purpose":"DP48 personal-monitor assignments, links and group names","operations":"/node, GET, SET"},
         {"pattern":"/config/amixenable","purpose":"Automix enable configuration","operations":"/node, GET, SET"},
         {"pattern":"/-show/prepos, /-show/prepos/current","purpose":"Show-file preposition and current show position","operations":"/node, GET"},
