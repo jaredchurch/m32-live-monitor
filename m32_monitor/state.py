@@ -783,7 +783,7 @@ class ConsoleState:
     @staticmethod
     def _valid_main_node_value(address, value):
         parts = address.strip("/").split("/")
-        if len(parts) < 3 or "/".join(parts[:2]) not in ("/main/st", "/main/m"):
+        if len(parts) < 3 or "/".join(parts[:2]) not in ("main/st", "main/m"):
             return False
         node = "/".join(parts[2:-1])
         field_name = parts[-1]
