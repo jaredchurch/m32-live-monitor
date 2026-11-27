@@ -2716,3 +2716,15 @@ def test_channel_mix_node_accepts_fader_level_in_db():
     assert state.get("/ch/03/mix/mono") == 0
     assert state.get("/ch/03/mix/mlevel") == pytest.approx((3.5 + 30.0) / 40.0)
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+def test_auxin_preamp_trim_accepts_tenth_db_values():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "auxin/05/preamp -3.3 OFF"))
+
+    assert state.get("/auxin/05/preamp/trim") == pytest.approx(-3.3)
+    assert state.get("/auxin/05/preamp/invert") == 0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
