@@ -1587,11 +1587,6 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
         assert state.get("/" + prefix + "/grp/mute") == 5
 
 
-@pytest.mark.parametrize(("address", "value"), [
-    ("/main/st/config/icon", 75), ("/main/m/config/color", 16),
-    ("/main/st/dyn/thr", -60.25), ("/main/m/insert/sel", 23),
-    ("/main/st/eq/6/g", 15.25), ("/main/m/mix/fader", 1.1),
-])
 def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
     state = ConsoleState()
     simulator = Simulator(state)
@@ -1624,6 +1619,12 @@ def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
 def test_main_output_matrix_sends_reject_invalid_values(address, value):
     assert not ConsoleState().update(address, value)
 
+
+@pytest.mark.parametrize(("address", "value"), [
+    ("/main/st/config/icon", 75), ("/main/m/config/color", 16),
+    ("/main/st/dyn/thr", -60.25), ("/main/m/insert/sel", 23),
+    ("/main/st/eq/6/g", 15.25), ("/main/m/mix/fader", 1.1),
+])
 
 def test_main_output_processing_rejects_invalid_values(address, value):
     assert not ConsoleState().update(address, value)
