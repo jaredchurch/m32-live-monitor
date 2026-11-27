@@ -856,3 +856,52 @@ def test_routing_inventory_rejects_non_binary_stereo_link_values(value):
     assert not state.routing.update("/config/chlink/1-2", value)
     assert not state.update("/config/chlink/1-2", value)
     assert "/config/chlink/1-2" not in state.routing.values
+
+
+
+def test_config_solo_node_returns_all_seventeen_fields_in_protocol_order():
+    state = ConsoleState()
+    state.solo_config.update({
+        "level": -12.5, "source": 2, "sourcetrim": 1.5,
+        "chmode": 1, "busmode": 0, "dcamode": 1,
+        "exclusive": 1, "followsel": 0, "followsolo": 1,
+        "dimatt": -18.0, "dim": 1, "mono": 0, "delay": 1,
+        "delaytime": 125.5, "masterctrl": 1, "mute": 0, "dimpfl": 1,
+    })
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+
+    simulator.handle(("127.0.0.1", 50123), packet("/node", "config/solo"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == [
+        "/config/solo -12.5 LR+C 1.5 AFL PFL AFL ON OFF ON -18.0 ON OFF ON 125.5 ON OFF ON\\n"
+    ]
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
+@pytest.mark.parametrize("field,value", [
+    ("level", -90.0), ("level", 10.0), ("source", 6),
+    ("sourcetrim", -18.0), ("sourcetrim", 18.0),
+    ("chmode", 1), ("busmode", 1), ("dcamode", 1),
+    ("exclusive", 1), ("followsel", 1), ("followsolo", 1),
+    ("dimatt", -40.0), ("dimatt", 0.0), ("dim", 1), ("mono", 1),
+    ("delay", 1), ("delaytime", 0.3), ("delaytime", 500.0),
+    ("masterctrl", 1), ("mute", 1), ("dimpfl", 1),
+])
+def test_config_solo_fields_can_be_read_and_set(field, value):
+    state = ConsoleState()
+    address = "/config/solo/" + field
+    assert state.get(address) == state.solo_config[field]
+    assert state.update(address, value)
+    assert state.get(address) == value
+
+
+@pytest.mark.parametrize("field,value", [
+    ("source", 7), ("chmode", 2), ("exclusive", True),
+    ("sourcetrim", 0.25), ("dimatt", -40.5),
+    ("delaytime", 0.35), ("delaytime", 500.1), ("level", 10.625),
+])
+def test_config_solo_fields_reject_invalid_values(field, value):
+    assert not ConsoleState().update("/config/solo/" + field, value)
