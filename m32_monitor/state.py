@@ -3,7 +3,7 @@ from dataclasses import asdict, dataclass, field
 import math
 import struct
 import time
-from m32_monitor.routing import RoutingState
+from m32_monitor.routing import ROUTING_PATHS, RoutingState
 
 
 @dataclass
@@ -154,9 +154,7 @@ class ConsoleState:
                             for key, item in sorted(self.meters.items())]}
 
     def update(self, address, value):
-        if address in self.routing.values or address in __import__("m32_monitor.routing", fromlist=["ROUTING_PATHS"]).ROUTING_PATHS:
-            from m32_monitor.routing import ROUTING_PATHS
-            if self.mode == "simulator" and address in ROUTING_PATHS:
+        if self.mode == "simulator" and address in ROUTING_PATHS:
                 choices = ROUTING_PATHS[address][1]
                 if (isinstance(value, bool) or not isinstance(value, (int, float))
                         or float(value) != int(value) or not 0 <= int(value) < len(choices)):
