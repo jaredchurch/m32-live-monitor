@@ -1492,6 +1492,64 @@ def test_bus_dynamics_reject_invalid_values():
     assert not state.update("/bus/01/dyn/on", 2)
 
 
+def test_matrix_config_processing_and_output_nodes_are_discoverable_and_writable():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    expected_counts = {
+        "config": 3, "preamp": 1, "dyn": 14, "dyn/filter": 3,
+        "insert": 3, "eq": 1, "eq/6": 4, "mix": 2, "grp": 2,
+    }
+    for node, count in expected_counts.items():
+        simulator.handle(client, packet("/node", "mtx/01/" + node))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.address == "/node"
+        assert len(response.params[0].split()) - 1 == count
+        assert response.params[0].startswith("/mtx/01/" + node + " ")
+
+    simulator.handle(client, packet("/", 'mtx/01/config "Vocal Matrix" 12 YE'))
+    simulator.handle(client, packet("/", "mtx/01/preamp ON"))
+    simulator.handle(client, packet("/", "mtx/01/dyn ON COMP RMS LIN -30 4.0 2 3 15 20 150 POST 75 OFF"))
+    simulator.handle(client, packet("/", "mtx/01/dyn/filter ON HC12 120"))
+    simulator.handle(client, packet("/", "mtx/01/insert ON POST FX3L"))
+    simulator.handle(client, packet("/", "mtx/01/eq ON"))
+    simulator.handle(client, packet("/", "mtx/01/eq/6 PEQ 2500 -3.0 1.2"))
+    simulator.handle(client, packet("/", "mtx/01/mix OFF 0.65"))
+    simulator.handle(client, packet("/", "mtx/01/grp 3 5"))
+
+    assert state.get("/mtx/01/config/name") == "Vocal Matrix"
+    assert state.get("/mtx/01/config/icon") == 12
+    assert state.get("/mtx/01/config/color") == 3
+    assert state.get("/mtx/01/preamp/invert") == 1
+    assert state.get("/mtx/01/dyn/thr") == -30.0
+    assert state.get("/mtx/01/dyn/ratio") == 6
+    assert state.get("/mtx/01/dyn/filter/f") == 120.0
+    assert state.get("/mtx/01/insert/sel") == 5
+    assert state.get("/mtx/01/eq/6/type") == 2
+    assert state.get("/mtx/01/eq/6/g") == -3.0
+    assert state.get("/mtx/01/mix/on") == 0
+    assert state.get("/mtx/01/mix/fader") == 0.65
+    assert state.get("/mtx/01/grp/dca") == 3
+    assert state.get("/mtx/01/grp/mute") == 5
+
+    simulator.handle(client, packet("/node", "mtx/01/insert/sel"))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/mtx/01/insert/sel FX3L\n"]
+
+
+@pytest.mark.parametrize(("address", "value"), [
+    ("/mtx/01/config/icon", 75), ("/mtx/01/config/color", 16),
+    ("/mtx/01/preamp/invert", 2), ("/mtx/01/dyn/thr", -60.25),
+    ("/mtx/01/dyn/ratio", 12), ("/mtx/01/dyn/filter/f", 20001),
+    ("/mtx/01/insert/sel", 23), ("/mtx/01/eq/6/type", 14),
+    ("/mtx/01/eq/6/g", 15.25), ("/mtx/01/mix/fader", 1.1),
+    ("/mtx/01/grp/mute", 64), ("/mtx/07/mix/on", 1),
+])
+def test_matrix_processing_rejects_invalid_values(address, value):
+    assert not ConsoleState().update(address, value)
+
+
 def test_simulator_default_discovery_name_is_m32_simulation():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
