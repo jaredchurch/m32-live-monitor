@@ -1215,6 +1215,34 @@ def test_config_osc_individual_node_get_uses_enum_labels():
         assert response.params == [expected]
 
 
+@pytest.mark.parametrize("token,expected", [
+    ("1k00", 1000.0), ("2k50", 2500.0), ("20k00", 20000.0), ("632.456", 632.456),
+])
+def test_oscillator_frequency_parser_accepts_console_khz_notation(token, expected):
+    from m32_monitor.simulator import _parse_osc_frequency
+    assert _parse_osc_frequency(token) == pytest.approx(expected)
+
+
+def test_config_osc_group_set_accepts_console_khz_notation():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", "config/osc -40.0 1k00 2k50 F1 WHITE 18"))
+    assert simulator.state.osc_config["level"] == -40.0
+    assert simulator.state.osc_config["f1"] == 1000.0
+    assert simulator.state.osc_config["f2"] == 2500.0
+    assert simulator.state.osc_config["dest"] == 18
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+def test_config_osc_individual_frequency_set_accepts_console_khz_notation():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    simulator.handle(("127.0.0.1", 50123), packet("/", "config/osc/f1 1k00"))
+    assert simulator.state.osc_config["f1"] == 1000.0
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
 def test_config_osc_node_set_updates_all_fields_atomically():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
