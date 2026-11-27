@@ -1128,6 +1128,9 @@ class Simulator:
         if kind == "enum":
             return labels.index(token)
         if kind == "float":
+            # X32node uses -oo to represent a fader at its bottom (silence).
+            if token == "-oo":
+                return 0.0
             # M32-Edit serialises audio frequencies in compact k notation
             # (for example 9k35 = 9350 Hz). Ordinary decimal values remain valid.
             return _parse_osc_frequency(token)
