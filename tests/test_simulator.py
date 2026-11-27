@@ -1076,6 +1076,20 @@ def test_config_osc_individual_node_set_updates_enum_and_numeric_values():
     assert simulator.state.osc_config["dest"] == 25
 
 
+@pytest.mark.parametrize("header", [
+    "config/routing/routswitch",
+    "config/routing/rootswitch",
+    "config/routing/outswitch",
+])
+def test_routing_switch_node_spellings_return_a_valid_response(header):
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    simulator.handle(("127.0.0.1", 50123), packet("/node", header))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params[0].splitlines() == ["/" + header + " 0"]
+
+
 def test_config_routing_parent_node_returns_all_documented_routing_entries():
     from m32_monitor.routing import ROUTING_PATHS
 
