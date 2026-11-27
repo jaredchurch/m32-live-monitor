@@ -1140,14 +1140,14 @@ class Simulator:
                     raise ValueError("Enum index %d is out of range" % index)
                 return index
         if kind == "float":
-            # Channel mix node faders arrive in dB; other node families use
-            # the simulator's normalised 0.0-1.0 representation.
-            if field == "fader" and fader_db:
+            # Channel mix faders and channel-to-bus send levels arrive in dB;
+            # other node families use the simulator's normalised representation.
+            if field in ("fader", "level") and fader_db:
                 if token == "-oo":
                     return 0.0
                 db = float(token)
                 if not -90.0 <= db <= 10.0:
-                    raise ValueError("Fader level must be between -90 and +10 dB")
+                    raise ValueError("Channel mix level must be between -90 and +10 dB")
                 if db < -60.0:
                     return (db + 90.0) / 480.0
                 if db < -30.0:
