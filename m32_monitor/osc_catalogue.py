@@ -20,7 +20,7 @@ OSC_CATALOGUE = [
         {"pattern":"/config/fxlink/{1-2...7-8}","purpose":"Link/unlink FX return pairs","operations":"GET, SET, /node"},
         {"pattern":"/config/buslink/{1-2...15-16}","purpose":"Link/unlink mix-bus pairs","operations":"GET, SET, /node"},
         {"pattern":"/config/mtxlink/{1-2...5-6}","purpose":"Link/unlink Matrix pairs","operations":"GET, SET, /node"},
-        {"pattern":"/config/mute/{1...6}","purpose":"Mute group state","operations":"GET, SET"},
+        {"pattern":"/config/mute/{1...6}","purpose":"Mute group state","operations":"GET, SET, /node"},
         {"pattern":"/config/linkcfg/{hadly,eq,dyn,fdrmute}","purpose":"Linked-channel parameter coupling preferences","operations":"GET, SET","note":"Known protocol family; not yet fully simulated."},
         {"pattern":"/config/solo/*, /config/mono/*, /config/talk/*, /config/osc/*","purpose":"Solo, mono, talkback and oscillator configuration","operations":"GET, SET","note":"Known protocol families; not yet fully simulated."},
         {"pattern":"/config/routing/*","purpose":"Input, AES50, Card, output and playback routing banks","operations":"GET, SET, /node","note":"Routing snapshot covers selected assignments; complete node read/write coverage is outstanding."},
@@ -50,7 +50,7 @@ OSC_CATALOGUE = [
     ]},
     {"category":"DCA and mute groups","support":"partial","items":[
         {"pattern":"/dca/{1...8}/{config,mix}/*","purpose":"DCA name, fader and mute","operations":"GET, SET, /node","note":"Core name/fader/mute are modelled."},
-        {"pattern":"/config/mute/{1...6}","purpose":"Mute group active state","operations":"GET, SET"},
+        {"pattern":"/config/mute/{1...6}","purpose":"Mute group active state","operations":"GET, SET, /node"},
         {"pattern":"/-prefs/dcamute, /-prefs/hardmute","purpose":"DCA mute and hard-mute behaviour preferences","operations":"GET"}
     ]},
     {"category":"Effects, outputs and headamps","support":"known-unsupported","items":[
