@@ -397,7 +397,36 @@ class Simulator:
                 raise ValueError("Empty X32node text")
             header = tokens[0].lstrip("/")
             values = tokens[1:]
-            if header == "-prefs/rta":
+            if header == "config/talk":
+                if len(values) != 2:
+                    raise ValueError("Talkback group requires enable and source")
+                parsed = [("OFF", "ON").index(values[0]), ("INT", "EXT").index(values[1])]
+                paths = ["/config/talk/enable", "/config/talk/source"]
+            elif header in ("config/talk/A", "config/talk/B"):
+                if len(values) != 4:
+                    raise ValueError("Talkback A/B group requires level, dim, latch and destination map")
+                section = header.rsplit("/", 1)[1]
+                dest = values[3]
+                dest_value = int(dest[1:], 2) if dest.startswith("%") else int(dest, 0)
+                parsed = [float(values[0]), ("OFF", "ON").index(values[1]),
+                          ("OFF", "ON").index(values[2]), dest_value]
+                paths = ["/config/talk/%s/%s" % (section, field)
+                         for field in ("level", "dim", "latch", "destmap")]
+            elif header.startswith("config/talk/") and len(values) == 1:
+                field = header.rsplit("/", 1)[1]
+                if field in ("enable", "dim", "latch"):
+                    parsed = [("OFF", "ON").index(values[0])]
+                elif field == "source":
+                    parsed = [("INT", "EXT").index(values[0])]
+                elif field == "destmap":
+                    token = values[0]
+                    parsed = [int(token[1:], 2) if token.startswith("%") else int(token, 0)]
+                elif field == "level":
+                    parsed = [float(values[0])]
+                else:
+                    raise ValueError("Unknown talkback field")
+                paths = ["/" + header]
+            elif header == "-prefs/rta":
                 if len(values) != 10:
                     raise ValueError("RTA group requires 10 ordered values")
                 paths = ["/-prefs/rta/" + key for key in (
@@ -440,11 +469,13 @@ class Simulator:
             else:
                 raise ValueError("Unsupported X32node SET header %r" % header)
             old_preferences = dict(self.state.preferences)
+            old_talk = json.loads(json.dumps(self.state.talk_config))
             old_status = dict(self.state.rta_status)
             old_received = set(self.state.received)
             for path, value in zip(paths, parsed):
                 if not self.state.update(path, value):
                     self.state.preferences.update(old_preferences)
+                    self.state.talk_config = old_talk
                     self.state.rta_status.update(old_status)
                     self.state.received.clear()
                     self.state.received.update(old_received)
@@ -453,7 +484,8 @@ class Simulator:
             self.record("in", "unhandled_set", "/", args, client, str(exc))
             return
         self.record("in", "handled_node_set", "/", args, client,
-                    "Applied %d RTA preference value(s)" % len(paths))
+                    "Applied %d %s configuration value(s)" % (
+                        len(paths), "talkback" if paths[0].startswith("/config/talk/") else "RTA preference"))
         self.send(client, "/", args[0], outcome="node_set_echo")
         for subscriber in tuple(self.clients):
             self.send(subscriber, "/", args[0], outcome="subscription_update")
@@ -520,6 +552,17 @@ class Simulator:
         )
         return "/config/solo " + " ".join(ordered) + "\n"
 
+    def _config_talk_node_group(self, section=None):
+        """Render shared or A/B talkback settings in documented node order."""
+        config = self.state.talk_config
+        if section is None:
+            return "/config/talk %s %s\\n" % (
+                ("OFF", "ON")[config["enable"]], ("INT", "EXT")[config["source"]])
+        values = config[section]
+        return "/config/talk/%s %.1f %s %s %s\\n" % (
+            section, values["level"], ("OFF", "ON")[values["dim"]],
+            ("OFF", "ON")[values["latch"]], "%" + format(values["destmap"], "018b"))
+
     def _config_mute_node_group(self):
         """Render all six mute-group selection states."""
         return "".join("/config/mute/%d %s\n" % (
@@ -553,6 +596,18 @@ class Simulator:
                         "Returned all 17 solo-monitor configuration fields")
             return
 
+        if header == "config/talk":
+            self.send(client, "/node", self._config_talk_node_group(), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned talkback enable and source configuration")
+            return
+        if header in ("config/talk/A", "config/talk/B"):
+            section = header.rsplit("/", 1)[1]
+            self.send(client, "/node", self._config_talk_node_group(section), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned talkback %s configuration" % section)
+            return
+
         if header == "config/mute":
             response = self._config_mute_node_group()
             self.send(client, "/node", response, outcome="node_response")
@@ -580,6 +635,26 @@ class Simulator:
             self.send(client, "/node", self._rta_node_group(), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned all ten RTA preference fields")
+            return
+        if header.startswith("config/talk/"):
+            address = "/" + header
+            value = self.state.get(address)
+            if value is None:
+                self.record("in", "unhandled_command", "/node", args, client,
+                            "No talkback value is modelled for header %r" % header)
+                return
+            field = header.rsplit("/", 1)[1]
+            if field in ("enable", "dim", "latch"):
+                rendered = ("OFF", "ON")[int(value)]
+            elif field == "source":
+                rendered = ("INT", "EXT")[int(value)]
+            elif field == "destmap":
+                rendered = "%" + format(int(value), "018b")
+            else:
+                rendered = "%.1f" % float(value)
+            self.send(client, "/node", "%s %s\\n" % (address, rendered), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned individual talkback configuration value")
             return
         if header.startswith("-urec/") or header.startswith("-stat/urec/"):
             address = "/" + header
