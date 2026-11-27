@@ -582,9 +582,9 @@ class Simulator:
                     raise ValueError("Unknown FX slot")
                 number = int(parts[1])
                 type_names = TYPE_NAMES_FX_1_4 if number <= 4 else TYPE_NAMES_FX_5_8
-                if len(parts) == 2:
+                if len(parts) == 2 or (len(parts) == 3 and parts[2] == "type"):
                     if len(values) != 1:
-                        raise ValueError("FX node requires one effect type")
+                        raise ValueError("FX type node requires one effect type")
                     paths = ["/fx/%02d/type" % number]
                     parsed = [type_names.index(values[0])]
                 elif parts[2] == "source":
