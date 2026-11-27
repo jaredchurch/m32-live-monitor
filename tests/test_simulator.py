@@ -768,3 +768,13 @@ def test_config_link_rejects_unknown_pair_and_invalid_value():
     state = ConsoleState()
     assert not state.update("/config/chlink/2-3", 1)
     assert not state.update("/config/chlink/1-2", 2)
+    assert "/config/chlink/2-3" not in state.routing.values
+    assert "/config/chlink/1-2" not in state.routing.values
+
+
+@pytest.mark.parametrize("value", [2, -1, 0.5, float("nan"), True, "1", None])
+def test_routing_inventory_rejects_non_binary_stereo_link_values(value):
+    state = ConsoleState()
+    assert not state.routing.update("/config/chlink/1-2", value)
+    assert not state.update("/config/chlink/1-2", value)
+    assert "/config/chlink/1-2" not in state.routing.values
