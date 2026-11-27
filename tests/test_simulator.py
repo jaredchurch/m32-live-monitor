@@ -1287,7 +1287,7 @@ def test_routing_switch_node_spellings_return_a_valid_response(header):
     simulator.handle(("127.0.0.1", 50123), packet("/node", header))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params[0].splitlines() == ["/" + header + " 0"]
+    assert response.params[0].splitlines() == ["/" + header + " REC"]
 
 
 def test_config_routing_parent_node_returns_all_documented_routing_entries():
