@@ -31,9 +31,9 @@ def test_config_talk_node_groups_return_shared_and_a_b_settings():
     client = ("127.0.0.1", 50123)
 
     for header, expected in (
-        ("config/talk", "/config/talk ON EXT\n"),
-        ("config/talk/A", "/config/talk/A -12.5 ON OFF %100000000000000001\n"),
-        ("config/talk/B", "/config/talk/B 3.8 OFF ON %010101010101010101\n"),
+        ("config/talk", "/config/talk ON EXT\\n"),
+        ("config/talk/A", "/config/talk/A -12.5 ON OFF %100000000000000001\\n"),
+        ("config/talk/B", "/config/talk/B 3.8 OFF ON %010101010101010101\\n"),
     ):
         simulator.handle(client, packet("/node", header))
         response = OscMessage(simulator.transport.sent[-1][0])
@@ -89,10 +89,10 @@ def test_individual_talkback_node_get_returns_enum_and_bitmap_values():
     client = ("127.0.0.1", 50123)
     simulator.state.talk_config["A"].update({"dim": 1, "destmap": 5})
     for header, expected in (
-        ("config/talk/enable", "/config/talk/enable OFF\n"),
-        ("config/talk/source", "/config/talk/source INT\n"),
-        ("config/talk/A/dim", "/config/talk/A/dim ON\n"),
-        ("config/talk/A/destmap", "/config/talk/A/destmap %000000000000000101\n"),
+        ("config/talk/enable", "/config/talk/enable OFF\\n"),
+        ("config/talk/source", "/config/talk/source INT\\n"),
+        ("config/talk/A/dim", "/config/talk/A/dim ON\\n"),
+        ("config/talk/A/destmap", "/config/talk/A/destmap %000000000000000101\\n"),
     ):
         simulator.handle(client, packet("/node", header))
         response = OscMessage(simulator.transport.sent[-1][0])
@@ -1040,9 +1040,9 @@ def test_config_osc_individual_node_get_uses_enum_labels():
     client = ("127.0.0.1", 50123)
     simulator.state.osc_config.update({"fsel": 1, "type": 2, "dest": 25})
     for header, expected in (
-        ("config/osc/fsel", "/config/osc/fsel F2\n"),
-        ("config/osc/type", "/config/osc/type WHITE\n"),
-        ("config/osc/dest", "/config/osc/dest 25\n"),
+        ("config/osc/fsel", "/config/osc/fsel F2\\n"),
+        ("config/osc/type", "/config/osc/type WHITE\\n"),
+        ("config/osc/dest", "/config/osc/dest 25\\n"),
     ):
         simulator.handle(client, packet("/node", header))
         response = OscMessage(simulator.transport.sent[-1][0])
