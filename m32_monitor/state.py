@@ -613,7 +613,7 @@ class ConsoleState:
                     return None
                 slots = self.user_rout_out if parts[2] == "out" else self.user_rout_in
                 return slots.get(int(slot_text))
-            if len(parts) == 4 and parts[:2] == ["config", "userctrl"]:
+            if len(parts) in (4, 5) and parts[:2] == ["config", "userctrl"]:
                 bank, section = parts[2], parts[3]
                 if bank not in self.user_controls:
                     return None
