@@ -1502,12 +1502,14 @@ def test_matrix_config_processing_and_output_nodes_are_discoverable_and_writable
         "config": 3, "preamp": 1, "dyn": 14, "dyn/filter": 3,
         "insert": 3, "eq": 1, "eq/6": 4, "mix": 2, "grp": 2,
     }
-    for node, count in expected_counts.items():
-        simulator.handle(client, packet("/node", "mtx/01/" + node))
-        response = OscMessage(simulator.transport.sent[-1][0])
-        assert response.address == "/node"
-        assert len(response.params[0].split()) - 1 == count
-        assert response.params[0].startswith("/mtx/01/" + node + " ")
+    for matrix_number in range(1, 7):
+        for node, count in expected_counts.items():
+            header = "mtx/%02d/%s" % (matrix_number, node)
+            simulator.handle(client, packet("/node", header))
+            response = OscMessage(simulator.transport.sent[-1][0])
+            assert response.address == "/node"
+            assert len(response.params[0].split()) - 1 == count
+            assert response.params[0].startswith("/" + header + " ")
 
     simulator.handle(client, packet("/", 'mtx/01/config "Vocal Matrix" 12 YE'))
     simulator.handle(client, packet("/", "mtx/01/preamp ON"))
