@@ -150,7 +150,10 @@ def routing_enum_index(address, value):
         try:
             index = tokens.index(value)
         except ValueError:
-            raise ValueError("Unknown routing enum token %r for %s" % (value, address))
+            try:
+                index = int(value, 0)
+            except ValueError:
+                raise ValueError("Unknown routing enum token %r for %s" % (value, address))
     else:
         raise ValueError("Invalid routing enum value %r for %s" % (value, address))
     if not 0 <= index < len(tokens):
