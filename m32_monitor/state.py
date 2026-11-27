@@ -144,6 +144,22 @@ for _band in range(1, 7):
         "q": (1.0,0.3,10.0,0,"float",None)}
 
 
+# Main stereo and mono output processing nodes.
+MAIN_NODE_SCHEMA = {
+    "config": {"name": ("Main L/R", None, None, 0, "string", None),
+               "icon": (1, 1, 74, 1, "int", None),
+               "color": (1, 0, 15, 1, "enum", ("OFF","RD","GN","YE","BL","MG","CY","WH","OFFi","RDi","GNi","YEi","BLi","MGi","CYi","WHi"))},
+    "dyn": STRIP_NODE_SCHEMA["bus"]["dyn"],
+    "dyn/filter": STRIP_NODE_SCHEMA["bus"]["dyn/filter"],
+    "insert": STRIP_NODE_SCHEMA["bus"]["insert"],
+    "eq": STRIP_NODE_SCHEMA["bus"]["eq"],
+    "mix": STRIP_NODE_SCHEMA["bus"]["mix"],
+    "grp": STRIP_NODE_SCHEMA["bus"]["grp"],
+}
+for _band in range(1, 7):
+    MAIN_NODE_SCHEMA["eq/%d" % _band] = STRIP_NODE_SCHEMA["bus"]["eq/%d" % _band]
+
+
 @dataclass
 class ChannelState:
     number: int
@@ -238,6 +254,7 @@ class ConsoleState:
         self.auxins = {n: ChannelState(n, "AUX %02d" % n, 0.72, False, 1, 32 + n, False) for n in range(1, 9)}
         self.fx_returns = {n: ChannelState(n, "FX RTN %02d" % n, 0.72, False, 1, 0, False) for n in range(1, 9)}
         self.strip_node_schema = STRIP_NODE_SCHEMA
+        self.main_node_schema = MAIN_NODE_SCHEMA
         self.strip_nodes = {}
         for family, nodes in STRIP_NODE_SCHEMA.items():
             counts = {"ch": 32, "auxin": 8, "fxrtn": 8, "bus": 16, "mtx": 6}[family]
@@ -261,6 +278,10 @@ class ConsoleState:
             "main_st": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0, "sends": {}},
             "main_mono": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0, "sends": {}},
         }
+        for prefix in ("/main/st", "/main/m"):
+            for node, fields in MAIN_NODE_SCHEMA.items():
+                for field_name, spec in fields.items():
+                    self.strip_nodes["%s/%s/%s" % (prefix, node, field_name)] = spec[0]
         self.matrices = {n: {"number": n, "name": "Matrix %02d" % n, "icon": 1, "colour": 1,
                              "on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0}
                          for n in range(1, 7)}
@@ -729,21 +750,60 @@ class ConsoleState:
 
             if address.startswith(("/main/st/", "/main/m/")):
                 key = "main_st" if address.startswith("/main/st/") else "main_mono"
-                if address.endswith("/mix/on"):
-                    self.outputs[key]["on"] = self._bool(value)
-                elif address.endswith("/mix/fader"):
-                    self.outputs[key]["fader"] = max(0.0, min(1.0, float(value)))
-                elif address.endswith("/grp/dca"):
-                    self.outputs[key]["dca_mask"] = int(value) & 255
-                elif address.endswith("/grp/mute"):
-                    self.outputs[key]["mute_mask"] = int(value) & 63
-                else:
-                    return False
-                self.received.add(address)
-                return True
+                if address in self.strip_nodes:
+                    if not self._valid_main_node_value(address, value):
+                        return False
+                    self.strip_nodes[address] = value
+                    suffix = address.split("/")[3:]
+                    if suffix == ["config", "name"]: pass
+                    elif suffix == ["mix", "on"]: self.outputs[key]["on"] = self._bool(value)
+                    elif suffix == ["mix", "fader"]: self.outputs[key]["fader"] = float(value)
+                    elif suffix == ["grp", "dca"]: self.outputs[key]["dca_mask"] = int(value)
+                    elif suffix == ["grp", "mute"]: self.outputs[key]["mute_mask"] = int(value)
+                    self.received.add(address)
+                    return True
+                if len(parts) == 5 and parts[2] == "mix":
+                    matrix = int(parts[3])
+                    if not 1 <= matrix <= 6 or parts[4] not in ("on", "level"):
+                        return False
+                    send = self.outputs[key]["sends"].setdefault(matrix, {"on": True, "level": 0.0})
+                    if parts[4] == "on" and isinstance(value, (int, float)) and int(value) in (0, 1):
+                        send["on"] = self._bool(value)
+                    elif parts[4] == "level" and isinstance(value, (int, float)) and 0 <= float(value) <= 1:
+                        send["level"] = float(value)
+                    else:
+                        return False
+                    self.received.add(address)
+                    return True
+                return False
         except (ValueError, KeyError, TypeError):
             return False
         return False
+
+    @staticmethod
+    def _valid_main_node_value(address, value):
+        parts = address.strip("/").split("/")
+        if len(parts) < 3 or "/".join(parts[:2]) not in ("/main/st", "/main/m"):
+            return False
+        node = "/".join(parts[2:-1])
+        field_name = parts[-1]
+        try:
+            spec = MAIN_NODE_SCHEMA[node][field_name]
+        except KeyError:
+            return False
+        default, minimum, maximum, step, kind, labels = spec
+        if kind == "string":
+            return isinstance(value, str) and len(value) <= 12
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return False
+        if kind in ("int", "enum") and float(value) != int(value):
+            return False
+        numeric = float(value)
+        if minimum is not None and numeric < minimum or maximum is not None and numeric > maximum:
+            return False
+        if step and minimum is not None and abs((numeric - minimum) / step - round((numeric - minimum) / step)) > 1e-6:
+            return False
+        return True
 
     @staticmethod
     def _valid_strip_node_value(address, value):
@@ -906,6 +966,7 @@ class ConsoleState:
                 if address.endswith("/grp/mute"): return self.outputs[key]["mute_mask"]
                 if address.endswith("/mix/on"): return self.outputs[key]["on"]
                 if address.endswith("/mix/fader"): return self.outputs[key]["fader"]
+                return self.strip_nodes.get(address)
         except (ValueError, KeyError):
             return None
         return None
