@@ -68,8 +68,9 @@ class ConsoleState:
             "B": {"level": 0.0, "dim": 0, "latch": 0, "destmap": 0}}
         # Oscillator generator configuration; frequency values use 121 logarithmic positions.
         self.osc_config = {"level": 0.0, "f1": 632.456, "f2": 632.456, "fsel": 0, "type": 0, "dest": 0}
-        # User output slots 01-48; 0 means unassigned. Sources are documented 0-208.
+        # User routing slots: outputs 01-48 (sources 0-208), inputs 01-32 (sources 0-168).
         self.user_rout_out = {number: 0 for number in range(1, 49)}
+        self.user_rout_in = {number: 0 for number in range(1, 33)}
         self.solo_config = {
             "level": 0.0, "source": 0, "sourcetrim": 0.0,
             "chmode": 0, "busmode": 0, "dcamode": 0,
@@ -232,17 +233,20 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) == 4 and parts[:3] == ["config", "userrout", "out"]:
+            if len(parts) == 4 and parts[:3] in (["config", "userrout", "out"], ["config", "userrout", "in"]):
+                direction = parts[2]
+                slots = self.user_rout_out if direction == "out" else self.user_rout_in
+                max_source = 208 if direction == "out" else 168
                 slot_text = parts[3]
                 if not slot_text.isdigit() or len(slot_text) != 2:
                     return False
                 slot = int(slot_text)
-                if slot not in self.user_rout_out or isinstance(value, bool) or not isinstance(value, (int, float)):
+                if slot not in slots or isinstance(value, bool) or not isinstance(value, (int, float)):
                     return False
                 number = float(value)
-                if number != int(number) or not 0 <= number <= 208:
+                if number != int(number) or not 0 <= number <= max_source:
                     return False
-                self.user_rout_out[slot] = int(number)
+                slots[slot] = int(number)
                 self.received.add(address)
                 return True
 
@@ -519,11 +523,12 @@ class ConsoleState:
                 return self.urec_markers.get(int(parts[2]), 0)
             if len(parts) == 3 and parts[:2] == ["-stat", "urec"]:
                 return self.urec_status.get(parts[2])
-            if len(parts) == 4 and parts[:3] == ["config", "userrout", "out"]:
+            if len(parts) == 4 and parts[:3] in (["config", "userrout", "out"], ["config", "userrout", "in"]):
                 slot_text = parts[3]
                 if not slot_text.isdigit() or len(slot_text) != 2:
                     return None
-                return self.user_rout_out.get(int(slot_text))
+                slots = self.user_rout_out if parts[2] == "out" else self.user_rout_in
+                return slots.get(int(slot_text))
             if len(parts) == 3 and parts[:2] == ["config", "osc"]:
                 return self.osc_config.get(parts[2])
             if len(parts) == 3 and parts[:2] == ["config", "talk"]:
