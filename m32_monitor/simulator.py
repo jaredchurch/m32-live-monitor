@@ -664,7 +664,7 @@ class Simulator:
                            for n in range(1, 13))
         return ("/config/dp48/scope %%%04d\n/config/dp48/broadcast %d\n"
                 "/config/dp48/aesAB %s\n" %
-                (int(values["scope"]), values["broadcast"], ("AESA", "AESB")[values["aesAB"]]) +
+                ("%" + format(int(values["scope"]), "04b"), values["broadcast"], ("AESA", "AESB")[values["aesAB"]]) +
                 self._config_dp48_node_group("link") +
                 self._config_dp48_node_group("assign") +
                 self._config_dp48_node_group("grpname"))
