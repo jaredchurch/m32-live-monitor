@@ -1,4 +1,4 @@
-# M32 Live Monitor
+# M32 Simulation
 
 A local-first browser dashboard for monitoring a Midas M32. It runs natively on macOS, Linux and Windows, and in a local VS Code Dev Container. Codespaces is for UI and simulator development; its forwarded web port is not a route to a physical console on your home LAN.
 
@@ -24,9 +24,9 @@ Requirements: Python 3.11+.
 
 Open http://localhost:8000. The first run creates a local virtual environment and installs dependencies. Stop with Ctrl+C. The application reads an optional .env file automatically.
 
-By default the dashboard listens on this computer only. To open it from a phone, tablet or another computer on the same LAN, start it with `WEB_HOST=0.0.0.0 ./run.sh` (macOS/Linux) or set `$env:WEB_HOST="0.0.0.0"` before running `./run.ps1` (PowerShell). Then browse to `http://<computer-LAN-IP>:8000`. Keep this LAN exposure on a trusted network; the dashboard currently has no login. For a memorable address, create a local DNS record such as `m32-monitor.home.arpa` pointing to the computer running the app.
+By default the dashboard listens on this computer only. To open it from a phone, tablet or another computer on the same LAN, start it with `WEB_HOST=0.0.0.0 ./run.sh` (macOS/Linux) or set `$env:WEB_HOST="0.0.0.0"` before running `./run.ps1` (PowerShell). Then browse to `http://<computer-LAN-IP>:8000`. Keep this LAN exposure on a trusted network; the dashboard currently has no login. For a memorable address, create a local DNS record such as `m32-simulation.home.arpa` pointing to the computer running the app.
 
-The default mode is simulator and starts with the Sunday service scenario. Use the **Simulator / OSC log** tab to select other scenarios and inspect all traffic. The simulator binds to 0.0.0.0:10023 on IPv4 so M32-Edit can discover it using its /xinfo broadcast scan. Select M32-Live-Monitor in the scan results, or enter 127.0.0.1 manually on the same Mac. This exposes the unauthenticated simulator to the local network; use it only on a trusted LAN and allow the app through the macOS firewall if prompted. Set SIMULATOR_HOST=127.0.0.1 to disable network discovery and restrict access to this Mac. The reported identity is configurable with SIMULATOR_NAME, SIMULATOR_MODEL, SIMULATOR_FIRMWARE and SIMULATOR_SERVER_VERSION. Do not point M32-Edit at the physical console while testing the simulator.
+The default mode is simulator and starts with the Sunday service scenario. Use the **Simulator / OSC log** tab to select other scenarios and inspect all traffic. The simulator binds to 0.0.0.0:10023 on IPv4 so M32-Edit can discover it using its /xinfo broadcast scan. Select M32-Simulation in the scan results, or enter 127.0.0.1 manually on the same Mac. This exposes the unauthenticated simulator to the local network; use it only on a trusted LAN and allow the app through the macOS firewall if prompted. Set SIMULATOR_HOST=127.0.0.1 to disable network discovery and restrict access to this Mac. The reported identity is configurable with SIMULATOR_NAME, SIMULATOR_MODEL, SIMULATOR_FIRMWARE and SIMULATOR_SERVER_VERSION. Do not point M32-Edit at the physical console while testing the simulator.
 
 ## Use a physical M32
 
