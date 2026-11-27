@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class Simulator:
     def __init__(self, state, host="0.0.0.0", port=10023, log_limit=3000,
-                 name="M32-Live-Monitor", model="M32", firmware="4.06",
+                 name="M32-Simulation", model="M32", firmware="4.06",
                  server_version="V2.07"):
         self.state, self.host, self.port = state, host, port
         self.name, self.model = name, model
