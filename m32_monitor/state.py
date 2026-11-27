@@ -71,6 +71,20 @@ class ConsoleState:
         # User routing slots: outputs 01-48 (sources 0-208), inputs 01-32 (sources 0-168).
         self.user_rout_out = {number: 0 for number in range(1, 49)}
         self.user_rout_in = {number: 0 for number in range(1, 33)}
+        # User-assignable surface banks A/B/C: colour, four encoders and eight buttons.
+        self.user_controls = {
+            bank: {"color": 0, "enc": {n: "-" for n in range(1, 5)},
+                   "btn": {n: "-" for n in range(5, 13)}}
+            for bank in ("A", "B", "C")
+        }
+        self.tape_config = {"gainL": 0.0, "gainR": 0.0, "autoplay": 0}
+        self.amix_enable = {"X": 0, "Y": 0}
+        self.dp48_config = {
+            "scope": 0, "broadcast": 0, "aesAB": 0,
+            "link": {n: 0 for n in range(1, 25)},
+            "assign": {n: 0 for n in range(1, 49)},
+            "grpname": {n: "" for n in range(1, 13)},
+        }
         self.solo_config = {
             "level": 0.0, "source": 0, "sourcetrim": 0.0,
             "chmode": 0, "busmode": 0, "dcamode": 0,
@@ -250,6 +264,87 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if len(parts) == 4 and parts[:2] == ["config", "userctrl"]:
+                bank, section, slot_text = parts[2], parts[3], None
+                if bank not in self.user_controls:
+                    return False
+                if section == "color" and len(parts) == 4:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or int(value) not in range(16):
+                        return False
+                    self.user_controls[bank]["color"] = int(value)
+                elif section in ("enc", "btn") and len(parts) == 5:
+                    slot_text = parts[4]
+                    values = self.user_controls[bank][section]
+                    if not slot_text.isdigit() or int(slot_text) not in values or not isinstance(value, str) or len(value) > 7:
+                        return False
+                    values[int(slot_text)] = value
+                else:
+                    return False
+                self.received.add(address)
+                return True
+
+            if len(parts) == 3 and parts[:2] == ["config", "tape"]:
+                field = parts[2]
+                if field == "autoplay":
+                    valid = not isinstance(value, bool) and isinstance(value, (int, float)) and float(value) in (0.0, 1.0)
+                else:
+                    valid = field in ("gainL", "gainR") and not isinstance(value, bool) and isinstance(value, (int, float)) and -6.0 <= float(value) <= 24.0 and abs(float(value) * 2 - round(float(value) * 2)) < 1e-6
+                if not valid:
+                    return False
+                self.tape_config[field] = int(value) if field == "autoplay" else float(value)
+                self.received.add(address)
+                return True
+
+            if len(parts) == 3 and parts[:2] == ["config", "amixenable"]:
+                field = parts[2]
+                if field not in self.amix_enable or isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) not in (0.0, 1.0):
+                    return False
+                self.amix_enable[field] = int(value)
+                self.received.add(address)
+                return True
+
+            if len(parts) >= 3 and parts[:2] == ["config", "dp48"]:
+                field = parts[2]
+                if len(parts) == 3 and field in ("scope", "broadcast", "aesAB"):
+                    maximum = 15 if field == "scope" else 1
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or int(value) not in range(maximum + 1):
+                        return False
+                    self.dp48_config[field] = int(value)
+                elif len(parts) == 4 and field in ("link", "assign", "grpname"):
+                    slot_text = parts[3]
+                    values = self.dp48_config[field]
+                    if not slot_text.isdigit() or len(slot_text) != 2 or int(slot_text) not in values:
+                        return False
+                    if field == "grpname":
+                        if not isinstance(value, str) or len(value) > 8:
+                            return False
+                        values[int(slot_text)] = value
+                    else:
+                        maximum = 1 if field == "link" else 12
+                        if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or int(value) not in range(maximum + 1):
+                            return False
+                        values[int(slot_text)] = int(value)
+                else:
+                    return False
+                self.received.add(address)
+                return True
+
+            if len(parts) == 4 and parts[:2] == ["config", "userctrl"]:
+                bank, section = parts[2], parts[3]
+                if bank not in self.user_controls:
+                    return None
+                if section == "color" and len(parts) == 4:
+                    return self.user_controls[bank]["color"]
+                if section in ("enc", "btn") and len(parts) == 5 and parts[4].isdigit():
+                    return self.user_controls[bank][section].get(int(parts[4]))
+            if len(parts) == 3 and parts[:2] == ["config", "tape"]:
+                return self.tape_config.get(parts[2])
+            if len(parts) == 3 and parts[:2] == ["config", "amixenable"]:
+                return self.amix_enable.get(parts[2])
+            if len(parts) == 3 and parts[:2] == ["config", "dp48"]:
+                return self.dp48_config.get(parts[2])
+            if len(parts) == 4 and parts[:2] == ["config", "dp48"] and parts[2] in ("link", "assign", "grpname") and parts[3].isdigit():
+                return self.dp48_config[parts[2]].get(int(parts[3]))
             if len(parts) == 3 and parts[:2] == ["config", "osc"]:
                 field = parts[2]
                 if field not in self.osc_config or isinstance(value, bool) or not isinstance(value, (int, float)):
