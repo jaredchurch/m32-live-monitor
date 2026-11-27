@@ -1349,7 +1349,7 @@ def test_channel_config_parent_node_returns_identity_and_routing_fields():
 
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ['/ch/01/config "CH 01" 1 YE 1\n']
+    assert response.params == ['/ch/01/config "CH 01" 1 RD 1\n']
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
