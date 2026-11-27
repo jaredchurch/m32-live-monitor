@@ -2625,3 +2625,20 @@ def test_eq_gain_accepts_half_tenth_db_values_across_strip_families():
 
     assert state.update("/main/st/eq/2/g", -2.25)
     assert state.get("/main/st/eq/2/g") == -2.25
+
+
+def test_channel_mix_node_set_accepts_negative_infinity_fader_token():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "ch/01/mix OFF -oo ON +0 OFF -oo"))
+
+    assert state.get("/ch/01/mix/on") == 0
+    assert state.get("/ch/01/mix/fader") == 0.0
+    assert state.get("/ch/01/mix/st") == 1
+    assert state.get("/ch/01/mix/pan") == 0.0
+    assert state.get("/ch/01/mix/mono") == 0
+    assert state.get("/ch/01/mix/mlevel") == 0.0
+    assert not simulator.snapshot(outcome="unhandled_set")["events"]
