@@ -364,7 +364,7 @@ class Simulator:
             "-prefs/rta/pos": ("PRE", "POST"),
             "-prefs/rta/mode": ("BAR", "SPEC"),
             "-prefs/rta/det": ("RMS", "PEAK"),
-            "-prefs/rta/peakhold": ("OFF", "1", "2", "3", "4", "5", "6", "7", "8"),
+            "-prefs/rta/peakhold": ("OFF", "1s", "2s", "3s", "4s", "5s", "6s", "7s", "8s"),
             "-stat/rtamodeeq": ("BAR", "SPEC"),
             "-stat/rtamodegeq": ("BAR", "SPEC"),
             "-stat/rtaeqpre": ("OFF", "ON"),
