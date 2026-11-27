@@ -595,7 +595,7 @@ class Simulator:
     def _config_osc_node_group(self):
         """Render the six oscillator generator settings in protocol order."""
         values = self.state.osc_config
-        return "/config/osc %.1f %.1f %.1f %s %s %d\\n" % (
+        return "/config/osc %.1f %.3f %.3f %s %s %d\\n" % (
             values["level"], values["f1"], values["f2"],
             ("F1", "F2")[values["fsel"]],
             ("SINE", "PINK", "WHITE")[values["type"]], values["dest"])
@@ -685,8 +685,10 @@ class Simulator:
                 rendered = ("F1", "F2")[int(value)]
             elif field == "type":
                 rendered = ("SINE", "PINK", "WHITE")[int(value)]
-            elif field in ("level", "f1", "f2"):
+            elif field == "level":
                 rendered = "%.1f" % float(value)
+            elif field in ("f1", "f2"):
+                rendered = "%.3f" % float(value)
             else:
                 rendered = str(int(value))
             self.send(client, "/node", "%s %s\\n" % (address, rendered), outcome="node_response")
