@@ -65,6 +65,8 @@ class ConsoleState:
         self.talk_config = {"enable": 0, "source": 0,
             "A": {"level": 0.0, "dim": 0, "latch": 0, "destmap": 0},
             "B": {"level": 0.0, "dim": 0, "latch": 0, "destmap": 0}}
+        # Oscillator generator configuration; frequency values use 121 logarithmic positions.
+        self.osc_config = {"level": 0.0, "f1": 1000.0, "f2": 1000.0, "fsel": 0, "type": 0, "dest": 0}
         self.solo_config = {
             "level": 0.0, "source": 0, "sourcetrim": 0.0,
             "chmode": 0, "busmode": 0, "dcamode": 0,
@@ -224,6 +226,27 @@ class ConsoleState:
                 if field not in self.mono_config or isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or int(value) not in range(maximum + 1):
                     return False
                 self.mono_config[field] = int(value)
+                self.received.add(address)
+                return True
+
+            if len(parts) == 3 and parts[:2] == ["config", "osc"]:
+                field = parts[2]
+                if field not in self.osc_config or isinstance(value, bool) or not isinstance(value, (int, float)):
+                    return False
+                number = float(value)
+                if field == "level":
+                    valid = -90.0 <= number <= 10.0 and abs((number + 90.0) / 0.625 - round((number + 90.0) / 0.625)) < 1e-6
+                elif field in ("f1", "f2"):
+                    valid = 20.0 <= number <= 20000.0 and abs(math.log(number / 20.0) / math.log(1000.0) * 120.0 - round(math.log(number / 20.0) / math.log(1000.0) * 120.0)) < 1e-4
+                elif field == "fsel":
+                    valid = number in (0.0, 1.0)
+                elif field == "type":
+                    valid = number in (0.0, 1.0, 2.0)
+                else:
+                    valid = number == int(number) and 0 <= number <= 25
+                if not valid:
+                    return False
+                self.osc_config[field] = int(number) if field in ("fsel", "type", "dest") else number
                 self.received.add(address)
                 return True
 
@@ -479,6 +502,8 @@ class ConsoleState:
                 return self.urec_markers.get(int(parts[2]), 0)
             if len(parts) == 3 and parts[:2] == ["-stat", "urec"]:
                 return self.urec_status.get(parts[2])
+            if len(parts) == 3 and parts[:2] == ["config", "osc"]:
+                return self.osc_config.get(parts[2])
             if len(parts) == 3 and parts[:2] == ["config", "talk"]:
                 return self.talk_config.get(parts[2])
             if len(parts) == 4 and parts[:2] == ["config", "talk"] and parts[2] in ("A", "B"):
