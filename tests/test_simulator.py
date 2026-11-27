@@ -2697,7 +2697,7 @@ def test_auxin_mix_send_level_accepts_db():
     assert state.get("/auxin/01/mix/01/on") == 1
     assert state.get("/auxin/01/mix/01/level") == pytest.approx((-18.5 + 50.0) / 80.0)
     assert state.get("/auxin/01/mix/01/pan") == pytest.approx(0.0)
-    assert state.get("/auxin/01/mix/01/type") == "PRE"
+    assert state.get("/auxin/01/mix/01/type") == 3
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
 
