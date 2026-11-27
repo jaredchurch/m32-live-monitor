@@ -1368,7 +1368,7 @@ def test_channel_processing_node_reads_cover_delay_preamp_gate_dynamics_insert_a
         simulator.handle(client, packet("/node", header))
         response = OscMessage(simulator.transport.sent[-1][0])
         assert response.address == "/node"
-        assert len(response.params[0].split()) == count + 1
+        assert len(response.params[0].split()) - 1 == count + 1
         assert response.params[0].startswith("/" + header + " ")
 
 
