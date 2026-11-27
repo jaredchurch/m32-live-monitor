@@ -1307,7 +1307,7 @@ def test_config_routing_parent_node_returns_all_documented_routing_entries():
     assert response.address == "/node"
     assert len(lines) == len(ROUTING_PATHS) - 1
     assert "/config/routing/IN/1-8 AN25-32" in lines
-    assert "/config/routing/AES50A/1-8 B1-8" in lines
+    assert "/config/routing/AES50A/1-8 A9-16" in lines
     assert "/config/routing/outswitch 0" in lines
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
