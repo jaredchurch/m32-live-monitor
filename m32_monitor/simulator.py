@@ -425,14 +425,14 @@ class Simulator:
                     "config/routing/IN", "config/routing/AES50A",
                     "config/routing/AES50B", "config/routing/CARD",
                     "config/routing/OUT", "config/routing/PLAY"):
-                from m32_monitor.routing import ROUTING_PATHS
+                from m32_monitor.routing import ROUTING_PATHS, routing_enum_index
                 prefix = "/" + header
                 paths = [path for path in ROUTING_PATHS
                          if path.startswith(prefix + "/")
                          and path.rsplit("/", 1)[-1] not in ("routswitch", "rootswitch", "outswitch")]
                 if len(values) != len(paths):
                     raise ValueError("Routing node requires %d patch values" % len(paths))
-                parsed = [int(token, 0) for token in values]
+                parsed = [routing_enum_index(path, token) for path, token in zip(paths, values)]
             elif header in ("config/userrout/out", "config/userrout/in"):
                 direction = header.rsplit("/", 1)[1]
                 slots = self.state.user_rout_out if direction == "out" else self.state.user_rout_in
@@ -1031,9 +1031,11 @@ class Simulator:
         else:
             paths = [path for path in ROUTING_PATHS
                      if path.startswith(prefix + "/")]
-        return "".join("%s %s\n" % (path, self.state.routing.get(path)
-                                      if self.state.routing.get(path) is not None else 0)
-                       for path in paths)
+        from m32_monitor.routing import routing_enum_token
+        return "".join("%s %s\n" % (
+            path, routing_enum_token(path, self.state.routing.get(path)
+                                     if self.state.routing.get(path) is not None else 0))
+            for path in paths)
 
     def _config_userctrl_node_group(self, bank, section=None):
         """Render a user-assignable control bank or its encoder/button sub-node."""
@@ -1691,24 +1693,24 @@ class Simulator:
                 "/config/routing/IN", "/config/routing/AES50A",
                 "/config/routing/AES50B", "/config/routing/CARD",
                 "/config/routing/OUT", "/config/routing/PLAY"):
-            from m32_monitor.routing import ROUTING_PATHS
+            from m32_monitor.routing import ROUTING_PATHS, routing_enum_index
             prefix = address
             paths = [path for path in ROUTING_PATHS
                      if path.startswith(prefix + "/")
                      and path.rsplit("/", 1)[-1] not in ("routswitch", "rootswitch", "outswitch")]
-            if (len(args) != len(paths) or any(
-                    isinstance(value, bool) or not isinstance(value, (int, float))
-                    or float(value) != int(value)
-                    or not 0 <= int(value) < len(ROUTING_PATHS[path][1])
-                    for path, value in zip(paths, args))):
+            try:
+                parsed = [routing_enum_index(path, value) for path, value in zip(paths, args)]
+            except ValueError:
+                parsed = None
+            if len(args) != len(paths) or parsed is None:
                 self.record("in", "unhandled_set", address, args, client,
                             "Expected %d integer patch values in documented enum ranges" % len(paths))
                 return
-            for path, value in zip(paths, args):
-                self.state.routing.update(path, int(value))
+            for path, value in zip(paths, parsed):
+                self.state.routing.update(path, value)
                 self.state.received.add(path)
                 for subscriber in tuple(self.clients):
-                    self.send(subscriber, path, int(value), outcome="subscription_update")
+                    self.send(subscriber, path, value, outcome="subscription_update")
             self.record("in", "handled_set", address, args, client,
                         "Applied %d routing patch assignment(s)" % len(paths))
             return
@@ -1741,10 +1743,18 @@ class Simulator:
                 self.record("in", "unhandled_set", address, args, client,
                             "Only single-argument parameter SET messages are currently supported")
                 return
-            if self.state.update(address, args[0]):
+            value = args[0]
+            from m32_monitor.routing import ROUTING_ENUM_TOKENS, routing_enum_index
+            if address in ROUTING_ENUM_TOKENS:
+                try:
+                    value = routing_enum_index(address, value)
+                except ValueError as exc:
+                    self.record("in", "unhandled_set", address, args, client, str(exc))
+                    return
+            if self.state.update(address, value):
                 self.record("in", "handled_set", address, args, client)
                 for subscriber in tuple(self.clients):
-                    self.send(subscriber, address, args[0], outcome="subscription_update")
+                    self.send(subscriber, address, value, outcome="subscription_update")
             else:
                 self.record("in", "unhandled_set", address, args, client,
                             "No simulator state handler accepts this address/type")
