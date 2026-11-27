@@ -3,7 +3,7 @@ from dataclasses import asdict, dataclass, field
 import math
 import struct
 import time
-from m32_monitor.routing import ROUTING_PATHS, RoutingState
+from m32_monitor.routing import CONFIG_LINK_ADDRESSES, ROUTING_PATHS, RoutingState
 
 
 # Ordered X32node schemas for input strips. Values are (default, minimum, maximum,
@@ -370,7 +370,7 @@ class ConsoleState:
                 if (isinstance(value, bool) or not isinstance(value, (int, float))
                         or float(value) != int(value) or not 0 <= int(value) < len(choices)):
                     return False
-        if not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/fx/", "/outputs/main/", "/outputs/aux/", "/outputs/p16/", "/outputs/aes/", "/outputs/rec/")) and self.routing.update(address, value):
+        if address not in CONFIG_LINK_ADDRESSES and not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/fx/", "/outputs/main/", "/outputs/aux/", "/outputs/p16/", "/outputs/aes/", "/outputs/rec/")) and self.routing.update(address, value):
             self.received.add(address)
             return True
         parts = address.strip("/").split("/")
@@ -761,6 +761,7 @@ class ConsoleState:
                 if pair not in self.config_links[family] or isinstance(value, bool) or not isinstance(value, (int, float)) or int(value) not in (0, 1) or float(value) != int(value):
                     return False
                 self.config_links[family][pair] = int(value)
+                self.routing.values[address] = int(value)
                 self.received.add(address)
                 return True
 
