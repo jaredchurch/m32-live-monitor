@@ -22,7 +22,8 @@ OSC_CATALOGUE = [
         {"pattern":"/config/mtxlink/{1-2...5-6}","purpose":"Link/unlink Matrix pairs","operations":"GET, SET, /node"},
         {"pattern":"/config/mute/{1...6}","purpose":"Mute group state","operations":"GET, SET, /node"},
         {"pattern":"/config/linkcfg/{hadly,eq,dyn,fdrmute}","purpose":"Linked-channel parameter coupling preferences (delay/headamp, EQ, dynamics, fader/mute)","operations":"GET, SET, /node"},
-        {"pattern":"/config/solo/*, /config/mono/*, /config/talk/*, /config/osc/*","purpose":"Solo, mono, talkback and oscillator configuration","operations":"GET, SET","note":"Known protocol families; not yet fully simulated."},
+        {"pattern":"/config/solo/*, /config/talk/*, /config/osc/*","purpose":"Solo, talkback and oscillator configuration","operations":"GET, SET","note":"Known protocol families; not yet fully simulated."},
+        {"pattern":"/config/mono/{mode,link}","purpose":"Main mono/centre output mode and Main L/R dependency","operations":"GET, SET, /node","note":"Mode and link settings are simulated."}},
         {"pattern":"/config/routing/*","purpose":"Input, AES50, Card, output and playback routing banks","operations":"GET, SET, /node","note":"Routing snapshot covers selected assignments; complete node read/write coverage is outstanding."},
         {"pattern":"/config/userctrl/*, /config/dp48/*","purpose":"User controls and DP48 configuration","operations":"GET, SET, /node","note":"Known protocol families; not yet fully simulated."}
     ]},
