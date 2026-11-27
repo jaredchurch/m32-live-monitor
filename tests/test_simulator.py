@@ -2079,3 +2079,47 @@ def test_invalid_headamp_node_write_is_atomic():
     simulator.handle(client, packet("/", "headamp/000 61 ON"))
     assert simulator.state.headamps[0] == before
     assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+
+def test_m32_edit_showfile_preferences_and_action_options_accept_node_writes():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    writes = (
+        ("/-show/showfile/show/inputs", "ON", 1),
+        ("/-show/showfile/show/mxsends", "OFF", 0),
+        ("/-show/showfile/show/mxbuses", "ON", 1),
+        ("/-show/showfile/show/console", "OFF", 0),
+        ("/-show/showfile/show/chan16", "ON", 1),
+        ("/-show/showfile/show/chan32", "ON", 1),
+        ("/-show/showfile/show/return", "ON", 1),
+        ("/-show/showfile/show/buses", "ON", 1),
+        ("/-show/showfile/show/lrmtxdca", "ON", 1),
+        ("/-show/showfile/show/effects", "ON", 1),
+        ("/-prefs/safe_masterlevels", "ON", 1),
+        ("/-prefs/show_control", "OFF", 0),
+        ("/-prefs/haflags", "ON", 1),
+        ("/-prefs/invertmutes", "OFF", 0),
+        ("/-action/undopt", "1", 1),
+    )
+    for address, token, expected in writes:
+        simulator.handle(client, packet("/", address.lstrip("/") + " " + token))
+        assert state.get(address) == expected
+        assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+    assert len(simulator.snapshot(outcome="handled_node_set")["events"]) == len(writes)
+
+
+def test_unknown_root_node_set_reports_actual_header_for_enum_diagnostics():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "config/tape/autoplay MAYBE"))
+
+    event = simulator.snapshot(outcome="unhandled_set")["events"][-1]
+    assert event["address"] == "/config/tape/autoplay"
+    assert "tuple.index(x)" in event["detail"]
