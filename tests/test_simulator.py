@@ -851,6 +851,41 @@ def test_invalid_rta_group_node_set_is_atomic():
     ("1 2 3 4 5 GOOD 6 7 8 9 READY ERROR \"Card one\" \"Card two\" \"No error\" 10",
      [1, 2, 3, 4, 5, 1, 6, 7, 8, 9, 1, 3, "Card one", "Card two", "No error", 10]),
 ])
+@pytest.mark.parametrize("header,value,expected", [
+    ("-urec/sessionmax", "12", 12),
+    ("-urec/batterystate", "GOOD", 1),
+    ("-urec/sd1state", "READY", 1),
+    ("-urec/sd1info", '"Card ready"', "Card ready"),
+    ("-urec/errormessage", '"No error"', "No error"),
+])
+def test_xlive_urec_individual_node_set(header, value, expected):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    simulator.handle(("127.0.0.1", 50123), packet("/", header + " " + value))
+    assert state.get(header) == expected
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+@pytest.mark.parametrize("field,value,expected", [
+    ("on", "OFF", 0), ("fader", "0.25", 0.25),
+    ("config/name", '"Vox DCA"', "Vox DCA"), ("config/icon", "12", 12),
+    ("config/color", "GN", 2),
+])
+def test_dca_individual_node_get_set(field, value, expected):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", "dca/1/%s %s" % (field, value)))
+    assert state.get("/dca/1/" + field) == expected
+    simulator.handle(client, packet("/node", "dca/1/" + field))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params
+    assert simulator.snapshot(outcome="handled_node_get")["events"]
+
+
 def test_xlive_urec_group_set_updates_all_fields(tokens, expected):
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
