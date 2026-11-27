@@ -1787,7 +1787,7 @@ def test_fx_slot_nodes_are_readable_and_writable(number):
         simulator.handle(client, packet("/node", "fx/%02d/source" % number))
         assert simulator.snapshot(outcome="unhandled_command")["events"]
 
-    simulator.handle(client, packet("/", "fx/%02d/par/01 0.375" % number))
+    simulator.handle(client, packet("/fx/%02d/par/01" % number, 0.375))
     assert state.get("/fx/%02d/par/01" % number) == 0.375
     simulator.handle(client, packet("/node", "fx/%02d/par/01" % number))
     assert OscMessage(simulator.transport.sent[-1][0]).params == ["/fx/%02d/par/01 0.375000\n" % number]
