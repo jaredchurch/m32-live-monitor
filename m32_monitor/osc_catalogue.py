@@ -48,8 +48,8 @@ OSC_CATALOGUE = [
     {"category":"Buses, matrices and main outputs","support":"partial","items":[
         {"pattern":"/bus/{01...16}/config/*, /bus/{01...16}/mix/*","purpose":"Bus name, processing, fader, mute and sends to matrices","operations":"GET, SET, /node","note":"Bus config node returns name, icon and colour; core output mute/fader and Matrix sends are modelled."},
         {"pattern":"/mtx/{01...06}/config/*, /mtx/{01...06}/mix/*, /mtx/{01...06}/grp/*","purpose":"Matrix output configuration, fader, mute and group assignments","operations":"GET, SET, /node","note":"Implemented: config discovery (name/icon/colour), documented config/preamp/invert alias, output fader/mute and DCA/mute-group assignments."},
-        {"pattern":"/main/st/{config,mix,eq,dyn,insert}/*","purpose":"Main stereo output","operations":"GET, SET, /node","note":"Core fader/mute/group/send fields are modelled."},
-        {"pattern":"/main/m/{config,mix,eq,dyn,insert}/*","purpose":"Main mono/centre output","operations":"GET, SET, /node","note":"Core fader/mute/group/send fields are modelled."}
+        {"pattern":"/main/st/{config,dyn,dyn/filter,insert,eq,eq/{1...6},mix,grp}/*","purpose":"Main stereo output processing and control","operations":"GET, SET, /node","note":"Implemented config, dynamics/filter, insert, six-band EQ, fader/mute and group fields."},
+        {"pattern":"/main/m/{config,dyn,dyn/filter,insert,eq,eq/{1...6},mix,grp}/*","purpose":"Main mono/centre output processing and control","operations":"GET, SET, /node","note":"Implemented config, dynamics/filter, insert, six-band EQ, fader/mute and group fields."}
     ]},
     {"category":"DCA and mute groups","support":"partial","items":[
         {"pattern":"/dca/{1...8}/{config,mix}/*","purpose":"DCA name, fader and mute","operations":"GET, SET, /node","note":"Core name/fader/mute are modelled."},
