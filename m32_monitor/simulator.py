@@ -1102,7 +1102,7 @@ class Simulator:
         if (len(config_parts) == 3 and config_parts[0] in self.state.strip_node_schema
                 and config_parts[1].isdigit() and config_parts[2] == "config"):
             family, number = config_parts[0], int(config_parts[1])
-            limit = {"ch": 32, "auxin": 8, "fxrtn": 8}[family]
+            limit = {"ch": 32, "auxin": 8, "fxrtn": 8, "bus": 16}[family]
             if 1 <= number <= limit:
                 prefix = "/" + family + "/" + config_parts[1]
                 fields = tuple(self.state.strip_node_schema[family]["config"])
