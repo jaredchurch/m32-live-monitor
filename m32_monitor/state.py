@@ -205,14 +205,14 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if len(parts) == 3 and parts[:2] == ["config", "linkcfg"]:
+                field = parts[2]
                 if field not in self.link_config or isinstance(value, bool) or not isinstance(value, (int, float)) or int(value) not in (0, 1) or float(value) != int(value):
                     return False
                 self.link_config[field] = int(value)
                 self.received.add(address)
                 return True
 
-            if len(parts) == 3 and parts[:2] == ["config", "linkcfg"]:
-                return self.link_config.get(parts[2])
             if len(parts) == 3 and parts[0] == "config" and parts[1] in self.config_links:
                 family, pair = parts[1], parts[2]
                 if pair not in self.config_links[family] or isinstance(value, bool) or not isinstance(value, (int, float)) or int(value) not in (0, 1) or float(value) != int(value):
