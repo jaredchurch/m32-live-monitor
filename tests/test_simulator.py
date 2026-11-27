@@ -2657,3 +2657,14 @@ def test_channel_bus_send_node_accepts_numeric_pan_follow_enum_and_silent_level(
     assert state.get("/ch/01/mix/01/type") == 3
     assert state.get("/ch/01/mix/01/panFollow") == 0
     assert not simulator.snapshot(outcome="unhandled_set")["events"]
+
+def test_channel_group_node_accepts_percent_binary_dca_and_mute_masks():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "ch/01/grp %01000000 %000000"))
+
+    assert state.get("/ch/01/grp/dca") == 64
+    assert state.get("/ch/01/grp/mute") == 0
+    assert not [event for event in simulator.events if event.get("outcome") == "unhandled_set"]
