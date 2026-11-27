@@ -1758,3 +1758,65 @@ def test_invalid_grouped_dca_node_write_is_rejected_without_partial_changes():
 
     assert simulator.state.dcas[1] == before
     assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+@pytest.mark.parametrize("number", range(1, 9))
+def test_fx_slot_nodes_are_readable_and_writable(number):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    type_count = 61 if number <= 4 else 34
+
+    simulator.handle(client, packet("/node", "fx/%02d" % number))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == ["/fx/%02d/type HALL\n" % number] if number <= 4 else ["/fx/%02d/type GEQ2\n" % number]
+
+    simulator.handle(client, packet("/", "fx/%02d/type %d" % (number, type_count - 1)))
+    assert state.get("/fx/%02d/type" % number) == type_count - 1
+
+    if number <= 4:
+        simulator.handle(client, packet("/node", "fx/%02d/source" % number))
+        assert OscMessage(simulator.transport.sent[-1][0]).params == ["/fx/%02d/source INS INS\n" % number]
+        simulator.handle(client, packet("/", "fx/%02d/source MIX3 M/C" % number))
+        assert state.get("/fx/%02d/source/l" % number) == 3
+        assert state.get("/fx/%02d/source/r" % number) == 17
+        simulator.handle(client, packet("/node", "fx/%02d/source/l" % number))
+        assert OscMessage(simulator.transport.sent[-1][0]).params == ["/fx/%02d/source/l MIX3\n" % number]
+    else:
+        simulator.handle(client, packet("/node", "fx/%02d/source" % number))
+        assert simulator.snapshot(outcome="unhandled_command")["events"]
+
+    simulator.handle(client, packet("/", "fx/%02d/par/01 0.375" % number))
+    assert state.get("/fx/%02d/par/01" % number) == 0.375
+    simulator.handle(client, packet("/node", "fx/%02d/par/01" % number))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/fx/%02d/par/01 0.375000\n" % number]
+
+    simulator.handle(client, packet("/node", "fx/%02d/par" % number))
+    lines = OscMessage(simulator.transport.sent[-1][0]).params[0].splitlines()
+    assert len(lines) == 64
+    assert lines[0] == "/fx/%02d/par/01 0.375000" % number
+    assert lines[-1] == "/fx/%02d/par/64 0.000000" % number
+
+
+def test_fx_grouped_node_writes_and_invalid_values():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "fx/01 DLY"))
+    assert state.get("/fx/01/type") == 10
+    simulator.handle(client, packet("/", "fx/01/source MIX1 MIX2"))
+    assert state.get("/fx/01/source/l") == 1
+    assert state.get("/fx/01/source/r") == 2
+    params = " ".join(["0.25"] * 64)
+    simulator.handle(client, packet("/", "fx/01/par " + params))
+    assert state.get("/fx/01/par/64") == 0.25
+
+    assert not state.update("/fx/01/type", 61)
+    assert not state.update("/fx/05/type", 34)
+    assert not state.update("/fx/05/source/l", 1)
+    assert not state.update("/fx/01/source/r", 18)
+    assert not state.update("/fx/01/par/65", 0.5)
+    assert not state.update("/fx/01/par/01", float("inf"))
