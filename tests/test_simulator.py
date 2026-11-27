@@ -1558,7 +1558,7 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
     simulator = Simulator(state)
     simulator.transport = FakeTransport()
     client = ("127.0.0.1", 50123)
-    expected = {"config": 3, "dyn": 14, "dyn/filter": 3, "insert": 3,
+    expected = {"config": 3, "dyn": 15, "dyn/filter": 3, "insert": 3,
                 "eq": 1, "eq/6": 4, "mix": 2, "grp": 2}
     for prefix in ("main/st", "main/m"):
         for node, count in expected.items():
@@ -1569,7 +1569,7 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
             assert len(shlex.split(response.params[0])) - 1 == count
             assert response.params[0].startswith("/" + header + " ")
         simulator.handle(client, packet("/", prefix + '/config "Main Out" 12 YE'))
-        simulator.handle(client, packet("/", prefix + "/dyn ON COMP RMS LIN -30 4.0 2 3 15 20 150 POST 75 OFF"))
+        simulator.handle(client, packet("/", prefix + "/dyn ON COMP RMS LIN -30 4.0 2 3 15 20 150 POST 0 75 OFF"))
         simulator.handle(client, packet("/", prefix + "/dyn/filter ON HC12 120"))
         simulator.handle(client, packet("/", prefix + "/insert ON POST FX3L"))
         simulator.handle(client, packet("/", prefix + "/eq ON"))
