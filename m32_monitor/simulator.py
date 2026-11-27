@@ -560,7 +560,17 @@ class Simulator:
                     parsed = [int(values[0])]
                 elif key in ("options", "option"):
                     parsed = [int(values[0].lstrip("%"), 2) if values[0].startswith("%") else int(values[0], 0)]
-                else:
+                elif self._strip_node_header(header) is not None:
+                prefix, node, fields = self._strip_node_header(header)
+                if len(values) != len(fields):
+                    raise ValueError("Strip node %s requires %d values" % (header, len(fields)))
+                paths = [prefix + "/" + node + "/" + field for field in fields]
+                parsed = [self._parse_strip_node_value(self.state.strip_node_schema[header.split("/")[0]][node][field], token)
+                          for field, token in zip(fields, values)]
+                for path, value in zip(paths, parsed):
+                    if not self.state._valid_strip_node_value(path, value):
+                        raise ValueError("Invalid value for %s: %r" % (path, value))
+            else:
                     raise ValueError("Unknown RTA preference")
                 paths, parsed = [path], parsed
             else:
@@ -749,6 +759,60 @@ class Simulator:
                 self._config_dp48_node_group("link") +
                 self._config_dp48_node_group("assign") +
                 self._config_dp48_node_group("grpname"))
+
+    def _strip_node_header(self, header):
+        parts = header.split("/")
+        if len(parts) < 3 or parts[0] not in self.state.strip_node_schema or not parts[1].isdigit():
+            return None
+        family = parts[0]
+        number = int(parts[1])
+        limit = {"ch": 32, "auxin": 8, "fxrtn": 8}[family]
+        if not 1 <= number <= limit:
+            return None
+        node = "/".join(parts[2:])
+        schema = self.state.strip_node_schema[family]
+        if node in schema:
+            return "/" + family + "/" + parts[1], node, tuple(schema[node])
+        if len(parts) >= 4:
+            parent = "/".join(parts[2:-1])
+            field = parts[-1]
+            if parent in schema and field in schema[parent]:
+                return "/" + family + "/" + parts[1], parent, (field,)
+        return None
+
+    @staticmethod
+    def _parse_strip_node_value(spec, token):
+        default, minimum, maximum, step, kind, labels = spec
+        if kind == "string":
+            return token
+        if kind == "enum":
+            return labels.index(token)
+        if kind == "float":
+            return float(token)
+        return int(token, 0)
+
+    @staticmethod
+    def _format_strip_node_value(spec, value):
+        default, minimum, maximum, step, kind, labels = spec
+        if kind == "enum":
+            return labels[int(value)]
+        if kind == "string":
+            return json.dumps(value, ensure_ascii=False)
+        if kind == "float":
+            return "%.3f" % float(value)
+        return str(int(value))
+
+    def _strip_node_response(self, prefix, node, fields):
+        family = prefix.strip("/").split("/")[0]
+        specs = self.state.strip_node_schema[family][node]
+        values = []
+        for field in fields:
+            address = prefix + "/" + node + "/" + field
+            value = self.state.get(address)
+            if value is None:
+                value = specs[field][0]
+            values.append(self._format_strip_node_value(specs[field], value))
+        return "%s %s\\n" % (prefix + "/" + node, " ".join(values))
 
     def _handle_node(self, client, args):
         if len(args) != 1 or not isinstance(args[0], str):
@@ -1030,6 +1094,14 @@ class Simulator:
                     detail = "Returned RTA visibility X32node"
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client, detail)
+            return
+        strip_node = self._strip_node_header(header)
+        if strip_node is not None:
+            prefix, node, fields = strip_node
+            response = self._strip_node_response(prefix, node, fields)
+            self.send(client, "/node", response, outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned %s processing node (%d values)" % (node, len(fields)))
             return
         self.record("in", "unhandled_command", "/node", args, client,
                     "No X32node response is defined for header %r" % header)
