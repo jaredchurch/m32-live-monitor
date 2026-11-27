@@ -59,6 +59,8 @@ class ConsoleState:
             "mtxlink": {f"{n}-{n+1}": 0 for n in range(1, 6, 2)},
         }
         self.link_config = {"hadly": 0, "eq": 0, "dyn": 0, "fdrmute": 0}
+        # Main mono/centre output configuration: 0=LR+M, 1=LCR; link is OFF/ON.
+        self.mono_config = {"mode": 0, "link": 0}
         self.key_solo = 0
         self.solo_switches = {number: 0 for number in range(1, 81)}
         self.card_preferences = {name: 0 for name in ("UFifc", "UFmode", "USBmode", "ADATwc", "ADATsync", "MADImode", "MADIin", "MADIout", "MADIsrc", "URECtracks", "URECplayb", "URECrout", "URECsdsel")}
@@ -202,6 +204,15 @@ class ConsoleState:
                     self.matrices[number]["name"] = value
                 else:
                     return False
+                self.received.add(address)
+                return True
+
+            if len(parts) == 3 and parts[:2] == ["config", "mono"]:
+                field = parts[2]
+                maximum = 1
+                if field not in self.mono_config or isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or int(value) not in range(maximum + 1):
+                    return False
+                self.mono_config[field] = int(value)
                 self.received.add(address)
                 return True
 
@@ -407,6 +418,8 @@ class ConsoleState:
                 return self.urec_status.get(parts[2])
             if len(parts) == 3 and parts[:2] == ["config", "linkcfg"]:
                 return self.link_config.get(parts[2])
+            if len(parts) == 3 and parts[:2] == ["config", "mono"]:
+                return self.mono_config.get(parts[2])
             if len(parts) == 3 and parts[0] == "config" and parts[1] in self.config_links:
                 return self.config_links[parts[1]].get(parts[2])
             if address == "/-prefs/rta/visibility":
