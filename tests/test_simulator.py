@@ -2521,3 +2521,26 @@ def test_direct_config_routing_parent_address_accepts_routing_mode_switch(token,
     assert "/config/routing/outswitch" in simulator.state.received
     assert simulator.snapshot(outcome="handled_set")["events"]
     assert not simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+
+def test_aes50_routing_accepts_m32_edit_aux_tb_alias():
+    from m32_monitor.routing import routing_enum_index, routing_enum_token
+
+    address = "/config/routing/AES50B/41-48"
+    assert routing_enum_index(address, "AUX/TB") == 25
+    assert routing_enum_index(address, "AUXIN1-6/TB") == 25
+    assert routing_enum_token(address, 25) == "AUXIN1-6/TB"
+
+
+def test_aes50_routing_node_set_accepts_m32_edit_aux_tb_alias():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    values = ["UIN1-8", "UIN9-16", "UIN17-24", "UIN25-32", "P161-8", "AUX/TB"]
+
+    simulator.handle(client, packet("/", "config/routing/AES50B " + " ".join(values)))
+
+    assert simulator.state.routing.get("/config/routing/AES50B/41-48") == 25
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+    assert not simulator.snapshot(outcome="unhandled_set")["events"]
