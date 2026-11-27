@@ -61,6 +61,13 @@ class ConsoleState:
         self.link_config = {"hadly": 0, "eq": 0, "dyn": 0, "fdrmute": 0}
         # Main mono/centre output configuration: 0=LR+M, 1=LCR; link is OFF/ON.
         self.mono_config = {"mode": 0, "link": 0}
+        self.solo_config = {
+            "level": 0.0, "source": 0, "sourcetrim": 0.0,
+            "chmode": 0, "busmode": 0, "dcamode": 0,
+            "exclusive": 0, "followsel": 0, "followsolo": 0,
+            "dimatt": -20.0, "dim": 0, "mono": 0, "delay": 0,
+            "delaytime": 0.3, "masterctrl": 0, "mute": 0, "dimpfl": 0,
+        }
         self.key_solo = 0
         self.solo_switches = {number: 0 for number in range(1, 81)}
         self.card_preferences = {name: 0 for name in ("UFifc", "UFmode", "USBmode", "ADATwc", "ADATsync", "MADImode", "MADIin", "MADIout", "MADIsrc", "URECtracks", "URECplayb", "URECrout", "URECsdsel")}
@@ -213,6 +220,33 @@ class ConsoleState:
                 if field not in self.mono_config or isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or int(value) not in range(maximum + 1):
                     return False
                 self.mono_config[field] = int(value)
+                self.received.add(address)
+                return True
+
+            if len(parts) == 3 and parts[:2] == ["config", "solo"]:
+                field = parts[2]
+                if field not in self.solo_config or isinstance(value, bool) or not isinstance(value, (int, float)):
+                    return False
+                number = float(value)
+                if field == "source":
+                    valid = number == int(number) and 0 <= number <= 6
+                elif field in ("chmode", "busmode", "dcamode", "exclusive", "followsel",
+                               "followsolo", "dim", "mono", "delay", "masterctrl", "mute", "dimpfl"):
+                    valid = number in (0, 1) and number == int(number)
+                elif field == "sourcetrim":
+                    valid = -18 <= number <= 18 and abs(number * 2 - round(number * 2)) < 1e-6
+                elif field == "dimatt":
+                    valid = -40 <= number <= 0 and number == int(number)
+                elif field == "delaytime":
+                    valid = 0.3 <= number <= 500 and abs(number * 10 - round(number * 10)) < 1e-6
+                else:
+                    valid = -90 <= number <= 10 and abs((number + 90) / 0.625 - round((number + 90) / 0.625)) < 1e-6
+                if not valid:
+                    return False
+                self.solo_config[field] = int(number) if field in (
+                    "source", "chmode", "busmode", "dcamode", "exclusive", "followsel",
+                    "followsolo", "dim", "mono", "delay", "masterctrl", "mute", "dimpfl"
+                ) else number
                 self.received.add(address)
                 return True
 
@@ -420,6 +454,8 @@ class ConsoleState:
                 return self.link_config.get(parts[2])
             if len(parts) == 3 and parts[:2] == ["config", "mono"]:
                 return self.mono_config.get(parts[2])
+            if len(parts) == 3 and parts[:2] == ["config", "solo"]:
+                return self.solo_config.get(parts[2])
             if len(parts) == 3 and parts[0] == "config" and parts[1] in self.config_links:
                 return self.config_links[parts[1]].get(parts[2])
             if address == "/-prefs/rta/visibility":
