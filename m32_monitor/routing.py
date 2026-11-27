@@ -85,13 +85,6 @@ class RoutingState:
         self.values = {}
 
     def update(self, address, value):
-        if address in ROUTING_PATHS:
-            choices = ROUTING_PATHS[address][1]
-            if (isinstance(value, bool) or not isinstance(value, (int, float))
-                    or float(value) != int(value) or not 0 <= int(value) < len(choices)):
-                return False
-            self.values[address] = int(value)
-            return True
         if address in CONFIG_LINK_ADDRESSES:
             # Stereo-link controls are binary. Keep them in the routing inventory,
             # but do not let this generic inventory path bypass ConsoleState validation.
