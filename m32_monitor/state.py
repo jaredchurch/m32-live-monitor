@@ -61,6 +61,10 @@ class ConsoleState:
         self.link_config = {"hadly": 0, "eq": 0, "dyn": 0, "fdrmute": 0}
         # Main mono/centre output configuration: 0=LR+M, 1=LCR; link is OFF/ON.
         self.mono_config = {"mode": 0, "link": 0}
+        # Talkback levels are stored in dB; destination maps are 18-bit masks.
+        self.talk_config = {"enable": 0, "source": 0,
+            "A": {"level": 0.0, "dim": 0, "latch": 0, "destmap": 0},
+            "B": {"level": 0.0, "dim": 0, "latch": 0, "destmap": 0}}
         self.solo_config = {
             "level": 0.0, "source": 0, "sourcetrim": 0.0,
             "chmode": 0, "busmode": 0, "dcamode": 0,
@@ -220,6 +224,31 @@ class ConsoleState:
                 if field not in self.mono_config or isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or int(value) not in range(maximum + 1):
                     return False
                 self.mono_config[field] = int(value)
+                self.received.add(address)
+                return True
+
+            if len(parts) == 3 and parts[:2] == ["config", "talk"]:
+                field = parts[2]
+                if field not in ("enable", "source") or isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) not in (0.0, 1.0):
+                    return False
+                self.talk_config[field] = int(value)
+                self.received.add(address)
+                return True
+
+            if len(parts) == 4 and parts[:2] == ["config", "talk"] and parts[2] in ("A", "B"):
+                section, field = parts[2], parts[3]
+                if field not in self.talk_config[section] or isinstance(value, bool) or not isinstance(value, (int, float)):
+                    return False
+                number = float(value)
+                if field in ("dim", "latch"):
+                    valid = number in (0.0, 1.0)
+                elif field == "destmap":
+                    valid = number == int(number) and 0 <= number <= 262143
+                else:
+                    valid = -90.0 <= number <= 10.0 and abs((number + 90.0) / 0.625 - round((number + 90.0) / 0.625)) < 1e-6
+                if not valid:
+                    return False
+                self.talk_config[section][field] = int(number) if field in ("dim", "latch", "destmap") else number
                 self.received.add(address)
                 return True
 
@@ -450,6 +479,10 @@ class ConsoleState:
                 return self.urec_markers.get(int(parts[2]), 0)
             if len(parts) == 3 and parts[:2] == ["-stat", "urec"]:
                 return self.urec_status.get(parts[2])
+            if len(parts) == 3 and parts[:2] == ["config", "talk"]:
+                return self.talk_config.get(parts[2])
+            if len(parts) == 4 and parts[:2] == ["config", "talk"] and parts[2] in ("A", "B"):
+                return self.talk_config[parts[2]].get(parts[3])
             if len(parts) == 3 and parts[:2] == ["config", "linkcfg"]:
                 return self.link_config.get(parts[2])
             if len(parts) == 3 and parts[:2] == ["config", "mono"]:
