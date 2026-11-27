@@ -134,7 +134,7 @@ class ConsoleState:
                             for key, item in sorted(self.meters.items())]}
 
     def update(self, address, value):
-        if not address.startswith("/config/solo/") and self.routing.update(address, value):
+        if not address.startswith(("/config/solo/", "/config/talk/")) and self.routing.update(address, value):
             self.received.add(address)
             return True
         parts = address.strip("/").split("/")
