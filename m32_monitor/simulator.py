@@ -1128,7 +1128,9 @@ class Simulator:
         if kind == "enum":
             return labels.index(token)
         if kind == "float":
-            return float(token)
+            # M32-Edit serialises audio frequencies in compact k notation
+            # (for example 9k35 = 9350 Hz). Ordinary decimal values remain valid.
+            return _parse_osc_frequency(token)
         return int(token, 0)
 
     @staticmethod
