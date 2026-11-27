@@ -650,8 +650,10 @@ class ConsoleState:
                 number, matrix = int(parts[1]), int(parts[3])
                 if number not in self.buses or not 1 <= matrix <= 6 or parts[4] not in ("on", "level"):
                     return False
+                if not self._valid_strip_node_value(address, value):
+                    return False
                 send = self.buses[number].setdefault("matrix_sends", {}).setdefault(matrix, {"on": True, "level": 0.0})
-                send[parts[4]] = self._bool(value) if parts[4] == "on" else max(0.0, min(1.0, float(value)))
+                send[parts[4]] = int(value) if parts[4] == "on" else float(value)
                 self.received.add(address)
                 return True
 
@@ -665,14 +667,14 @@ class ConsoleState:
                     self.buses[number]["icon"] = int(value)
                 elif parts[2:] == ["config", "color"] and self._valid_strip_node_value(address, value):
                     self.buses[number]["colour"] = int(value)
-                elif parts[2:] == ["mix", "on"]:
+                elif parts[2:] == ["mix", "on"] and self._valid_strip_node_value(address, value):
                     self.buses[number]["on"] = self._bool(value)
-                elif parts[2:] == ["mix", "fader"]:
-                    self.buses[number]["fader"] = max(0.0, min(1.0, float(value)))
-                elif parts[2:] == ["grp", "dca"]:
-                    self.buses[number]["dca_mask"] = int(value) & 255
-                elif parts[2:] == ["grp", "mute"]:
-                    self.buses[number]["mute_mask"] = int(value) & 63
+                elif parts[2:] == ["mix", "fader"] and self._valid_strip_node_value(address, value):
+                    self.buses[number]["fader"] = float(value)
+                elif parts[2:] == ["grp", "dca"] and self._valid_strip_node_value(address, value):
+                    self.buses[number]["dca_mask"] = int(value)
+                elif parts[2:] == ["grp", "mute"] and self._valid_strip_node_value(address, value):
+                    self.buses[number]["mute_mask"] = int(value)
                 else:
                     return False
                 self.received.add(address)
