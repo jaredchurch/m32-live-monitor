@@ -26,6 +26,15 @@ OUTPUT_BANKS = (
 OUTPUT_BLOCKS = ("1-4", "5-8", "9-12", "13-16")
 OUTPUT_SOURCES = ("OFF", "Main L", "Main R", "Mono/C") + tuple("Mix Bus %02d" % n for n in range(1, 17)) + tuple("Matrix %d" % n for n in range(1, 7)) + tuple("Direct Out CH %02d" % n for n in range(1, 33)) + tuple("Direct Out Aux %d" % n for n in range(1, 9)) + tuple("Direct Out FX %d%s" % (n, side) for n in range(1, 5) for side in ("L", "R")) + ("Monitor L", "Monitor R", "Talkback")
 OUTPUT_TAPS = ("IN/LC", "IN/LC + Mute", "Pre EQ", "Pre EQ + Mute", "Post EQ", "Post EQ + Mute", "Pre Fader", "Pre Fader + Mute", "Post Fader")
+
+# Stereo-link addresses are retained in the routing inventory only when they
+# identify a real adjacent pair on the console.
+CONFIG_LINK_ADDRESSES = {
+    f"/config/{family}/{n}-{n+1}"
+    for family, limit in (("chlink", 32), ("auxlink", 8), ("fxlink", 8),
+                          ("buslink", 16), ("mtxlink", 6))
+    for n in range(1, limit, 2)
+}
 ROUTING_PATHS = {
     "/config/routing/IN/1-8": ("Input patch", INPUT_BANKS),
     "/config/routing/IN/9-16": ("Input patch", INPUT_BANKS),
@@ -79,7 +88,8 @@ class RoutingState:
                                   "/fx/", "/config/solo/", "/config/talk/",
                                   "/main/m/mix/pan", "/main/st/insert", "/main/m/insert")) or
                 (address.startswith(("/ch/", "/auxin/", "/fxrtn/", "/bus/", "/mtx/")) and
-                 ("/insert" in address or address.endswith("/mix/pan")))):
+                 ("/insert" in address or address.endswith("/mix/pan"))) or
+                address in CONFIG_LINK_ADDRESSES):
             self.values[address] = value
             return True
         return False
