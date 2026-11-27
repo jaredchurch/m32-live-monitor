@@ -795,7 +795,7 @@ class Simulator:
                     parsed = [("OFF", "ON").index(values[0]), float(values[1]), values[2],
                               int(values[3], 0), ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
                               "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi").index(values[4])]
-                elif parts[2] == "config":
+                elif len(parts) == 3 and parts[2] == "config":
                     if len(values) != 3:
                         raise ValueError("DCA config node requires name, icon and colour")
                     paths = ["/dca/%d/config/name" % number, "/dca/%d/config/icon" % number,
@@ -1533,7 +1533,7 @@ class Simulator:
                                 prefix, "ON" if dca["on"] else "OFF", prefix, dca["fader"],
                                 prefix, json.dumps(dca["name"], ensure_ascii=False), prefix,
                                 dca["icon"], prefix, colour_names[dca["colour"]]))
-            elif dca_parts[2] == "config":
+            elif len(dca_parts) == 3 and dca_parts[2] == "config":
                 response = "%s/config %s %d %s\n" % (
                     prefix, json.dumps(dca["name"], ensure_ascii=False), dca["icon"],
                     colour_names[dca["colour"]])
