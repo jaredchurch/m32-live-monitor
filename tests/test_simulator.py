@@ -1540,7 +1540,7 @@ def test_matrix_config_processing_and_output_nodes_are_discoverable_and_writable
 
 @pytest.mark.parametrize(("address", "value"), [
     ("/mtx/01/config/icon", 75), ("/mtx/01/config/color", 16),
-    ("/mtx/01/preamp/invert", 2), ("/mtx/01/dyn/thr", -60.25),
+    ("/mtx/01/preamp/invert", 2), ("/mtx/01/config/preamp/invert", 2), ("/mtx/01/dyn/thr", -60.25),
     ("/mtx/01/dyn/ratio", 12), ("/mtx/01/dyn/filter/f", 20001),
     ("/mtx/01/insert/sel", 23), ("/mtx/01/eq/6/type", 14),
     ("/mtx/01/eq/6/g", 15.25), ("/mtx/01/mix/fader", 1.1),
