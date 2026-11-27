@@ -1337,8 +1337,9 @@ def test_userctrl_bank_parent_node_set_accepts_colour_only_write(bank, token, co
     simulator = Simulator(state)
     simulator.transport = FakeTransport()
 
+    # X32node SETs are sent to the root address, not the /node GET endpoint.
     simulator.handle(("127.0.0.1", 50123),
-                     packet("/node", "/config/userctrl/%s %s" % (bank, token)))
+                     packet("/", "config/userctrl/%s %s" % (bank, token)))
 
     assert state.get("/config/userctrl/%s/color" % bank) == colour
     assert state.get("/config/userctrl/%s/enc/1" % bank) == "F00"
