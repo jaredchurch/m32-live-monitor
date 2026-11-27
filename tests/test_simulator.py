@@ -20,6 +20,85 @@ def packet(address, *args):
     return builder.build().dgram
 
 
+def test_config_talk_node_groups_return_shared_and_a_b_settings():
+    state = ConsoleState()
+    state.talk_config.update({"enable": 1, "source": 1})
+    state.talk_config["A"].update({"level": -12.5, "dim": 1, "latch": 0, "destmap": 0x20001})
+    state.talk_config["B"].update({"level": 3.75, "dim": 0, "latch": 1, "destmap": 0x15555})
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    for header, expected in (
+        ("config/talk", "/config/talk ON EXT\\n"),
+        ("config/talk/A", "/config/talk/A -12.5 ON OFF %100000000000000001\\n"),
+        ("config/talk/B", "/config/talk/B 3.8 OFF ON %010101010101010101\\n"),
+    ):
+        simulator.handle(client, packet("/node", header))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.address == "/node"
+        assert response.params == [expected]
+
+
+@pytest.mark.parametrize("field,value", [
+    ("enable", 1), ("source", 1),
+    ("A/level", -90.0), ("A/level", 10.0), ("A/dim", 1),
+    ("A/latch", 1), ("A/destmap", 262143),
+    ("B/level", -12.5), ("B/dim", 0), ("B/latch", 0), ("B/destmap", 0),
+])
+def test_config_talk_individual_fields_can_be_read_and_set(field, value):
+    state = ConsoleState()
+    address = "/config/talk/" + field
+    assert state.get(address) is not None
+    assert state.update(address, value)
+    assert state.get(address) == value
+
+
+@pytest.mark.parametrize("address,value", [
+    ("/config/talk/enable", 2), ("/config/talk/source", -1),
+    ("/config/talk/A/dim", 2), ("/config/talk/B/latch", 0.5),
+    ("/config/talk/A/level", 10.1), ("/config/talk/B/level", -90.1),
+    ("/config/talk/A/level", -12.3), ("/config/talk/B/destmap", 262144),
+    ("/config/talk/A/unknown", 1),
+])
+def test_config_talk_rejects_invalid_values(address, value):
+    state = ConsoleState()
+    assert not state.update(address, value)
+
+
+def test_talkback_node_set_updates_shared_and_channel_settings_atomically():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", "config/talk ON EXT"))
+    assert simulator.state.talk_config["enable"] == 1
+    assert simulator.state.talk_config["source"] == 1
+    simulator.handle(client, packet("/", "config/talk/A -12.5 ON OFF %100000000000000001"))
+    assert simulator.state.talk_config["A"] == {
+        "level": -12.5, "dim": 1, "latch": 0, "destmap": 0x20001
+    }
+    before = dict(simulator.state.talk_config["A"])
+    simulator.handle(client, packet("/", "config/talk/A -12.3 ON OFF %100000000000000001"))
+    assert simulator.state.talk_config["A"] == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+def test_individual_talkback_node_get_returns_enum_and_bitmap_values():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.state.talk_config["A"].update({"dim": 1, "destmap": 5})
+    for header, expected in (
+        ("config/talk/enable", "/config/talk/enable OFF\\n"),
+        ("config/talk/source", "/config/talk/source INT\\n"),
+        ("config/talk/A/dim", "/config/talk/A/dim ON\\n"),
+        ("config/talk/A/destmap", "/config/talk/A/destmap %000000000000000101\\n"),
+    ):
+        simulator.handle(client, packet("/node", header))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.params == [expected]
+
+
 def test_config_linkcfg_node_returns_four_link_preferences():
     state = ConsoleState()
     state.link_config.update({"hadly": 1, "eq": 0, "dyn": 1, "fdrmute": 1})
