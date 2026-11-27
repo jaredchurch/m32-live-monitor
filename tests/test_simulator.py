@@ -1930,3 +1930,52 @@ def test_invalid_physical_aux_output_node_write_is_atomic():
     simulator.handle(client, packet("/", "outputs/aux/01 77 PRE ON"))
     assert simulator.state.output_aux[1] == before
     assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+@pytest.mark.parametrize("number", range(1, 17))
+def test_p16_output_node_get_set_and_iq_configuration(number):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    prefix = "outputs/p16/%02d" % number
+
+    simulator.handle(client, packet("/node", prefix))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == ["/%s/src 0\n/%s/pos POST\n" % (prefix, prefix)]
+
+    simulator.handle(client, packet("/", prefix + " 33 PRE"))
+    assert state.get("/" + prefix + "/src") == 33
+    assert state.get("/" + prefix + "/pos") == 6
+
+    simulator.handle(client, packet("/node", prefix + "/iQ"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.params == ["/%s/iQ/group OFF\n/%s/iQ/speaker none\n" % (prefix, prefix)]
+
+    simulator.handle(client, packet("/", prefix + "/iQ A iQ12"))
+    assert state.get("/" + prefix + "/iQ/group") == 1
+    assert state.get("/" + prefix + "/iQ/speaker") == 3
+
+    simulator.handle(client, packet("/node", prefix + "/iQ/group"))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/%s/iQ/group A\n" % prefix]
+    simulator.handle(client, packet("/outputs/p16/%02d/src" % number, 12))
+    assert state.get("/" + prefix + "/src") == 12
+
+
+@pytest.mark.parametrize(("address", "value"), [
+    ("/outputs/p16/01/src", 77), ("/outputs/p16/17/src", 1),
+    ("/outputs/p16/01/pos", 9), ("/outputs/p16/01/iQ/group", 3),
+    ("/outputs/p16/01/iQ/speaker", 7), ("/outputs/p16/01/invert", 1),
+])
+def test_p16_output_rejects_invalid_values(address, value):
+    assert not ConsoleState().update(address, value)
+
+
+def test_invalid_p16_output_node_write_is_atomic():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    before = dict(simulator.state.output_p16[1])
+    simulator.handle(client, packet("/", "outputs/p16/01 77 PRE"))
+    assert simulator.state.output_p16[1] == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
