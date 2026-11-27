@@ -205,8 +205,6 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) == 3 and parts[:2] == ["config", "linkcfg"]:
-                field = parts[2]
                 if field not in self.link_config or isinstance(value, bool) or not isinstance(value, (int, float)) or int(value) not in (0, 1) or float(value) != int(value):
                     return False
                 self.link_config[field] = int(value)
@@ -407,6 +405,8 @@ class ConsoleState:
                 return self.urec_markers.get(int(parts[2]), 0)
             if len(parts) == 3 and parts[:2] == ["-stat", "urec"]:
                 return self.urec_status.get(parts[2])
+            if len(parts) == 3 and parts[:2] == ["config", "linkcfg"]:
+                return self.link_config.get(parts[2])
             if len(parts) == 3 and parts[0] == "config" and parts[1] in self.config_links:
                 return self.config_links[parts[1]].get(parts[2])
             if address == "/-prefs/rta/visibility":
