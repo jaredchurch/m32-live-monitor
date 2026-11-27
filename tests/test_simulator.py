@@ -1306,8 +1306,8 @@ def test_config_routing_parent_node_returns_all_documented_routing_entries():
     lines = response.params[0].splitlines()
     assert response.address == "/node"
     assert len(lines) == len(ROUTING_PATHS) - 1
-    assert "/config/routing/IN/1-8 3" in lines
-    assert "/config/routing/AES50A/1-8 5" in lines
+    assert "/config/routing/IN/1-8 AN25-32" in lines
+    assert "/config/routing/AES50A/1-8 B1-8" in lines
     assert "/config/routing/outswitch 0" in lines
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
@@ -1581,6 +1581,49 @@ def test_userrout_bulk_sets_reject_wrong_count_or_invalid_source_without_partial
         simulator.handle(client, packet("/config/userrout/" + direction, *invalid_values))
         assert (state.user_rout_out if direction == "out" else state.user_rout_in) == before
         assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
+def test_routing_input_node_set_accepts_m32_edit_symbolic_enum_names():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    tokens = ["UIN1-8", "UIN9-16", "UIN17-24", "UIN25-32", "AUX1-4"]
+    simulator.handle(client, packet("/", "config/routing/IN " + " ".join(tokens)))
+    from m32_monitor.routing import ROUTING_ENUM_TOKENS
+    paths = ["/config/routing/IN/1-8", "/config/routing/IN/9-16",
+             "/config/routing/IN/17-24", "/config/routing/IN/25-32",
+             "/config/routing/IN/AUX"]
+    assert [state.routing.get(path) for path in paths] == [
+        ROUTING_ENUM_TOKENS[path].index(token) for path, token in zip(paths, tokens)]
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+@pytest.mark.parametrize("address,token,expected", [
+    ("/config/routing/IN/1-8", "UIN1-8", 20),
+    ("/config/routing/IN/AUX", "AUX1-4", 0),
+    ("/config/routing/AES50A/1-8", "UOUT1-8", 26),
+    ("/config/routing/OUT/1-4", "UIN1-4", 32),
+    ("/config/routing/OUT/5-8", "UIN5-8", 32),
+    ("/config/routing/PLAY/1-8", "CARD1-8", 16),
+])
+def test_individual_routing_osc_set_accepts_symbolic_enum_names(address, token, expected):
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    simulator.handle(("127.0.0.1", 50123), packet(address, token))
+    assert simulator.state.routing.get(address) == expected
+
+
+def test_routing_input_node_get_returns_symbolic_enum_names():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", "config/routing/IN " +
+                                    "UIN1-8 UIN9-16 UIN17-24 UIN25-32 AUX1-4"))
+    simulator.handle(client, packet("/node", "config/routing/IN"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert "UIN1-8" in response.params[0]
+    assert "AUX1-4" in response.params[0]
 
 
 @pytest.mark.parametrize("header", [
