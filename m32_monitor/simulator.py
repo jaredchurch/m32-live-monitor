@@ -502,7 +502,7 @@ class Simulator:
         """Render mono/centre output mode and Main L/R link settings."""
         mode = ("LR+M", "LCR")[int(self.state.mono_config["mode"])]
         link = ("OFF", "ON")[int(self.state.mono_config["link"])]
-        return "/config/mono/mode %s\\n/config/mono/link %s\\n" % (mode, link)
+        return "/config/mono/mode %s\n/config/mono/link %s\n" % (mode, link)
 
     def _config_mute_node_group(self):
         """Render all six mute-group selection states."""
