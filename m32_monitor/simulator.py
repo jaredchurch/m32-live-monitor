@@ -875,7 +875,7 @@ class Simulator:
                 schema = self.state.main_node_schema if prefix in ("/main/st", "/main/m") else self.state.strip_node_schema[header.split("/")[0]]
                 parsed = [self._parse_strip_node_value(
                     schema[node][field], token, field,
-                    fader_db=(prefix.startswith("/ch/") and
+                    fader_db=(prefix.startswith(("/ch/", "/auxin/")) and
                               ((node == "mix" and field in ("fader", "mlevel")) or
                                (node.startswith("mix/") and field == "level"))))
                           for field, token in zip(fields, values)]
