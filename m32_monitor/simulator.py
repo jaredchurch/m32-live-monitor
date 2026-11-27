@@ -583,10 +583,10 @@ class Simulator:
         """Render shared or A/B talkback settings in documented node order."""
         config = self.state.talk_config
         if section is None:
-            return "/config/talk %s %s\\n" % (
+            return "/config/talk %s %s\n" % (
                 ("OFF", "ON")[config["enable"]], ("INT", "EXT")[config["source"]])
         values = config[section]
-        return "/config/talk/%s %.1f %s %s %s\\n" % (
+        return "/config/talk/%s %.1f %s %s %s\n" % (
             section, values["level"], ("OFF", "ON")[values["dim"]],
             ("OFF", "ON")[values["latch"]], "%" + format(values["destmap"], "018b"))
 
@@ -634,7 +634,7 @@ class Simulator:
         if header in ("config/userrout/out", "config/userrout/in"):
             direction = header.rsplit("/", 1)[1]
             slots = self.state.user_rout_out if direction == "out" else self.state.user_rout_in
-            response = "".join("/config/userrout/%s/%02d %d\\n" % (direction, slot, source)
+            response = "".join("/config/userrout/%s/%02d %d\n" % (direction, slot, source)
                                for slot, source in slots.items())
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
@@ -648,7 +648,7 @@ class Simulator:
                 self.record("in", "unhandled_command", "/node", args, client,
                             "No user routing slot is modelled for header %r" % header)
                 return
-            self.send(client, "/node", "%s %d\\n" % (address, value), outcome="node_response")
+            self.send(client, "/node", "%s %d\n" % (address, value), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned individual user routing assignment")
             return
@@ -717,7 +717,7 @@ class Simulator:
                 rendered = "%.3f" % float(value)
             else:
                 rendered = str(int(value))
-            self.send(client, "/node", "%s %s\\n" % (address, rendered), outcome="node_response")
+            self.send(client, "/node", "%s %s\n" % (address, rendered), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned individual oscillator configuration value")
             return
@@ -737,7 +737,7 @@ class Simulator:
                 rendered = "%" + format(int(value), "018b")
             else:
                 rendered = "%.1f" % float(value)
-            self.send(client, "/node", "%s %s\\n" % (address, rendered), outcome="node_response")
+            self.send(client, "/node", "%s %s\n" % (address, rendered), outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned individual talkback configuration value")
             return
