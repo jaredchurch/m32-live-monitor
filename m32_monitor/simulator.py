@@ -693,8 +693,9 @@ class Simulator:
             paths = [path for path in ROUTING_PATHS
                      if path.startswith("/config/routing/")
                      and path != "/config/routing/routswitch"]
-        elif header == "config/routing/outswitch":
-            paths = ["/config/routing/outswitch"]
+        elif header in ("config/routing/outswitch", "config/routing/routswitch",
+                        "config/routing/rootswitch"):
+            paths = ["/" + header]
         else:
             paths = [path for path in ROUTING_PATHS
                      if path.startswith(prefix + "/")]
@@ -759,7 +760,8 @@ class Simulator:
                 "config/routing/IN", "config/routing/AES50A",
                 "config/routing/AES50B", "config/routing/CARD",
                 "config/routing/OUT", "config/routing/PLAY",
-                "config/routing/outswitch"):
+                "config/routing/outswitch", "config/routing/routswitch",
+                "config/routing/rootswitch"):
             response = self._config_routing_node_group(header)
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
