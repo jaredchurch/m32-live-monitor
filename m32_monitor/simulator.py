@@ -812,7 +812,7 @@ class Simulator:
             if value is None:
                 value = specs[field][0]
             values.append(self._format_strip_node_value(specs[field], value))
-        return "%s %s\\n" % (prefix + "/" + node, " ".join(values))
+        return "%s %s\n" % (prefix + "/" + node, " ".join(values))
 
     def _handle_node(self, client, args):
         if len(args) != 1 or not isinstance(args[0], str):
