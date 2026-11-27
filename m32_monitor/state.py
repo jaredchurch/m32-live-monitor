@@ -66,7 +66,7 @@ class ConsoleState:
             "A": {"level": 0.0, "dim": 0, "latch": 0, "destmap": 0},
             "B": {"level": 0.0, "dim": 0, "latch": 0, "destmap": 0}}
         # Oscillator generator configuration; frequency values use 121 logarithmic positions.
-        self.osc_config = {"level": 0.0, "f1": 1000.0, "f2": 1000.0, "fsel": 0, "type": 0, "dest": 0}
+        self.osc_config = {"level": 0.0, "f1": 632.456, "f2": 632.456, "fsel": 0, "type": 0, "dest": 0}
         self.solo_config = {
             "level": 0.0, "source": 0, "sourcetrim": 0.0,
             "chmode": 0, "busmode": 0, "dcamode": 0,
