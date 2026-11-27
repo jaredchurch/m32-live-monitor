@@ -1746,3 +1746,15 @@ def test_dca_individual_values_can_be_read_and_set():
             address = prefix + suffix
             assert state.update(address, value)
             assert state.get(address) == value
+
+
+def test_invalid_grouped_dca_node_write_is_rejected_without_partial_changes():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    before = dict(simulator.state.dcas[1])
+
+    simulator.handle(client, packet("/", 'dca/1 OFF 0.625 "Changed" 0 YE'))
+
+    assert simulator.state.dcas[1] == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
