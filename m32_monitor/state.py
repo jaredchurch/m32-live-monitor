@@ -76,7 +76,7 @@ for _family in ("ch", "auxin", "fxrtn"):
                         "level": (0.0,0.0,1.0,0,"float",None)}
         if _bus % 2:
             _send_fields.update({"pan": (0.0,-100.0,100.0,2.0,"float",None),
-                                 "type": (3,0,5,1,"enum",("IN/LC","<-EQ","EQ->","PRE","POST","GRP")),
+                                 "type": (4,0,5,1,"enum",("IN/LC","<-EQ","EQ->","PRE","POST","GRP")),
                                  "panFollow": (0,0,1,1,"enum",("OFF","ON"))})
         STRIP_NODE_SCHEMA[_family]["mix/%02d" % _bus] = _send_fields
 
