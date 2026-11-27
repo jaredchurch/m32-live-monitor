@@ -1592,6 +1592,39 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
     ("/main/st/dyn/thr", -60.25), ("/main/m/insert/sel", 23),
     ("/main/st/eq/6/g", 15.25), ("/main/m/mix/fader", 1.1),
 ])
+def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    for prefix in ("main/st", "main/m"):
+        for matrix in range(1, 7):
+            header = "%s/mix/%02d" % (prefix, matrix)
+            simulator.handle(client, packet("/node", header))
+            response = OscMessage(simulator.transport.sent[-1][0])
+            assert response.address == "/node"
+            assert response.params == ["/%s ON 0.000\\n" % header]
+
+            simulator.handle(client, packet("/", header + " OFF 0.65"))
+            assert state.get("/%s/on" % header) == 0
+            assert state.get("/%s/level" % header) == 0.65
+            output_key = "main_st" if prefix == "main/st" else "main_mono"
+            assert state.outputs[output_key]["sends"][matrix] == {"on": 0, "level": 0.65}
+
+            simulator.handle(client, packet("/node", header))
+            response = OscMessage(simulator.transport.sent[-1][0])
+            assert response.params == ["/%s OFF 0.650\\n" % header]
+
+
+@pytest.mark.parametrize(("address", "value"), [
+    ("/main/st/mix/00/on", 1), ("/main/m/mix/07/level", 0.5),
+    ("/main/st/mix/01/on", 2), ("/main/m/mix/06/level", 1.1),
+])
+def test_main_output_matrix_sends_reject_invalid_values(address, value):
+    assert not ConsoleState().update(address, value)
+
+
 def test_main_output_processing_rejects_invalid_values(address, value):
     assert not ConsoleState().update(address, value)
 
