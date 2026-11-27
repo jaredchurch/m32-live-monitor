@@ -835,7 +835,9 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if address.startswith(("/-show/", "/-prefs/", "/-action/")):
+            if (address.startswith(("/-show/", "/-action/")) or
+                    (address.startswith("/-prefs/") and not address.startswith(("/-prefs/rta/", "/-prefs/card/"))
+                     and address not in ("/-prefs/dcamute", "/-prefs/hardmute"))):
                 if isinstance(value, bool) or not isinstance(value, (str, int, float)):
                     return False
                 if isinstance(value, float) and not math.isfinite(value):
