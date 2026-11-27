@@ -1138,9 +1138,9 @@ class Simulator:
                     raise ValueError("Enum index %d is out of range" % index)
                 return index
         if kind == "float":
-            # X32node represents faders as dB, while simulator state stores
-            # the console's normalised 0.0-1.0 fader position.
-            if field == "fader":
+            # Channel mix node faders arrive in dB; other node families use
+            # the simulator's normalised 0.0-1.0 representation.
+            if field == "fader" and fader_db:
                 if token == "-oo":
                     return 0.0
                 db = float(token)
