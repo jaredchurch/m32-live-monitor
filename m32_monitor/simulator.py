@@ -604,12 +604,42 @@ class Simulator:
             number, "ON" if enabled else "OFF")
             for number, enabled in self.state.mute_groups.items())
 
+    def _config_routing_node_group(self, header="config/routing"):
+        """Build a routing X32node response from the documented patch-bank entries."""
+        from m32_monitor.routing import ROUTING_PATHS
+
+        prefix = "/" + header
+        if header == "config/routing":
+            paths = [path for path in ROUTING_PATHS
+                     if path.startswith("/config/routing/")
+                     and path != "/config/routing/routswitch"]
+        elif header == "config/routing/outswitch":
+            paths = ["/config/routing/outswitch"]
+        else:
+            paths = [path for path in ROUTING_PATHS
+                     if path.startswith(prefix + "/")]
+        return "".join("%s %s\\n" % (path, self.state.routing.get(path)
+                                      if self.state.routing.get(path) is not None else 0)
+                       for path in paths)
+
     def _handle_node(self, client, args):
         if len(args) != 1 or not isinstance(args[0], str):
             self.record("in", "unhandled_command", "/node", args, client,
                         "Expected exactly one X32node header string")
             return
         header = args[0].lstrip("/")
+        if header == "config/routing" or header in (
+                "config/routing/IN", "config/routing/AES50A",
+                "config/routing/AES50B", "config/routing/CARD",
+                "config/routing/OUT", "config/routing/PLAY",
+                "config/routing/outswitch"):
+            response = self._config_routing_node_group(header)
+            self.send(client, "/node", response, outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned %d routing configuration entries" %
+                        len(response.splitlines()))
+            return
+
         if header == "config/linkcfg":
             response = self._config_linkcfg_node_group()
             self.send(client, "/node", response, outcome="node_response")
