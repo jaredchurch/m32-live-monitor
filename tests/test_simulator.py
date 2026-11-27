@@ -1217,9 +1217,9 @@ def test_extended_configuration_individual_node_reads_render_enums_and_bitmaps()
     simulator.state.update("/config/amixenable/X", 1)
     simulator.state.update("/config/dp48/scope", 10)
     for header, expected in (
-        ("config/userctrl/B/color", "/config/userctrl/B/color WHi\\n"),
-        ("config/amixenable/X", "/config/amixenable/X ON\\n"),
-        ("config/dp48/scope", "/config/dp48/scope %1010\\n"),
+        ("config/userctrl/B/color", "/config/userctrl/B/color WHi\n"),
+        ("config/amixenable/X", "/config/amixenable/X ON\n"),
+        ("config/dp48/scope", "/config/dp48/scope %1010\n"),
     ):
         simulator.handle(client, packet("/node", header))
         response = OscMessage(simulator.transport.sent[-1][0])
