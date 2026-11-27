@@ -309,7 +309,7 @@ class ConsoleState:
                     maximum = 15 if field == "scope" else 1
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or int(value) not in range(maximum + 1):
                         return False
-                    self.dp48_config[field] = int(value)
+                    self.dp48_config[field] = 0 if field == "broadcast" else int(value)
                 elif len(parts) == 4 and field in ("link", "assign", "grpname"):
                     slot_text = parts[3]
                     values = self.dp48_config[field]
