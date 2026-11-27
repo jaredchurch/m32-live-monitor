@@ -1583,6 +1583,49 @@ def test_userrout_bulk_sets_reject_wrong_count_or_invalid_source_without_partial
         assert simulator.snapshot(outcome="unhandled_set")["events"]
 
 
+@pytest.mark.parametrize("header", [
+    "config/routing", "config/routing/IN", "config/routing/AES50A",
+    "config/routing/AES50B", "config/routing/CARD", "config/routing/OUT",
+    "config/routing/PLAY",
+])
+def test_routing_group_node_set_applies_ordered_patch_values(header):
+    from m32_monitor.routing import ROUTING_PATHS
+
+    prefix = "/" + header
+    paths = [path for path in ROUTING_PATHS if path.startswith(prefix + "/")
+             and path.rsplit("/", 1)[-1] not in ("routswitch", "rootswitch", "outswitch")]
+    values = [0] * len(paths)
+    values[-1] = len(ROUTING_PATHS[paths[-1]][1]) - 1
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet("/", header + " " + " ".join(map(str, values))))
+    assert [state.routing.get(path) for path in paths] == values
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+@pytest.mark.parametrize("header", [
+    "/config/routing", "/config/routing/IN", "/config/routing/AES50A",
+    "/config/routing/AES50B", "/config/routing/CARD", "/config/routing/OUT",
+    "/config/routing/PLAY",
+])
+def test_routing_group_direct_osc_set_applies_ordered_patch_values(header):
+    from m32_monitor.routing import ROUTING_PATHS
+
+    paths = [path for path in ROUTING_PATHS if path.startswith(header + "/")
+             and path.rsplit("/", 1)[-1] not in ("routswitch", "rootswitch", "outswitch")]
+    values = [0] * len(paths)
+    values[-1] = len(ROUTING_PATHS[paths[-1]][1]) - 1
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.handle(client, packet(header, *values))
+    assert [state.routing.get(path) for path in paths] == values
+    assert simulator.snapshot(outcome="handled_set")["events"]
+
+
 def test_channel_config_parent_node_returns_identity_and_routing_fields():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
