@@ -1,4 +1,5 @@
 import pytest
+import shlex
 from pythonosc.osc_message import OscMessage
 from pythonosc.osc_message_builder import OscMessageBuilder
 
@@ -1508,7 +1509,7 @@ def test_matrix_config_processing_and_output_nodes_are_discoverable_and_writable
             simulator.handle(client, packet("/node", header))
             response = OscMessage(simulator.transport.sent[-1][0])
             assert response.address == "/node"
-            assert len(response.params[0].split()) - 1 == count
+            assert len(shlex.split(response.params[0])) - 1 == count
             assert response.params[0].startswith("/" + header + " ")
 
     simulator.handle(client, packet("/", 'mtx/01/config "Vocal Matrix" 12 YE'))
@@ -1576,7 +1577,7 @@ def test_bus_insert_eq_mix_and_group_nodes_are_discoverable_and_writable():
         simulator.handle(client, packet("/node", "bus/01/" + node))
         response = OscMessage(simulator.transport.sent[-1][0])
         assert response.address == "/node"
-        assert len(response.params[0].split()) - 1 == count
+        assert len(shlex.split(response.params[0])) - 1 == count
         assert response.params[0].startswith("/bus/01/" + node + " ")
 
     simulator.handle(client, packet("/", "bus/01/insert ON POST FX3L"))
