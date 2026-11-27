@@ -1184,7 +1184,7 @@ def test_extended_configuration_x32node_writes_update_state():
     simulator.transport = FakeTransport()
     client = ("127.0.0.1", 50123)
 
-    simulator.handle(client, packet("/", "config/userctrl/A YE F00 P01 S0000 X0000 MN05003 - - - - -"))
+    simulator.handle(client, packet("/", "config/userctrl/A " + " ".join(["YE", "F00", "P01", "S0000", "X0000", "MN05003"] + ["-"] * 7)))
     assert simulator.state.get("/config/userctrl/A/color") == 3
     assert simulator.state.get("/config/userctrl/A/enc/1") == "F00"
     assert simulator.state.get("/config/userctrl/A/btn/5") == "MN05003"
@@ -1204,7 +1204,7 @@ def test_extended_configuration_x32node_writes_update_state():
     assert simulator.state.dp48_config["link"][1] == 1
     simulator.handle(client, packet("/", "config/dp48/assign " + " ".join(["12"] + ["0"] * 47)))
     assert simulator.state.dp48_config["assign"][1] == 12
-    simulator.handle(client, packet("/", "config/dp48/grpname " + " ".join(["Choir"] + [""] * 11)))
+    simulator.handle(client, packet("/", "config/dp48/grpname " + " ".join(["Choir"] + ["G"] * 11)))
     assert simulator.state.dp48_config["grpname"][1] == "Choir"
     assert simulator.snapshot(outcome="handled_node_set")["events"]
 
