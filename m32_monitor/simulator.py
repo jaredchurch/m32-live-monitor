@@ -1305,6 +1305,18 @@ class Simulator:
                 self.send(client, "/node", "/%s %s\n" % (header, rendered), outcome="node_response")
                 self.record("in", "handled_node_get", "/node", args, client, "Returned physical output delay field")
                 return
+        if (len(output_parts) == 5 and output_parts[:2] == ["outputs", "p16"]
+                and output_parts[2].isdigit() and int(output_parts[2]) in self.state.output_p16
+                and output_parts[3] == "iQ" and output_parts[4] in ("group", "speaker")):
+            number = int(output_parts[2])
+            output = self.state.output_p16[number]
+            if output_parts[4] == "group":
+                value = ("OFF", "A", "B")[output["iq_group"]]
+            else:
+                value = ("none", "iQ8", "iQ10", "iQ12", "iQ15", "iQ15B", "iQ18B")[output["iq_speaker"]]
+            self.send(client, "/node", "/%s %s\\n" % (header, value), outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client, "Returned P16 iQ setting")
+            return
         fx_parts = header.split("/")
         if (len(fx_parts) in (2, 3) and fx_parts[0] == "fx"
                 and fx_parts[1].isdigit() and int(fx_parts[1]) in self.state.fx):
