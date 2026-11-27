@@ -876,7 +876,7 @@ def test_config_solo_node_returns_all_seventeen_fields_in_protocol_order():
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
     assert response.params == [
-        "/config/solo -12.5 LR+C 1.5 AFL PFL AFL ON OFF ON -18.0 ON OFF ON 125.5 ON OFF ON\\n"
+        "/config/solo -12.5 LR+C 1.5 AFL PFL AFL ON OFF ON -18.0 ON OFF ON 125.5 ON OFF ON\n"
     ]
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
