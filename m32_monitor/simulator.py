@@ -1126,7 +1126,15 @@ class Simulator:
         if kind == "string":
             return token
         if kind == "enum":
-            return labels.index(token)
+            try:
+                return labels.index(token)
+            except ValueError:
+                # X32node normally emits symbolic labels, but some enum fields
+                # (notably send pan-follow) are serialised as numeric indices.
+                index = int(token, 0)
+                if not 0 <= index < len(labels):
+                    raise ValueError("Enum index %d is out of range" % index)
+                return index
         if kind == "float":
             # X32node uses -oo to represent a fader at its bottom (silence).
             if token == "-oo":
