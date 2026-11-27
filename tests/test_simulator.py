@@ -845,12 +845,6 @@ def test_invalid_rta_group_node_set_is_atomic():
     assert simulator.snapshot(outcome="unhandled_set")["events"]
 
 
-@pytest.mark.parametrize("tokens,expected", [
-    ("0 0 0 0 0 NONE 0 0 0 0 NONE NONE \"\" \"\" \"\" 0",
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "", "", "", 0]),
-    ("1 2 3 4 5 GOOD 6 7 8 9 READY ERROR \"Card one\" \"Card two\" \"No error\" 10",
-     [1, 2, 3, 4, 5, 1, 6, 7, 8, 9, 1, 3, "Card one", "Card two", "No error", 10]),
-])
 @pytest.mark.parametrize("header,value,expected", [
     ("-urec/sessionmax", "12", 12),
     ("-urec/batterystate", "GOOD", 1),
@@ -886,6 +880,12 @@ def test_dca_individual_node_get_set(field, value, expected):
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
+@pytest.mark.parametrize("tokens,expected", [
+    ("0 0 0 0 0 NONE 0 0 0 0 NONE NONE \"\" \"\" \"\" 0",
+     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "", "", "", 0]),
+    ("1 2 3 4 5 GOOD 6 7 8 9 READY ERROR \"Card one\" \"Card two\" \"No error\" 10",
+     [1, 2, 3, 4, 5, 1, 6, 7, 8, 9, 1, 3, "Card one", "Card two", "No error", 10]),
+])
 def test_xlive_urec_group_set_updates_all_fields(tokens, expected):
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
