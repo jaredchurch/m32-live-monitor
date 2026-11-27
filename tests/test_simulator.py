@@ -264,7 +264,7 @@ def test_simulator_udp_round_trip():
 
             await loop.sock_sendto(client, packet("/xremote"), address)
             await loop.sock_sendto(
-                client, packet("/ch/01/config/name", "UDP integration test"), address
+                client, packet("/ch/01/config/name", "UDP test"), address
             )
             data, _peer = await asyncio.wait_for(
                 loop.sock_recvfrom(client, 4096), timeout=1
@@ -1350,7 +1350,7 @@ def test_channel_processing_node_reads_cover_delay_preamp_gate_dynamics_insert_a
         "ch/01/eq/1", "ch/01/mix", "ch/01/mix/01", "ch/01/grp",
         "ch/01/automix",
     )
-    expected_counts = (2, 5, 8, 3, 14, 3, 3, 1, 4, 6, 5, 2, 2)
+    expected_counts = (2, 5, 8, 3, 15, 3, 3, 1, 4, 6, 5, 2, 2)
     for header, count in zip(headers, expected_counts):
         simulator.handle(client, packet("/node", header))
         response = OscMessage(simulator.transport.sent[-1][0])
@@ -1378,7 +1378,7 @@ def test_channel_processing_node_group_writes_and_individual_access():
     simulator.handle(client, packet("/node", "ch/01/gate/thr"))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == ["/ch/01/gate/thr -30.000\\n"]
+    assert response.params == ["/ch/01/gate/thr -30.000\n"]
     assert simulator.snapshot(outcome="handled_node_set")["events"]
 
 
