@@ -927,6 +927,36 @@ def test_config_link_node_returns_all_pair_states(family, pairs):
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
+@pytest.mark.parametrize("family,pairs", [
+    ("chlink", 16), ("auxlink", 4), ("fxlink", 4),
+    ("buslink", 8), ("mtxlink", 3),
+])
+def test_config_link_group_set_updates_all_pairs(family, pairs):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    tokens = ["ON" if index in (2, pairs - 1) else "OFF" for index in range(pairs)]
+
+    simulator.handle(client, packet("/", "config/%s %s" % (family, " ".join(tokens))))
+
+    assert list(state.config_links[family].values()) == [1 if token == "ON" else 0 for token in tokens]
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+def test_config_link_group_set_rejects_wrong_count_and_invalid_enum_atomically():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    before = dict(state.config_links["chlink"])
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "config/chlink OFF ON"))
+    assert state.config_links["chlink"] == before
+    simulator.handle(client, packet("/", "config/chlink " + " ".join(["OFF"] * 15 + ["INVALID"])))
+    assert state.config_links["chlink"] == before
+    assert len(simulator.snapshot(outcome="unhandled_set")["events"]) == 2
+
+
 def test_config_link_parameters_can_be_read_and_set():
     state = ConsoleState()
     simulator = Simulator(state)
