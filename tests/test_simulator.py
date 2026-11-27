@@ -2686,6 +2686,22 @@ def test_all_channel_bus_send_nodes_accept_db_levels():
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
 
+
+def test_auxin_mix_send_level_accepts_db():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "auxin/01/mix/01 ON -18.5 +0 PRE 0"))
+
+    assert state.get("/auxin/01/mix/01/on") == 1
+    assert state.get("/auxin/01/mix/01/level") == pytest.approx((-18.5 + 50.0) / 80.0)
+    assert state.get("/auxin/01/mix/01/pan") == pytest.approx(0.0)
+    assert state.get("/auxin/01/mix/01/type") == "PRE"
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
+
 def test_channel_mix_node_accepts_fader_level_in_db():
     state = ConsoleState()
     simulator = Simulator(state)
