@@ -1683,3 +1683,66 @@ def test_bus_insert_eq_and_matrix_send_validation():
     assert not state.update("/bus/01/eq/6/g", 15.25)
     assert not state.update("/bus/01/mix/06/level", 1.1)
     assert not state.update("/bus/01/grp/mute", 64)
+
+
+def test_all_eight_dca_nodes_and_config_nodes_are_discoverable_and_writable():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    colours = ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
+               "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi")
+
+    for number in range(1, 9):
+        simulator.handle(client, packet("/node", "dca/%d" % number))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.address == "/node"
+        lines = response.params[0].splitlines()
+        assert len(lines) == 5
+        assert lines[0] == "/dca/%d/on ON" % number
+        assert lines[1] == "/dca/%d/fader 0.750" % number
+        assert lines[2] == '/dca/%d/config/name "DCA %d"' % (number, number)
+        assert lines[3] == "/dca/%d/config/icon 1" % number
+        assert lines[4] == "/dca/%d/config/color RD" % number
+
+        simulator.handle(client, packet("/node", "dca/%d/config" % number))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.params == ['/dca/%d/config "DCA %d" 1 RD\n' % (number, number)]
+
+        colour = colours[number + 1]
+        simulator.handle(client, packet("/", 'dca/%d OFF 0.625 "Monitor %d" %d %s' %
+                                        (number, number, number + 1, colour)))
+        assert state.dcas[number] == {
+            "number": number, "name": "Monitor %d" % number, "icon": number + 1,
+            "colour": number + 1, "on": False, "fader": 0.625
+        }
+
+        simulator.handle(client, packet("/node", "dca/%d" % number))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.params[0].splitlines() == [
+            "/dca/%d/on OFF" % number, "/dca/%d/fader 0.625" % number,
+            '/dca/%d/config/name "Monitor %d"' % (number, number),
+            "/dca/%d/config/icon %d" % (number, number + 1),
+            "/dca/%d/config/color %s" % (number, colour),
+        ]
+
+
+@pytest.mark.parametrize(("address", "value"), [
+    ("/dca/1/on", 2), ("/dca/1/on", True), ("/dca/1/fader", 1.01),
+    ("/dca/1/config/name", "Name is too long"),
+    ("/dca/1/config/icon", 0), ("/dca/1/config/icon", 75),
+    ("/dca/1/config/color", 16), ("/dca/9/on", 1),
+])
+def test_dca_individual_values_reject_invalid_inputs(address, value):
+    assert not ConsoleState().update(address, value)
+
+
+def test_dca_individual_values_can_be_read_and_set():
+    state = ConsoleState()
+    for number in range(1, 9):
+        prefix = "/dca/%d/" % number
+        for suffix, value in (("on", 0), ("fader", 0.625), ("config/name", "Monitor"),
+                              ("config/icon", 74), ("config/color", 15)):
+            address = prefix + suffix
+            assert state.update(address, value)
+            assert state.get(address) == value
