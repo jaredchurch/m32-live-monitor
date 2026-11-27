@@ -1339,3 +1339,82 @@ def test_userrout_out_individual_node_get_and_set():
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.params == ["/config/userrout/out/08 167\n"]
     assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+def test_channel_processing_node_reads_cover_delay_preamp_gate_dynamics_insert_and_eq():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    headers = (
+        "ch/01/delay", "ch/01/preamp", "ch/01/gate", "ch/01/gate/filter",
+        "ch/01/dyn", "ch/01/dyn/filter", "ch/01/insert", "ch/01/eq",
+        "ch/01/eq/1", "ch/01/mix", "ch/01/mix/01", "ch/01/grp",
+        "ch/01/automix",
+    )
+    expected_counts = (2, 5, 8, 3, 14, 3, 3, 1, 4, 6, 5, 2, 2)
+    for header, count in zip(headers, expected_counts):
+        simulator.handle(client, packet("/node", header))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.address == "/node"
+        assert len(response.params[0].split()) == count + 1
+        assert response.params[0].startswith("/" + header + " ")
+
+
+def test_channel_processing_node_group_writes_and_individual_access():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "ch/01/gate ON GATE -30 40 5 100 200 1"))
+    simulator.handle(client, packet("/", "ch/01/eq/2 PEQ 1200 -2.5 1.4"))
+    simulator.handle(client, packet("/", "ch/01/preamp 3.0 ON OFF 18 80"))
+
+    assert simulator.state.get("/ch/01/gate/thr") == -30.0
+    assert simulator.state.get("/ch/01/gate/mode") == 3
+    assert simulator.state.get("/ch/01/eq/2/f") == 1200.0
+    assert simulator.state.get("/ch/01/eq/2/g") == -2.5
+    assert simulator.state.get("/ch/01/preamp/trim") == 3.0
+    assert simulator.state.get("/ch/01/preamp/invert") == 1
+
+    simulator.handle(client, packet("/node", "ch/01/gate/thr"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == ["/ch/01/gate/thr -30.000\\n"]
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+def test_auxin_and_fx_return_processing_nodes_match_supported_protocol_scope():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "auxin/01/preamp"))
+    assert len(OscMessage(simulator.transport.sent[-1][0]).params[0].split()) == 3
+    simulator.handle(client, packet("/node", "auxin/01/eq/4"))
+    assert len(OscMessage(simulator.transport.sent[-1][0]).params[0].split()) == 5
+    simulator.handle(client, packet("/node", "fxrtn/01/eq"))
+    assert len(OscMessage(simulator.transport.sent[-1][0]).params[0].split()) == 2
+    simulator.handle(client, packet("/node", "fxrtn/01/eq/1"))
+    assert len(OscMessage(simulator.transport.sent[-1][0]).params[0].split()) == 5
+
+    simulator.handle(client, packet("/", "auxin/01/preamp 4.0 ON"))
+    simulator.handle(client, packet("/", "fxrtn/01/eq/1 HShv 8000 2.0 0.7"))
+    assert simulator.state.get("/auxin/01/preamp/trim") == 4.0
+    assert simulator.state.get("/fxrtn/01/eq/1/type") == 4
+    assert simulator.state.get("/fxrtn/01/eq/1/f") == 8000.0
+
+
+def test_channel_processing_node_writes_reject_invalid_groups_atomically():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "ch/01/gate ON GATE -30 40 5 100 200 65"))
+    assert state.get("/ch/01/gate/on") == 0
+    assert state.get("/ch/01/gate/thr") == -40.0
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+    assert not state.update("/ch/01/eq/1/g", 15.25)
+    assert not state.update("/ch/01/preamp/trim", 18.25)
+    assert not state.update("/ch/01/delay/time", 500.1)
+    assert not state.update("/auxin/01/gate/on", 1)
