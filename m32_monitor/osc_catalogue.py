@@ -94,6 +94,7 @@ OSC_CATALOGUE = [
         {"pattern":"/bus/{01...16}/eq, /bus/{01...16}/eq/{1...6}","purpose":"Bus EQ enable and six parametric EQ bands","operations":"GET, SET, /node","note":"Implemented: grouped and individual access for all six bands."},
         {"pattern":"/bus/{01...16}/mix, /bus/{01...16}/mix/{01...06}, /bus/{01...16}/grp","purpose":"Bus output fader/mute, six Matrix sends and DCA/mute-group assignments","operations":"GET, SET, /node","note":"Implemented: parent mix, matrix sends and group nodes."},
         {"pattern":"/mtx/{01...06}/{preamp,dyn,dyn/filter,insert,eq,eq/{1...6}}/*","purpose":"Matrix polarity, dynamics and side-chain filter, insert and six-band EQ processing","operations":"GET, SET, /node","note":"Implemented: grouped nodes, individual fields and validated writes across all six matrices."},
+        {"pattern":"/main/{st,m}/mix/{01...06}","purpose":"Main L/R and Mono/Centre sends to Matrix outputs","operations":"GET, SET, /node","note":"Implemented: six validated Matrix sends for each main output."},
         {"pattern":"/dca/{1...8}/config","purpose":"DCA configuration node","operations":"GET, SET, /node"},
         {"pattern":"/fx/{1...8}/{source,par}/*","purpose":"Effects rack source and up to 64 effect parameters","operations":"GET, SET, /node"},
         {"pattern":"/outputs/main/{01...16}/*, /outputs/aux/{01...06}/*","purpose":"Main and Aux physical output assignments","operations":"GET, SET, /node"},
