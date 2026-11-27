@@ -1098,7 +1098,13 @@ class Simulator:
         strip_node = self._strip_node_header(header)
         if strip_node is not None:
             prefix, node, fields = strip_node
-            response = self._strip_node_response(prefix, node, fields)
+            if header != prefix.lstrip("/") + "/" + node:
+                field = fields[0]
+                spec = self.state.strip_node_schema[header.split("/")[0]][node][field]
+                value = self.state.get(prefix + "/" + node + "/" + field)
+                response = "%s %s\\n" % ("/" + header, self._format_strip_node_value(spec, value))
+            else:
+                response = self._strip_node_response(prefix, node, fields)
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned %s processing node (%d values)" % (node, len(fields)))
