@@ -456,9 +456,11 @@ class Simulator:
                     raise ValueError("Unknown user control bank")
                 colors = ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
                           "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi")
-                if len(parts) == 3:
-                    if len(values) != 13:
-                        raise ValueError("User control bank requires colour, four encoders and eight buttons")
+                if len(parts) == 3 and len(values) == 1:
+                    # M32-Edit also writes the bank colour independently at the
+                    # parent address; preserve the existing encoder/button map.
+                    paths, parsed = ["/config/userctrl/%s/color" % bank], [colors.index(values[0])]
+                elif len(parts) == 3 and len(values) == 13:
                     parsed = [colors.index(values[0])] + values[1:]
                     paths = ["/config/userctrl/%s/color" % bank]
                     paths += ["/config/userctrl/%s/enc/%d" % (bank, n) for n in range(1, 5)]
