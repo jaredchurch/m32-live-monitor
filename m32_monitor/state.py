@@ -344,7 +344,7 @@ class ConsoleState:
                 if (isinstance(value, bool) or not isinstance(value, (int, float))
                         or float(value) != int(value) or not 0 <= int(value) < len(choices)):
                     return False
-        if not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/fx/")) and self.routing.update(address, value):
+        if not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/fx/", "/outputs/main/")) and self.routing.update(address, value):
             self.received.add(address)
             return True
         parts = address.strip("/").split("/")
