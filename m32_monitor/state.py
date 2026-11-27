@@ -264,7 +264,7 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) == 4 and parts[:2] == ["config", "userctrl"]:
+            if len(parts) in (4, 5) and parts[:2] == ["config", "userctrl"]:
                 bank, section, slot_text = parts[2], parts[3], None
                 if bank not in self.user_controls:
                     return False
