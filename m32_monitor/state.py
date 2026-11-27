@@ -9,6 +9,10 @@ from m32_monitor.routing import ROUTING_PATHS, RoutingState
 # Ordered X32node schemas for input strips. Values are (default, minimum, maximum,
 # step, kind, enum labels). The community protocol reference is unofficial.
 STRIP_NODE_SCHEMA = {
+    "bus": {
+        "config": {"name": (None, None, None, 0, "string", None), "icon": (1, 1, 74, 1, "int", None),
+                   "color": (1, 0, 15, 1, "enum", ("OFF","RD","GN","YE","BL","MG","CY","WH","OFFi","RDi","GNi","YEi","BLi","MGi","CYi","WHi"))},
+    },
     "ch": {
         "config": {"name": (None, None, None, 0, "string", None), "icon": (1, 1, 74, 1, "int", None),
                    "color": (1, 0, 15, 1, "enum", ("OFF","RD","GN","YE","BL","MG","CY","WH","OFFi","RDi","GNi","YEi","BLi","MGi","CYi","WHi")),
@@ -178,7 +182,7 @@ class ConsoleState:
         self.strip_node_schema = STRIP_NODE_SCHEMA
         self.strip_nodes = {}
         for family, nodes in STRIP_NODE_SCHEMA.items():
-            counts = {"ch": 32, "auxin": 8, "fxrtn": 8}[family]
+            counts = {"ch": 32, "auxin": 8, "fxrtn": 8, "bus": 16}[family]
             for number in range(1, counts + 1):
                 for node, fields in nodes.items():
                     for field_name, spec in fields.items():
@@ -192,7 +196,7 @@ class ConsoleState:
         self.dca_mutes_enabled = None
         self.hard_mutes_enabled = None
         self.buses = {
-            n: {"number": n, "name": "Bus %02d" % n, "on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0}
+            n: {"number": n, "name": "Bus %02d" % n, "icon": 1, "colour": 1, "on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0}
             for n in range(1, 17)
         }
         self.outputs = {
@@ -622,8 +626,12 @@ class ConsoleState:
                 number = int(parts[1])
                 if number not in self.buses:
                     return False
-                if parts[2:] == ["config", "name"] and isinstance(value, str):
+                if parts[2:] == ["config", "name"] and isinstance(value, str) and len(value) <= 12:
                     self.buses[number]["name"] = value
+                elif parts[2:] == ["config", "icon"] and self._valid_strip_node_value(address, value):
+                    self.buses[number]["icon"] = int(value)
+                elif parts[2:] == ["config", "color"] and self._valid_strip_node_value(address, value):
+                    self.buses[number]["colour"] = int(value)
                 elif parts[2:] == ["mix", "on"]:
                     self.buses[number]["on"] = self._bool(value)
                 elif parts[2:] == ["mix", "fader"]:
@@ -808,6 +816,8 @@ class ConsoleState:
                 return int(self.mute_groups[int(parts[2])])
             if len(parts) == 4 and parts[0] == "bus":
                 if parts[2:] == ["config", "name"]: return self.buses[int(parts[1])]["name"]
+                if parts[2:] == ["config", "icon"]: return self.buses[int(parts[1])]["icon"]
+                if parts[2:] == ["config", "color"]: return self.buses[int(parts[1])]["colour"]
                 if parts[2:] == ["grp", "dca"]: return self.buses[int(parts[1])]["dca_mask"]
                 if parts[2:] == ["grp", "mute"]: return self.buses[int(parts[1])]["mute_mask"]
                 return self.buses[int(parts[1])].get(parts[3]) if parts[2] == "mix" else None
