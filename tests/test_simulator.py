@@ -569,6 +569,28 @@ def test_formatsubscribe_rejects_malformed_group_without_sending():
     assert simulator.snapshot(outcome="unhandled_command")["events"]
 
 
+def test_node_set_updates_all_card_preferences():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    values = list(range(13))
+
+    simulator.handle(client, packet("/", "-prefs/card " + " ".join(map(str, values))))
+
+    assert list(state.card_preferences.values()) == values
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+def test_node_set_card_preferences_rejects_wrong_count_atomically():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    before = dict(state.card_preferences)
+    simulator.handle(("127.0.0.1", 50123), packet("/", "-prefs/card 1 2"))
+    assert state.card_preferences == before
+    assert simulator.snapshot(outcome="unhandled_set")["events"]
+
+
 def test_node_get_returns_card_preferences():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
