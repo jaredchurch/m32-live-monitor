@@ -68,6 +68,8 @@ class ConsoleState:
             "B": {"level": 0.0, "dim": 0, "latch": 0, "destmap": 0}}
         # Oscillator generator configuration; frequency values use 121 logarithmic positions.
         self.osc_config = {"level": 0.0, "f1": 632.456, "f2": 632.456, "fsel": 0, "type": 0, "dest": 0}
+        # User output slots 01-48; 0 means unassigned. Sources are documented 0-208.
+        self.user_rout_out = {number: 0 for number in range(1, 49)}
         self.solo_config = {
             "level": 0.0, "source": 0, "sourcetrim": 0.0,
             "chmode": 0, "busmode": 0, "dcamode": 0,
@@ -137,7 +139,7 @@ class ConsoleState:
                             for key, item in sorted(self.meters.items())]}
 
     def update(self, address, value):
-        if not address.startswith(("/config/solo/", "/config/talk/")) and self.routing.update(address, value):
+        if not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/")) and self.routing.update(address, value):
             self.received.add(address)
             return True
         parts = address.strip("/").split("/")
@@ -230,6 +232,25 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if len(parts) == 4 and parts[:3] == ["config", "userrout", "out"]:
+                slot_text = parts[3]
+                if not slot_text.isdigit() or len(slot_text) != 2:
+                    return False
+                slot = int(slot_text)
+                if slot not in self.user_rout_out or isinstance(value, bool) or not isinstance(value, (int, float)):
+                    return False
+                number = float(value)
+                if number != int(number) or not 0 <= number <= 208:
+                    return False
+                self.user_rout_out[slot] = int(number)
+                self.received.add(address)
+                return True
+
+            if len(parts) == 4 and parts[:3] == ["config", "userrout", "out"]:
+                slot_text = parts[3]
+                if not slot_text.isdigit() or len(slot_text) != 2:
+                    return None
+                return self.user_rout_out.get(int(slot_text))
             if len(parts) == 3 and parts[:2] == ["config", "osc"]:
                 field = parts[2]
                 if field not in self.osc_config or isinstance(value, bool) or not isinstance(value, (int, float)):
