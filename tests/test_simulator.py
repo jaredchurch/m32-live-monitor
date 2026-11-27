@@ -2670,6 +2670,22 @@ def test_channel_group_node_accepts_percent_binary_dca_and_mute_masks():
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
 
+def test_all_channel_bus_send_nodes_accept_db_levels():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    expected = (5.5 + 30.0) / 40.0
+    for channel in range(1, 33):
+        for bus in range(1, 17):
+            header = "ch/%02d/mix/%02d" % (channel, bus)
+            fields = "ON +5.5 +0 PRE 0" if bus % 2 else "ON +5.5"
+            simulator.handle(client, packet("/", header + " " + fields))
+            assert state.get("/" + header + "/level") == pytest.approx(expected)
+
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
 def test_channel_mix_node_accepts_fader_level_in_db():
     state = ConsoleState()
     simulator = Simulator(state)
