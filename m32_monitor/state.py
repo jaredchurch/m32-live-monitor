@@ -154,6 +154,13 @@ class ConsoleState:
                             for key, item in sorted(self.meters.items())]}
 
     def update(self, address, value):
+        if address in self.routing.values or address in __import__("m32_monitor.routing", fromlist=["ROUTING_PATHS"]).ROUTING_PATHS:
+            from m32_monitor.routing import ROUTING_PATHS
+            if self.mode == "simulator" and address in ROUTING_PATHS:
+                choices = ROUTING_PATHS[address][1]
+                if (isinstance(value, bool) or not isinstance(value, (int, float))
+                        or float(value) != int(value) or not 0 <= int(value) < len(choices)):
+                    return False
         if not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/")) and self.routing.update(address, value):
             self.received.add(address)
             return True
@@ -329,22 +336,6 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) == 4 and parts[:2] == ["config", "userctrl"]:
-                bank, section = parts[2], parts[3]
-                if bank not in self.user_controls:
-                    return None
-                if section == "color" and len(parts) == 4:
-                    return self.user_controls[bank]["color"]
-                if section in ("enc", "btn") and len(parts) == 5 and parts[4].isdigit():
-                    return self.user_controls[bank][section].get(int(parts[4]))
-            if len(parts) == 3 and parts[:2] == ["config", "tape"]:
-                return self.tape_config.get(parts[2])
-            if len(parts) == 3 and parts[:2] == ["config", "amixenable"]:
-                return self.amix_enable.get(parts[2])
-            if len(parts) == 3 and parts[:2] == ["config", "dp48"]:
-                return self.dp48_config.get(parts[2])
-            if len(parts) == 4 and parts[:2] == ["config", "dp48"] and parts[2] in ("link", "assign", "grpname") and parts[3].isdigit():
-                return self.dp48_config[parts[2]].get(int(parts[3]))
             if len(parts) == 3 and parts[:2] == ["config", "osc"]:
                 field = parts[2]
                 if field not in self.osc_config or isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -624,6 +615,22 @@ class ConsoleState:
                     return None
                 slots = self.user_rout_out if parts[2] == "out" else self.user_rout_in
                 return slots.get(int(slot_text))
+            if len(parts) == 4 and parts[:2] == ["config", "userctrl"]:
+                bank, section = parts[2], parts[3]
+                if bank not in self.user_controls:
+                    return None
+                if section == "color" and len(parts) == 4:
+                    return self.user_controls[bank]["color"]
+                if section in ("enc", "btn") and len(parts) == 5 and parts[4].isdigit():
+                    return self.user_controls[bank][section].get(int(parts[4]))
+            if len(parts) == 3 and parts[:2] == ["config", "tape"]:
+                return self.tape_config.get(parts[2])
+            if len(parts) == 3 and parts[:2] == ["config", "amixenable"]:
+                return self.amix_enable.get(parts[2])
+            if len(parts) == 3 and parts[:2] == ["config", "dp48"]:
+                return self.dp48_config.get(parts[2])
+            if len(parts) == 4 and parts[:2] == ["config", "dp48"] and parts[2] in ("link", "assign", "grpname") and parts[3].isdigit():
+                return self.dp48_config[parts[2]].get(int(parts[3]))
             if len(parts) == 3 and parts[:2] == ["config", "osc"]:
                 return self.osc_config.get(parts[2])
             if len(parts) == 3 and parts[:2] == ["config", "talk"]:
