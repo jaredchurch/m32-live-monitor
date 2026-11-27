@@ -498,6 +498,12 @@ class Simulator:
                           for field in fields)
         return "/config/linkcfg " + values + "\n"
 
+    def _config_mono_node_group(self):
+        """Render mono/centre output mode and Main L/R link settings."""
+        mode = ("LR+M", "LCR")[int(self.state.mono_config["mode"])]
+        link = ("OFF", "ON")[int(self.state.mono_config["link"])]
+        return "/config/mono/mode %s\\n/config/mono/link %s\\n" % (mode, link)
+
     def _config_mute_node_group(self):
         """Render all six mute-group selection states."""
         return "".join("/config/mute/%d %s\n" % (
@@ -515,6 +521,13 @@ class Simulator:
             self.send(client, "/node", response, outcome="node_response")
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned linked-channel configuration flags")
+            return
+
+        if header == "config/mono":
+            response = self._config_mono_node_group()
+            self.send(client, "/node", response, outcome="node_response")
+            self.record("in", "handled_node_get", "/node", args, client,
+                        "Returned mono/centre output mode and Main L/R link settings")
             return
 
         if header == "config/mute":
