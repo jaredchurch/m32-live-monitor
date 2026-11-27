@@ -111,6 +111,37 @@ for _matrix in range(1, 7):
         "on": (1,0,1,1,"enum",("OFF","ON")),
         "level": (0.0,0.0,1.0,0,"float",None)}
 
+# Matrix output strips: configuration, polarity, dynamics, insert, six-band EQ,
+# output level/mute and DCA/mute-group assignments.
+STRIP_NODE_SCHEMA["mtx"] = {
+    "config": {"name": ("Matrix", None, None, 0, "string", None),
+               "icon": (1, 1, 74, 1, "int", None),
+               "color": (1, 0, 15, 1, "enum", ("OFF","RD","GN","YE","BL","MG","CY","WH","OFFi","RDi","GNi","YEi","BLi","MGi","CYi","WHi"))},
+    "preamp": {"invert": (0,0,1,1,"enum",("OFF","ON"))},
+    "dyn": {"on": (0,0,1,1,"enum",("OFF","ON")), "mode": (0,0,1,1,"enum",("COMP","EXP")),
+            "det": (0,0,1,1,"enum",("PEAK","RMS")), "env": (0,0,1,1,"enum",("LIN","LOG")),
+            "thr": (-24.0,-60.0,0.0,0.5,"float",None),
+            "ratio": (6,0,11,1,"enum",("1.1","1.3","1.5","2.0","2.5","3.0","4.0","5.0","7.0","10","20","100")),
+            "knee": (0.0,0.0,5.0,1.0,"float",None), "mgain": (0.0,0.0,24.0,0.5,"float",None),
+            "attack": (10.0,0.0,120.0,1.0,"float",None), "hold": (10.0,0.02,2000.0,0,"float",None),
+            "release": (100.0,5.0,4000.0,0,"float",None), "pos": (0,0,1,1,"enum",("PRE","POST")),
+            "mix": (100.0,0.0,100.0,5.0,"float",None), "auto": (0,0,1,1,"enum",("OFF","ON"))},
+    "dyn/filter": {"on": (0,0,1,1,"enum",("OFF","ON")),
+                   "type": (0,0,8,1,"enum",("LC6","LC12","HC6","HC12","1.0","2.0","3.0","5.0","10.0")),
+                   "f": (1000.0,20.0,20000.0,0,"float",None)},
+    "insert": {"on": (0,0,1,1,"enum",("OFF","ON")), "pos": (0,0,1,1,"enum",("PRE","POST")),
+               "sel": (0,0,22,1,"enum",("OFF","FX1L","FX1R","FX2L","FX2R","FX3L","FX3R","FX4L","FX4R","FX5L","FX5R","FX6L","FX6R","FX7L","FX7R","FX8L","FX8R","AUX1","AUX2","AUX3","AUX4","AUX5","AUX6"))},
+    "eq": {"on": (0,0,1,1,"enum",("OFF","ON"))},
+    "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None)},
+    "grp": {"dca": (0,0,255,1,"int",None), "mute": (0,0,63,1,"int",None)},
+}
+for _band in range(1, 7):
+    STRIP_NODE_SCHEMA["mtx"]["eq/%d" % _band] = {
+        "type": (2,0,13,1,"enum",("LCut","LShv","PEQ","VEQ","HShv","HCut","BU6","BU12","BS12","LR12","BU18","BU24","BS24","LR24")),
+        "f": (1000.0,20.0,20000.0,0,"float",None),
+        "g": (0.0,-15.0,15.0,0.25,"float",None),
+        "q": (1.0,0.3,10.0,0,"float",None)}
+
 
 @dataclass
 class ChannelState:
@@ -208,7 +239,7 @@ class ConsoleState:
         self.strip_node_schema = STRIP_NODE_SCHEMA
         self.strip_nodes = {}
         for family, nodes in STRIP_NODE_SCHEMA.items():
-            counts = {"ch": 32, "auxin": 8, "fxrtn": 8, "bus": 16}[family]
+            counts = {"ch": 32, "auxin": 8, "fxrtn": 8, "bus": 16, "mtx": 6}[family]
             for number in range(1, counts + 1):
                 for node, fields in nodes.items():
                     for field_name, spec in fields.items():
@@ -229,8 +260,9 @@ class ConsoleState:
             "main_st": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0, "sends": {}},
             "main_mono": {"on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0, "sends": {}},
         }
-        self.matrices = {n: {"number": n, "name": "Matrix %02d" % n, "on": True, "fader": 0.75,
-                             "dca_mask": 0, "mute_mask": 0} for n in range(1, 7)}
+        self.matrices = {n: {"number": n, "name": "Matrix %02d" % n, "icon": 1, "colour": 1,
+                             "on": True, "fader": 0.75, "dca_mask": 0, "mute_mask": 0}
+                         for n in range(1, 7)}
 
     @property
     def online(self):
@@ -345,22 +377,22 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) == 4 and parts[0] == "mtx":
+            if len(parts) >= 4 and parts[0] == "mtx":
                 number = int(parts[1])
-                if number not in self.matrices:
+                if number not in self.matrices or address not in self.strip_nodes:
                     return False
-                if parts[2:] == ["mix", "on"]:
-                    self.matrices[number]["on"] = self._bool(value)
-                elif parts[2:] == ["mix", "fader"]:
-                    self.matrices[number]["fader"] = max(0.0, min(1.0, float(value)))
-                elif parts[2:] == ["grp", "dca"]:
-                    self.matrices[number]["dca_mask"] = int(value) & 255
-                elif parts[2:] == ["grp", "mute"]:
-                    self.matrices[number]["mute_mask"] = int(value) & 63
-                elif parts[2:] == ["config", "name"] and isinstance(value, str):
-                    self.matrices[number]["name"] = value
-                else:
+                if not self._valid_strip_node_value(address, value):
                     return False
+                self.strip_nodes[address] = value
+                matrix = self.matrices[number]
+                field_path = parts[2:]
+                if field_path == ["config", "name"]: matrix["name"] = value
+                elif field_path == ["config", "icon"]: matrix["icon"] = int(value)
+                elif field_path == ["config", "color"]: matrix["colour"] = int(value)
+                elif field_path == ["mix", "on"]: matrix["on"] = self._bool(value)
+                elif field_path == ["mix", "fader"]: matrix["fader"] = float(value)
+                elif field_path == ["grp", "dca"]: matrix["dca_mask"] = int(value)
+                elif field_path == ["grp", "mute"]: matrix["mute_mask"] = int(value)
                 self.received.add(address)
                 return True
 
@@ -832,13 +864,16 @@ class ConsoleState:
                 return int(self.dca_mutes_enabled) if self.dca_mutes_enabled is not None else None
             if address == "/-prefs/hardmute":
                 return int(self.hard_mutes_enabled) if self.hard_mutes_enabled is not None else None
-            if len(parts) == 4 and parts[0] == "mtx":
+            if len(parts) >= 4 and parts[0] == "mtx":
                 matrix = self.matrices[int(parts[1])]
+                if parts[2:] == ["config", "name"]: return matrix["name"]
+                if parts[2:] == ["config", "icon"]: return matrix["icon"]
+                if parts[2:] == ["config", "color"]: return matrix["colour"]
                 if parts[2:] == ["mix", "on"]: return matrix["on"]
                 if parts[2:] == ["mix", "fader"]: return matrix["fader"]
                 if parts[2:] == ["grp", "dca"]: return matrix["dca_mask"]
                 if parts[2:] == ["grp", "mute"]: return matrix["mute_mask"]
-                if parts[2:] == ["config", "name"]: return matrix["name"]
+                return self.strip_nodes.get(address)
             if len(parts) >= 4 and parts[0] == "bus" and parts[2] not in ("config", "mix", "grp") and address in self.strip_nodes:
                 return self.strip_nodes.get(address)
             if len(parts) == 5 and parts[0] == "bus" and parts[2] == "mix":
