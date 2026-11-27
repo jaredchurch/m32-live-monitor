@@ -1790,6 +1790,22 @@ def test_channel_processing_node_group_writes_and_individual_access():
     assert simulator.snapshot(outcome="handled_node_set")["events"]
 
 
+@pytest.mark.parametrize("header,expected_path", [
+    ("ch/01/eq/4 HShv 9k35 -11.7 2.0", "/ch/01/eq/4/f"),
+    ("ch/01/eq/4/f 9k35", "/ch/01/eq/4/f"),
+    ("mtx/01/eq/6 HShv 9k35 -11.7 2.0", "/mtx/01/eq/6/f"),
+])
+def test_eq_frequency_node_writes_accept_compact_khz_notation(header, expected_path):
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+
+    simulator.handle(("127.0.0.1", 50123), packet("/", header))
+
+    assert state.get(expected_path) == 9350.0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
 def test_auxin_and_fx_return_processing_nodes_match_supported_protocol_scope():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
