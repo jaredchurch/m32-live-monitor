@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>M32 Live Monitor</title><style>
+<title>M32 Simulation</title><style>
 :root{font-family:system-ui,sans-serif;color:#e9edf2;background:#11151b;color-scheme:dark}*{box-sizing:border-box}
 body{margin:0;padding:24px;max-width:1800px;margin-inline:auto}
 header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
@@ -52,7 +52,7 @@ td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;ba
 @media(max-width:800px){.catalogue-item{grid-template-columns:1fr}.catalogue-controls input,.catalogue-controls select{min-width:0;width:100%}}
 @media(max-width:700px){body{padding:14px}th,td{padding:6px 5px}.matrix-wrap{max-height:68vh}}
 </style></head><body>
-<header><div><h1>M32 Live Monitor</h1><div class="muted">Read-only console overview and signal-path mute analysis</div></div><div id="connection">Connecting…</div></header>
+<header><div><h1>M32 Simulation</h1><div class="muted">Read-only console overview and signal-path mute analysis</div></div><div id="connection">Connecting…</div></header>
 <nav class="tabs"><button class="tab active" data-panel="matrix">Output mute matrix</button><button class="tab" data-panel="channels-panel">Channel strips</button><button class="tab" data-panel="routing-panel">Routing map</button><button class="tab" data-panel="diagnostics-panel">Diagnostics</button><button class="tab" data-panel="simulator-panel">Simulator / OSC log</button><button class="tab" data-panel="catalogue-panel">OSC catalogue</button></nav>
 <section id="matrix" class="panel active">
 <h2>Channel → output signal paths</h2>
@@ -101,7 +101,7 @@ td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;ba
 </section>
 <section id="simulator-panel" class="panel">
 <h2>Simulator control and OSC traffic</h2>
-<div class="muted">Select a repeatable console state, then scan for M32-Live-Monitor in M32-Edit. If discovery does not find it, enter 127.0.0.1 and UDP port 10023 manually. Every decoded incoming and outgoing OSC message is recorded. Unsupported addresses and malformed packets are highlighted so we can extend compatibility from observed traffic.</div>
+<div class="muted">Select a repeatable console state, then scan for M32-Simulation in M32-Edit. If discovery does not find it, enter 127.0.0.1 and UDP port 10023 manually. Every decoded incoming and outgoing OSC message is recorded. Unsupported addresses and malformed packets are highlighted so we can extend compatibility from observed traffic.</div>
 <div class="sim-controls">
 <label>Scenario <select id="sim-scenario"></select></label>
 <button id="sim-load">Load scenario</button><button id="sim-export-csv">Export CSV</button><button id="sim-export-json">Export JSON</button><button id="sim-clear">Clear log</button>
