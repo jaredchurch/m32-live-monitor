@@ -30,20 +30,20 @@ OSC_CATALOGUE = [
         {"pattern":"/config/userctrl/{A,B,C}/*","purpose":"User-assignment bank colours, four encoders and eight buttons per bank","operations":"GET, SET, /node","note":"Implemented: bank, encoder and button group reads/writes; individual colour and string values are validated."}
     ]},
     {"category":"Input channels","support":"partial","items":[
-        {"pattern":"/ch/{01...32}/config/*","purpose":"Channel name, source, colour and configuration","operations":"GET, SET, /node"},
-        {"pattern":"/ch/{01...32}/preamp/*, /ch/{01...32}/delay/*","purpose":"Preamp, phantom/trim and channel delay","operations":"GET, SET, /node","note":"Most processing parameters are not yet modelled."},
-        {"pattern":"/ch/{01...32}/gate/*, /ch/{01...32}/dyn/*","purpose":"Gate and dynamics processing","operations":"GET, SET, /node","note":"Not yet fully modelled."},
-        {"pattern":"/ch/{01...32}/eq/*","purpose":"Four-band channel equaliser","operations":"GET, SET, /node","note":"Not yet fully modelled."},
-        {"pattern":"/ch/{01...32}/insert/*","purpose":"Channel insert assignment","operations":"GET, SET, /node","note":"Not yet fully modelled."},
-        {"pattern":"/ch/{01...32}/mix/*","purpose":"Main assignments, fader, mute, pan and 16 bus sends","operations":"GET, SET, /node","note":"Core mute/fader/main-send/bus-send parameters are modelled; others remain gaps."},
+        {"pattern":"/ch/{01...32}/config/*","purpose":"Channel name, icon, source and colour configuration","operations":"GET, SET, /node","note":"Documented channel config node is modelled with validated name, icon, colour and source values."},
+        {"pattern":"/ch/{01...32}/preamp/*, /ch/{01...32}/delay/*","purpose":"Preamp trim, polarity, low-cut/phantom controls and channel delay","operations":"GET, SET, /node","note":"Documented delay and preamp nodes, grouped reads/writes and individual fields are simulated with range validation."},
+        {"pattern":"/ch/{01...32}/gate/*, /ch/{01...32}/dyn/*","purpose":"Gate, side-chain filter, compressor/expander and dynamics filter","operations":"GET, SET, /node","note":"Documented gate/dynamics nodes and filter subnodes support grouped reads/writes and validated individual fields."},
+        {"pattern":"/ch/{01...32}/eq/*","purpose":"Four-band channel equaliser and individual band parameters","operations":"GET, SET, /node","note":"EQ enable and all four bands (type, frequency, gain and Q) support grouped reads/writes and individual access."},
+        {"pattern":"/ch/{01...32}/insert/*","purpose":"Channel insert enable, position and FX/Aux selection","operations":"GET, SET, /node","note":"Documented insert node supports grouped reads/writes and validated individual fields."},
+        {"pattern":"/ch/{01...32}/mix/*","purpose":"Main assignments, fader, mute, pan and 16 bus sends","operations":"GET, SET, /node","note":"Parent mix and 16 send nodes are modelled, including send pan, tap type and pan-follow fields where documented."},
         {"pattern":"/ch/{01...32}/grp/*","purpose":"DCA and mute-group assignments","operations":"GET, SET, /node"},
-        {"pattern":"/ch/{01...32}/automix/*","purpose":"Automix group and weight","operations":"GET, SET, /node","note":"Known protocol family; not yet simulated."}
+        {"pattern":"/ch/{01...32}/automix/*","purpose":"Automix group assignment and weight","operations":"GET, SET, /node","note":"Group and weight are modelled for channel strips; firmware behaviour restricts effective automix use to channels 01–08."}
     ]},
     {"category":"Aux inputs and FX returns","support":"partial","items":[
-        {"pattern":"/auxin/{01...08}/config/*, /auxin/{01...08}/preamp/*","purpose":"Aux input identity and preamp","operations":"GET, SET, /node","note":"Basic strip config is modelled; preamp coverage is incomplete."},
-        {"pattern":"/auxin/{01...08}/eq/*, /auxin/{01...08}/mix/*, /auxin/{01...08}/grp/*","purpose":"Aux EQ, sends, main assignment and groups","operations":"GET, SET, /node","note":"Core mute/fader/send/group fields are modelled; remaining fields are gaps."},
-        {"pattern":"/fxrtn/{01...08}/config/*, /fxrtn/{01...08}/eq/*","purpose":"FX return identity and equalisation","operations":"GET, SET, /node","note":"Basic strip state is modelled; EQ is not yet fully modelled."},
-        {"pattern":"/fxrtn/{01...08}/mix/*, /fxrtn/{01...08}/grp/*","purpose":"FX return fader, mute, sends and groups","operations":"GET, SET, /node","note":"Core mute/fader/send/group fields are modelled."}
+        {"pattern":"/auxin/{01...08}/config/*, /auxin/{01...08}/preamp/*","purpose":"Aux input identity and preamp trim/polarity","operations":"GET, SET, /node","note":"Documented config and preamp nodes are modelled with grouped reads/writes and validated fields."},
+        {"pattern":"/auxin/{01...08}/eq/*, /auxin/{01...08}/mix/*, /auxin/{01...08}/grp/*","purpose":"Aux EQ, sends, main assignment and groups","operations":"GET, SET, /node","note":"Documented EQ (four bands), mix, send and group nodes are modelled. No Aux gate/dynamics/delay/insert node is listed in the reference."},
+        {"pattern":"/fxrtn/{01...08}/config/*, /fxrtn/{01...08}/eq/*","purpose":"FX return identity and four-band equalisation","operations":"GET, SET, /node","note":"Documented config and EQ nodes, including all four bands, are modelled. No FX return preamp/gate/dynamics/delay/insert node is listed in the reference."},
+        {"pattern":"/fxrtn/{01...08}/mix/*, /fxrtn/{01...08}/grp/*","purpose":"FX return fader, mute, sends and groups","operations":"GET, SET, /node","note":"Documented parent mix, send and group nodes are modelled."}
     ]},
     {"category":"Buses, matrices and main outputs","support":"partial","items":[
         {"pattern":"/bus/{01...16}/config/*, /bus/{01...16}/mix/*","purpose":"Bus name, processing, fader, mute and sends to matrices","operations":"GET, SET, /node","note":"Core output mute/fader/name and Matrix sends are modelled."},
