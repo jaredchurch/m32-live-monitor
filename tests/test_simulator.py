@@ -1553,6 +1553,49 @@ def test_matrix_processing_rejects_invalid_values(address, value):
     assert not ConsoleState().update(address, value)
 
 
+def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    expected = {"config": 3, "dyn": 14, "dyn/filter": 3, "insert": 3,
+                "eq": 1, "eq/6": 4, "mix": 2, "grp": 2}
+    for prefix in ("main/st", "main/m"):
+        for node, count in expected.items():
+            header = prefix + "/" + node
+            simulator.handle(client, packet("/node", header))
+            response = OscMessage(simulator.transport.sent[-1][0])
+            assert response.address == "/node"
+            assert len(shlex.split(response.params[0])) - 1 == count
+            assert response.params[0].startswith("/" + header + " ")
+        simulator.handle(client, packet("/", prefix + '/config "Main Out" 12 YE'))
+        simulator.handle(client, packet("/", prefix + "/dyn ON COMP RMS LIN -30 4.0 2 3 15 20 150 POST 75 OFF"))
+        simulator.handle(client, packet("/", prefix + "/dyn/filter ON HC12 120"))
+        simulator.handle(client, packet("/", prefix + "/insert ON POST FX3L"))
+        simulator.handle(client, packet("/", prefix + "/eq ON"))
+        simulator.handle(client, packet("/", prefix + "/eq/6 PEQ 2500 -3.0 1.2"))
+        simulator.handle(client, packet("/", prefix + "/mix OFF 0.65"))
+        simulator.handle(client, packet("/", prefix + "/grp 3 5"))
+        assert state.get("/" + prefix + "/config/name") == "Main Out"
+        assert state.get("/" + prefix + "/config/icon") == 12
+        assert state.get("/" + prefix + "/config/color") == 3
+        assert state.get("/" + prefix + "/dyn/thr") == -30.0
+        assert state.get("/" + prefix + "/dyn/filter/f") == 120.0
+        assert state.get("/" + prefix + "/insert/sel") == 5
+        assert state.get("/" + prefix + "/eq/6/g") == -3.0
+        assert state.get("/" + prefix + "/mix/fader") == 0.65
+        assert state.get("/" + prefix + "/grp/mute") == 5
+
+
+@pytest.mark.parametrize(("address", "value"), [
+    ("/main/st/config/icon", 75), ("/main/m/config/color", 16),
+    ("/main/st/dyn/thr", -60.25), ("/main/m/insert/sel", 23),
+    ("/main/st/eq/6/g", 15.25), ("/main/m/mix/fader", 1.1),
+])
+def test_main_output_processing_rejects_invalid_values(address, value):
+    assert not ConsoleState().update(address, value)
+
+
 def test_simulator_default_discovery_name_is_m32_simulation():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
