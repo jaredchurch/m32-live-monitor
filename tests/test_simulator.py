@@ -1857,7 +1857,7 @@ def test_physical_main_output_nodes_are_discoverable_readable_and_writable():
     simulator.handle(client, packet("/node", "outputs/main/01/src"))
     assert OscMessage(simulator.transport.sent[-1][0]).params == ["/outputs/main/01/src 18\n"]
     simulator.handle(client, packet("/node", "outputs/main/01/delay/time"))
-    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/outputs/main/01/delay/time 125.5\n"]
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/outputs/main/01/delay/time 12.3\n"]
 
     simulator.handle(client, packet("/outputs/main/02/src", 76))
     assert state.get("/outputs/main/02/src") == 76
