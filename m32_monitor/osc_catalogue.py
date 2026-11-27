@@ -63,7 +63,7 @@ OSC_CATALOGUE = [
         {"pattern":"/outputs/p16/{01...16}, /outputs/p16/{01...16}/iQ","purpose":"Sixteen Ultranet/P16 personal-monitor output assignments and optional Turbosound iQ speaker configuration","operations":"GET, SET, /node","note":"Implemented: source and tap-position assignments plus iQ group and speaker settings."},
         {"pattern":"/outputs/aes/{01...02}","purpose":"Two AES50 output banks: source, tap position and polarity","operations":"GET, SET, /node","note":"Implemented grouped and individual reads/writes with source, tap-position and polarity validation."},
         {"pattern":"/outputs/rec/{01...02}","purpose":"Two recording-card output banks: source and tap position","operations":"GET, SET, /node","note":"Implemented grouped and individual reads/writes with source and tap-position validation."},
-        {"pattern":"/headamp/{1...N}","purpose":"Remote headamp gain and phantom state","operations":"GET, SET, /node"},
+        {"pattern":"/headamp/{000...127}, /headamp/{000...127}/{gain,phantom}","purpose":"Remote headamp gain (-12 to +60 dB in 0.5 dB steps) and phantom power","operations":"GET, SET, /node","note":"Implemented for all 128 headamps: local XLR inputs 000-031, AES50 A 032-079 and AES50 B 080-127."},
         {"pattern":"/-insert/*","purpose":"Insert routing and insert device configuration","operations":"GET, SET, /node"}
     ]},
     {"category":"Meters and subscriptions","support":"partial","items":[
@@ -103,7 +103,7 @@ OSC_CATALOGUE = [
         {"pattern":"/fx/{1...8}/{source,par}/*","purpose":"Effects rack source and up to 64 effect parameters","operations":"GET, SET, /node"},
         {"pattern":"/outputs/main/{01...16}/*, /outputs/aux/{01...06}/*","purpose":"Main and Aux physical output assignments","operations":"GET, SET, /node"},
         {"pattern":"/outputs/p16/{01...16}/*, /outputs/aes/{01...02}/*, /outputs/rec/{01...02}/*","purpose":"P16, AES and recording output assignments","operations":"GET, SET, /node"},
-        {"pattern":"/headamp/{000...127}","purpose":"Headamp gain and phantom configuration","operations":"GET, SET, /node"},
+        {"pattern":"/headamp/{000...127}, /headamp/{000...127}/{gain,phantom}","purpose":"Headamp gain and phantom configuration","operations":"GET, SET, /node","note":"Implemented for all 128 headamps with range and step validation."},
         {"pattern":"/-show/showfile/{inputs,mxsends,mxbuses,console,chan16,chan32,return,buses,effects,cue,scene,snippet}","purpose":"Show file content and cue/scene/snippet indexes","operations":"GET, SET, /node"},
         {"pattern":"/-libs/{ch,fx,r,mon}/{001...100}/*","purpose":"Channel, FX, routing and monitor preset libraries","operations":"GET, SET, /node"},
         {"pattern":"/-prefs/{style,bright,lcdcont,ledbright,lamp,clock*,confirm*,scene_advance,safe_masterlevels,autosel,show_control,fastFaders,ip,remote,iQ,key}/*","purpose":"Console preferences, networking, remote control, Turbosound iQ and key assignments","operations":"GET, SET, /node"},
