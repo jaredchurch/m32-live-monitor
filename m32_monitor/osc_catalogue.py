@@ -83,6 +83,7 @@ OSC_CATALOGUE = [
     ]},
     {"category":"Additional documented node families","support":"known-unsupported","items":[
         {"pattern":"/config/userrout/out/{01...48}","purpose":"User-defined output routing source assignments","operations":"GET, SET, /node","note":"Implemented: all 48 output slots; integer sources 0-208."},
+        {"pattern":"/config/routing, /config/routing/{IN,AES50A,AES50B,CARD,OUT,PLAY}","purpose":"Grouped input, AES50, Card, output and playback patch configuration","operations":"/node","note":"Implemented: parent and bank-group reads return newline-delimited entries; unreceived values default to 0 in the simulator."},
         {"pattern":"/config/userctrl/{A,B,C}/*","purpose":"User-assignment banks, encoder and button assignments","operations":"GET, SET, /node"},
         {"pattern":"/config/tape, /config/amixenable","purpose":"Tape and automix enable configuration","operations":"GET, SET, /node"},
         {"pattern":"/config/dp48/*","purpose":"DP48 personal monitor assignment, links and group names","operations":"GET, SET, /node"},
