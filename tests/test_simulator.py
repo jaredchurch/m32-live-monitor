@@ -760,7 +760,7 @@ def test_rta_group_node_returns_all_ten_fields_in_console_format():
     ("-prefs/rta/pos", 1, "/-prefs/rta/pos POST\n"),
     ("-prefs/rta/mode", 1, "/-prefs/rta/mode SPEC\n"),
     ("-prefs/rta/det", 1, "/-prefs/rta/det PEAK\n"),
-    ("-prefs/rta/peakhold", 8, "/-prefs/rta/peakhold 8\n"),
+    ("-prefs/rta/peakhold", 8, "/-prefs/rta/peakhold 8s\n"),
     ("-prefs/rta/options", 33, "/-prefs/rta/options %100001\n"),
     ("-stat/rtamodeeq", 1, "/-stat/rtamodeeq SPEC\n"),
     ("-stat/rtaeqpre", 1, "/-stat/rtaeqpre ON\n"),
