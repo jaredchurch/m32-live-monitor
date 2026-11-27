@@ -26,7 +26,7 @@ OSC_CATALOGUE = [
         {"pattern":"/config/solo/{level,source,sourcetrim,chmode,busmode,dcamode,exclusive,followsel,followsolo,dimatt,dim,mono,delay,delaytime,masterctrl,mute,dimpfl}","purpose":"Solo monitor source, level, PFL/AFL modes, dimming and delay","operations":"GET, SET, /node","note":"All 17 documented solo-monitor fields are simulated."},
         {"pattern":"/config/talk/{enable,source}, /config/talk/{A,B}/{level,dim,latch,destmap}","purpose":"Talkback enable, source, A/B levels, dim/latch and destination routing masks","operations":"GET, SET, /node","note":"Shared, A and B node reads/writes plus individual field access are simulated."},
         {"pattern":"/config/osc/{level,f1,f2,fsel,type,dest}","purpose":"Oscillator generator level, frequency selection, waveform and output destination","operations":"GET, SET, /node","note":"All six documented fields support validated individual access and grouped X32node reads/writes."},
-        {"pattern":"/config/routing/*","purpose":"Input, AES50, Card, output and playback routing banks","operations":"GET, SET, /node","note":"Routing snapshot covers selected assignments; complete node read/write coverage is outstanding."},
+        {"pattern":"/config/routing/*","purpose":"Input, AES50, Card, output and playback routing banks","operations":"GET, SET, /node","note":"Documented bank node reads and validated individual assignments are supported; the parent config/routing aggregate is a simulator convenience, not a documented header."},
         {"pattern":"/config/userctrl/{A,B,C}/*","purpose":"User-assignment bank colours, four encoders and eight buttons per bank","operations":"GET, SET, /node","note":"Implemented: bank, encoder and button group reads; individual colour and string values are validated."}
     ]},
     {"category":"Input channels","support":"partial","items":[
@@ -103,10 +103,10 @@ OSC_CATALOGUE = [
         {"pattern":"/-stat/{selidx,chfaderbank,grpfaderbank,sendsonfader,bussenbank,eqband,userbank,autosave,lock,usbmounted,remote,xcardtype,xcardsync,geq*,screen*,aes50*,solosw*,talk*,osc*,tape*}","purpose":"Surface, screen, AES50, solo, talkback, oscillator and tape status","operations":"GET, /node"}
     ]},
     {"category":"Additional documented X32node headers","support":"known-unsupported","items":[
-        {"pattern":"/config/routing/routswitch, /config/routing/PLAY","purpose":"Routing record/playback switch and playback source banks","operations":"/node, GET, SET"},
+        {"pattern":"/config/routing/{routswitch,rootswitch}, /config/routing/PLAY","purpose":"Routing record/playback switch aliases and playback source banks","operations":"/node, GET, SET","note":"Both documented switch spellings are accepted; routing enum writes are range-checked in simulator mode."},
         {"pattern":"/config/userrout/in/{01...32}","purpose":"User-defined input routing assignments","operations":"/node, GET, SET","note":"Implemented: all 32 input slots; integer sources 0-168."},
-        {"pattern":"/config/dp48, /config/dp48/assign, /config/dp48/grpname","purpose":"DP48 personal-monitor assignments, links and group names","operations":"/node, GET, SET"},
-        {"pattern":"/config/amixenable","purpose":"Automix enable configuration","operations":"/node, GET, SET"},
+        {"pattern":"/config/dp48, /config/dp48/assign, /config/dp48/link, /config/dp48/grpname","purpose":"DP48 scope, broadcast, AES50 target, links, assignments and group names","operations":"/node, GET, SET","note":"Implemented: parent and sub-node reads, grouped writes and validated individual values."},
+        {"pattern":"/config/amixenable/{X,Y}","purpose":"Automix enable flags for groups X and Y","operations":"/node, GET, SET","note":"Implemented: grouped and individual access."},
         {"pattern":"/-show/prepos, /-show/prepos/current","purpose":"Show-file preposition and current show position","operations":"/node, GET"},
         {"pattern":"/-prefs/iq, /-prefs/iq/{01...16}","purpose":"Turbosound iQ speaker preferences","operations":"/node, GET, SET"},
         {"pattern":"/outputs/p16/{01...16}/iQ","purpose":"P16 output speaker metadata and iQ control","operations":"/node, GET, SET"},
