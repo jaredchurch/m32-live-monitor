@@ -270,7 +270,7 @@ class ConsoleState:
                         default = spec[0]
                         self.strip_nodes["/%s/%02d/%s/%s" % (family, number, node, field_name)] = default
         self.dcas = {
-            n: {"number": n, "name": "DCA %d" % n, "on": True, "fader": 0.75}
+            n: {"number": n, "name": "DCA %d" % n, "icon": 1, "colour": 1, "on": True, "fader": 0.75}
             for n in range(1, 9)
         }
         self.mute_groups = {n: False for n in range(1, 7)}
@@ -390,16 +390,32 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) == 3 and parts[0] == "dca":
+            if len(parts) >= 3 and parts[0] == "dca":
                 number = int(parts[1])
                 if number not in self.dcas:
                     return False
-                if parts[2] == "on":
-                    self.dcas[number]["on"] = self._bool(value)
-                elif parts[2] == "fader":
-                    self.dcas[number]["fader"] = max(0.0, min(1.0, float(value)))
-                elif parts[2] == "config/name" and isinstance(value, str):
-                    self.dcas[number]["name"] = value
+                dca = self.dcas[number]
+                field = "/".join(parts[2:])
+                if field == "on":
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) not in (0.0, 1.0):
+                        return False
+                    dca["on"] = bool(int(value))
+                elif field == "fader":
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0.0 <= float(value) <= 1.0:
+                        return False
+                    dca["fader"] = float(value)
+                elif field == "config/name":
+                    if not isinstance(value, str) or len(value) > 12:
+                        return False
+                    dca["name"] = value
+                elif field == "config/icon":
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 1 <= int(value) <= 74:
+                        return False
+                    dca["icon"] = int(value)
+                elif field == "config/color":
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 0 <= int(value) <= 15:
+                        return False
+                    dca["colour"] = int(value)
                 else:
                     return False
                 self.received.add(address)
@@ -965,9 +981,14 @@ class ConsoleState:
             if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
                 key = "main_st" if address.startswith("/main/st/") else "main_mono"
                 return self.outputs[key]["sends"].get(int(parts[3]), {"on": True, "level": 0.0}).get(parts[4])
-            if len(parts) == 3 and parts[0] == "dca":
-                dca = self.dcas[int(parts[1])]
-                return dca.get(parts[2])
+            if len(parts) >= 3 and parts[0] == "dca":
+                dca = self.dcas.get(int(parts[1]))
+                if dca is None:
+                    return None
+                field = "/".join(parts[2:])
+                return {"on": int(dca["on"]), "fader": dca["fader"],
+                        "config/name": dca["name"], "config/icon": dca["icon"],
+                        "config/color": dca["colour"]}.get(field)
             if len(parts) == 3 and parts[:2] == ["config", "mute"]:
                 return int(self.mute_groups[int(parts[2])])
             if len(parts) == 4 and parts[0] == "bus":
