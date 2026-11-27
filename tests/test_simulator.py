@@ -1179,6 +1179,53 @@ def test_tape_amix_and_dp48_node_groups_return_documented_entries():
         assert len(response.params[0].splitlines()) == count
 
 
+def test_extended_configuration_x32node_writes_update_state():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "config/userctrl/A YE F00 P01 S0000 X0000 MN05003 - - - - -"))
+    assert simulator.state.get("/config/userctrl/A/color") == 3
+    assert simulator.state.get("/config/userctrl/A/enc/1") == "F00"
+    assert simulator.state.get("/config/userctrl/A/btn/5") == "MN05003"
+
+    simulator.handle(client, packet("/", "config/tape 12.0 -3.5 ON"))
+    assert simulator.state.tape_config == {"gainL": 12.0, "gainR": -3.5, "autoplay": 1}
+
+    simulator.handle(client, packet("/", "config/amixenable ON OFF"))
+    assert simulator.state.amix_enable == {"X": 1, "Y": 0}
+
+    simulator.handle(client, packet("/", "config/dp48 %1010 1 AESB"))
+    assert simulator.state.dp48_config["scope"] == 10
+    assert simulator.state.dp48_config["broadcast"] == 1
+    assert simulator.state.dp48_config["aesAB"] == 1
+
+    simulator.handle(client, packet("/", "config/dp48/link " + " ".join(["1"] + ["0"] * 23)))
+    assert simulator.state.dp48_config["link"][1] == 1
+    simulator.handle(client, packet("/", "config/dp48/assign " + " ".join(["12"] + ["0"] * 47)))
+    assert simulator.state.dp48_config["assign"][1] == 12
+    simulator.handle(client, packet("/", "config/dp48/grpname " + " ".join(["Choir"] + [""] * 11)))
+    assert simulator.state.dp48_config["grpname"][1] == "Choir"
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
+
+
+def test_extended_configuration_individual_node_reads_render_enums_and_bitmaps():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    simulator.state.update("/config/userctrl/B/color", 15)
+    simulator.state.update("/config/amixenable/X", 1)
+    simulator.state.update("/config/dp48/scope", 10)
+    for header, expected in (
+        ("config/userctrl/B/color", "/config/userctrl/B/color WHi\\n"),
+        ("config/amixenable/X", "/config/amixenable/X ON\\n"),
+        ("config/dp48/scope", "/config/dp48/scope %1010\\n"),
+    ):
+        simulator.handle(client, packet("/node", header))
+        response = OscMessage(simulator.transport.sent[-1][0])
+        assert response.params == [expected]
+
+
 def test_userrout_out_node_returns_all_48_slots_in_order():
     state = ConsoleState()
     state.user_rout_out.update({1: 1, 8: 167, 48: 208})
