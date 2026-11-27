@@ -246,11 +246,6 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if len(parts) == 4 and parts[:3] == ["config", "userrout", "out"]:
-                slot_text = parts[3]
-                if not slot_text.isdigit() or len(slot_text) != 2:
-                    return None
-                return self.user_rout_out.get(int(slot_text))
             if len(parts) == 3 and parts[:2] == ["config", "osc"]:
                 field = parts[2]
                 if field not in self.osc_config or isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -524,6 +519,11 @@ class ConsoleState:
                 return self.urec_markers.get(int(parts[2]), 0)
             if len(parts) == 3 and parts[:2] == ["-stat", "urec"]:
                 return self.urec_status.get(parts[2])
+            if len(parts) == 4 and parts[:3] == ["config", "userrout", "out"]:
+                slot_text = parts[3]
+                if not slot_text.isdigit() or len(slot_text) != 2:
+                    return None
+                return self.user_rout_out.get(int(slot_text))
             if len(parts) == 3 and parts[:2] == ["config", "osc"]:
                 return self.osc_config.get(parts[2])
             if len(parts) == 3 and parts[:2] == ["config", "talk"]:
