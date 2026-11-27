@@ -61,6 +61,8 @@ OSC_CATALOGUE = [
         {"pattern":"/outputs/main/{01...16}, /outputs/main/{01...16}/delay","purpose":"Sixteen physical main output patches: source, tap position, polarity and delay","operations":"GET, SET, /node","note":"Implemented: grouped and individual reads/writes with source, tap-position and delay validation."},
         {"pattern":"/outputs/aux/{01...06}","purpose":"Six physical auxiliary output patches: source, tap position and polarity","operations":"GET, SET, /node","note":"Implemented: grouped and individual reads/writes with source, tap-position and polarity validation."},
         {"pattern":"/outputs/p16/{01...16}, /outputs/p16/{01...16}/iQ","purpose":"Sixteen Ultranet/P16 personal-monitor output assignments and optional Turbosound iQ speaker configuration","operations":"GET, SET, /node","note":"Implemented: source and tap-position assignments plus iQ group and speaker settings."},
+        {"pattern":"/outputs/aes/{01...02}","purpose":"Two AES50 output banks: source, tap position and polarity","operations":"GET, SET, /node","note":"Implemented grouped and individual reads/writes with source, tap-position and polarity validation."},
+        {"pattern":"/outputs/rec/{01...02}","purpose":"Two recording-card output banks: source and tap position","operations":"GET, SET, /node","note":"Implemented grouped and individual reads/writes with source and tap-position validation."},
         {"pattern":"/headamp/{1...N}","purpose":"Remote headamp gain and phantom state","operations":"GET, SET, /node"},
         {"pattern":"/-insert/*","purpose":"Insert routing and insert device configuration","operations":"GET, SET, /node"}
     ]},
