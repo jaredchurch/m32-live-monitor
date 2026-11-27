@@ -1308,7 +1308,7 @@ def test_config_routing_parent_node_returns_all_documented_routing_entries():
     assert len(lines) == len(ROUTING_PATHS) - 1
     assert "/config/routing/IN/1-8 AN25-32" in lines
     assert "/config/routing/AES50A/1-8 A9-16" in lines
-    assert "/config/routing/outswitch 0" in lines
+    assert "/config/routing/outswitch REC" in lines
     assert simulator.snapshot(outcome="handled_node_get")["events"]
 
 
@@ -1612,6 +1612,28 @@ def test_individual_routing_osc_set_accepts_symbolic_enum_names(address, token, 
     simulator.transport = FakeTransport()
     simulator.handle(("127.0.0.1", 50123), packet(address, token))
     assert simulator.state.routing.get(address) == expected
+
+
+@pytest.mark.parametrize("header", [
+    "config/routing", "config/routing/IN", "config/routing/AES50A",
+    "config/routing/AES50B", "config/routing/CARD", "config/routing/OUT",
+    "config/routing/PLAY",
+])
+def test_all_routing_group_nodes_accept_protocol_symbolic_tokens(header):
+    from m32_monitor.routing import ROUTING_ENUM_TOKENS, ROUTING_PATHS
+
+    prefix = "/" + header
+    paths = [path for path in ROUTING_PATHS if path.startswith(prefix + "/")
+             and path.rsplit("/", 1)[-1] not in ("routswitch", "rootswitch", "outswitch")]
+    values = [ROUTING_ENUM_TOKENS[path][-1] for path in paths]
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    simulator.handle(("127.0.0.1", 50123),
+                     packet("/", header + " " + " ".join(values)))
+    assert [state.routing.get(path) for path in paths] == [
+        len(ROUTING_ENUM_TOKENS[path]) - 1 for path in paths]
+    assert simulator.snapshot(outcome="handled_node_set")["events"]
 
 
 def test_routing_input_node_get_returns_symbolic_enum_names():
