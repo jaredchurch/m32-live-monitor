@@ -618,7 +618,7 @@ class Simulator:
         else:
             paths = [path for path in ROUTING_PATHS
                      if path.startswith(prefix + "/")]
-        return "".join("%s %s\\n" % (path, self.state.routing.get(path)
+        return "".join("%s %s\n" % (path, self.state.routing.get(path)
                                       if self.state.routing.get(path) is not None else 0)
                        for path in paths)
 
