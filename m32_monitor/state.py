@@ -88,7 +88,7 @@ for _family in ("ch", "auxin", "fxrtn"):
         STRIP_NODE_SCHEMA[_family]["eq/%d" % _band] = {
             "type": (2,0,5,1,"enum",("LCut","LShv","PEQ","VEQ","HShv","HCut")),
             "f": (1000.0,20.0,20000.0,0,"float",None),
-            "g": (0.0,-15.0,15.0,0.25,"float",None),
+            "g": (0.0,-15.0,15.0,0.1,"float",None),
             "q": (1.0,0.3,10.0,0,"float",None)}
     for _bus in range(1, 17):
         _send_fields = {"on": (1,0,1,1,"enum",("OFF","ON")),
@@ -104,7 +104,7 @@ for _band in range(1, 7):
     STRIP_NODE_SCHEMA["bus"]["eq/%d" % _band] = {
         "type": (2,0,5,1,"enum",("LCut","LShv","PEQ","VEQ","HShv","HCut")),
         "f": (1000.0,20.0,20000.0,0,"float",None),
-        "g": (0.0,-15.0,15.0,0.25,"float",None),
+        "g": (0.0,-15.0,15.0,0.1,"float",None),
         "q": (1.0,0.3,10.0,0,"float",None)}
 for _matrix in range(1, 7):
     STRIP_NODE_SCHEMA["bus"]["mix/%02d" % _matrix] = {
@@ -140,7 +140,7 @@ for _band in range(1, 7):
     STRIP_NODE_SCHEMA["mtx"]["eq/%d" % _band] = {
         "type": (2,0,13,1,"enum",("LCut","LShv","PEQ","VEQ","HShv","HCut","BU6","BU12","BS12","LR12","BU18","BU24","BS24","LR24")),
         "f": (1000.0,20.0,20000.0,0,"float",None),
-        "g": (0.0,-15.0,15.0,0.25,"float",None),
+        "g": (0.0,-15.0,15.0,0.1,"float",None),
         "q": (1.0,0.3,10.0,0,"float",None)}
 
 
