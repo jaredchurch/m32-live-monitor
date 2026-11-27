@@ -273,6 +273,11 @@ class ConsoleState:
             n: {"number": n, "name": "DCA %d" % n, "icon": 1, "colour": 1, "on": True, "fader": 0.75}
             for n in range(1, 9)
         }
+        self.fx = {
+            n: {"type": 0, "source_l": 0, "source_r": 0,
+                "par": {p: 0.0 for p in range(1, 65)}}
+            for n in range(1, 9)
+        }
         self.mute_groups = {n: False for n in range(1, 7)}
         self.dca_mutes_enabled = None
         self.hard_mutes_enabled = None
@@ -390,6 +395,48 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
+            if len(parts) >= 3 and parts[0] == "fx":
+                number = int(parts[1])
+                if number not in self.fx:
+                    return False
+                fx = self.fx[number]
+                field = parts[2:]
+                if field == ["type"]:
+                    maximum = 60 if number <= 4 else 33
+                    if (isinstance(value, bool) or not isinstance(value, (int, float))
+                            or float(value) != int(value) or not 0 <= int(value) <= maximum):
+                        return False
+                    fx["type"] = int(value)
+                elif field in (["source", "l"], ["source", "r"]):
+                    if number > 4 or isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 0 <= int(value) <= 17:
+                        return False
+                    fx["source_l" if field[-1] == "l" else "source_r"] = int(value)
+                elif len(field) == 2 and field[0] == "par" and field[1].isdigit():
+                    parameter = int(field[1])
+                    if (not 1 <= parameter <= 64 or isinstance(value, bool)
+                            or not isinstance(value, (int, float)) or not math.isfinite(float(value))):
+                        return False
+                    fx["par"][parameter] = float(value)
+                else:
+                    return False
+                self.received.add(address)
+                return True
+
+            if len(parts) >= 3 and parts[0] == "fx":
+                number = int(parts[1])
+                fx = self.fx.get(number)
+                if fx is None:
+                    return None
+                field = parts[2:]
+                if field == ["type"]:
+                    return fx["type"]
+                if field == ["source", "l"]:
+                    return fx["source_l"]
+                if field == ["source", "r"]:
+                    return fx["source_r"]
+                if len(field) == 2 and field[0] == "par" and field[1].isdigit():
+                    return fx["par"].get(int(field[1]))
+                return None
             if len(parts) >= 3 and parts[0] == "dca":
                 number = int(parts[1])
                 if number not in self.dcas:
