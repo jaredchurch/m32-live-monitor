@@ -2922,12 +2922,12 @@ def test_showfile_metadata_node_write_is_stored_and_returned_by_node_and_showdum
     simulator.handle(client, packet("/node", "showfile/show"))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == [show_record + "\\n"]
+    assert response.params == [show_record + "\n"]
 
     simulator.handle(client, packet("/showdump"))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == [show_record + "\\n"]
+    assert response.params == [show_record + "\n"]
     event = simulator.snapshot(outcome="handled_showdump")["events"][-1]
     assert "stored show-file metadata" in event["detail"]
 
@@ -2945,4 +2945,4 @@ def test_showfile_cue_node_write_is_stored_and_returned_verbatim():
     simulator.handle(client, packet("/node", "showfile/cue/001"))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == [cue_record + "\\n"]
+    assert response.params == [cue_record + "\n"]
