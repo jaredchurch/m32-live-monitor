@@ -1986,7 +1986,8 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
         simulator.handle(client, packet("/", prefix + "/insert ON POST FX3L"))
         simulator.handle(client, packet("/", prefix + "/eq ON"))
         simulator.handle(client, packet("/", prefix + "/eq/6 PEQ 2500 -3.0 1.2"))
-        simulator.handle(client, packet("/", prefix + "/mix OFF -4.0 +0"))
+        mix_values = "OFF -4.0 +0" if prefix == "main/st" else "OFF -4.0"
+        simulator.handle(client, packet("/", prefix + "/mix " + mix_values))
         simulator.handle(client, packet("/", prefix + "/grp 3 5"))
         assert state.get("/" + prefix + "/config/name") == "Main Out"
         assert state.get("/" + prefix + "/config/icon") == 12
@@ -2045,7 +2046,7 @@ def test_main_mono_mix_node_accepts_two_fields_and_silent_fader():
     client = ("127.0.0.1", 50123)
 
     simulator.handle(client, packet("/node", "main/m/mix"))
-    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/main/m/mix ON 0.000\\n"]
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/main/m/mix ON 0.750\\n"]
 
     simulator.handle(client, packet("/", "main/m/mix ON -oo"))
     assert state.get("/main/m/mix/on") == 1
