@@ -175,14 +175,6 @@ MAIN_NODE_SCHEMA = {
 for _band in range(1, 7):
     MAIN_NODE_SCHEMA["eq/%d" % _band] = STRIP_NODE_SCHEMA["bus"]["eq/%d" % _band]
 
-# Mono/Centre master mix has no pan field; keep its node schema separate
-# while sharing the remaining processing and matrix-send nodes.
-MAIN_MONO_NODE_SCHEMA = dict(MAIN_NODE_SCHEMA)
-MAIN_MONO_NODE_SCHEMA["mix"] = {
-    "on": MAIN_NODE_SCHEMA["mix"]["on"],
-    "fader": MAIN_NODE_SCHEMA["mix"]["fader"],
-}
-
 # Main output matrix sends use the extended five-field M32 send format.
 for _matrix in range(1, 7):
     MAIN_NODE_SCHEMA["mix/%02d" % _matrix] = {
@@ -204,6 +196,14 @@ for _matrix in range(1, 7):
             "type": (4,0,5,1,"enum",("IN/LC","<-EQ","EQ->","PRE","POST","GRP")),
             "panFollow": (0,0,1,1,"enum",("OFF","ON"))})
     MAIN_NODE_SCHEMA["mix/%02d" % _matrix] = _send_fields
+
+# Mono/Centre master mix has no pan field; retain all shared processing and
+# matrix-send nodes, but use a two-field master mix node.
+MAIN_MONO_NODE_SCHEMA = dict(MAIN_NODE_SCHEMA)
+MAIN_MONO_NODE_SCHEMA["mix"] = {
+    "on": MAIN_NODE_SCHEMA["mix"]["on"],
+    "fader": MAIN_NODE_SCHEMA["mix"]["fader"],
+}
 
 
 @dataclass
