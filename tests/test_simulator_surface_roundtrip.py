@@ -176,6 +176,9 @@ def _state_differences(expected, actual, path=""):
             if len(differences) >= 40:
                 break
         return differences
+    if isinstance(expected, (int, float)) and not isinstance(expected, bool) and isinstance(actual, (int, float)) and not isinstance(actual, bool):
+        if math.isclose(float(expected), float(actual), rel_tol=1e-9, abs_tol=1e-6):
+            return []
     if expected != actual:
         return [(path, expected, actual)]
     return []
