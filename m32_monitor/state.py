@@ -1218,7 +1218,7 @@ class ConsoleState:
                 field = parts[3:]
                 if field == ["src"]: return output["src"]
                 if field == ["pos"]: return output["pos"]
-                if field == ["invert"] and parts[1] in ("main", "aux", "aes"): return output["invert"]
+                if field == ["invert"] and parts[1] in ("main", "aux", "p16", "aes"): return output["invert"]
                 if parts[1] == "p16" and field == ["iQ", "group"]: return output["iq_group"]
                 if parts[1] == "p16" and field == ["iQ", "speaker"]: return output["iq_speaker"]
                 if parts[1] == "main" and field == ["delay", "on"]: return output["delay_on"]
