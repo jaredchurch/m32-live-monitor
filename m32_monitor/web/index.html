@@ -121,6 +121,7 @@ td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;ba
 <div class="muted">Select a repeatable console state, then scan for M32-Simulation in M32-Edit. If discovery does not find it, enter 127.0.0.1 and UDP port 10023 manually. Every decoded incoming and outgoing OSC message is recorded. Unsupported addresses and malformed packets are highlighted so we can extend compatibility from observed traffic.</div>
 <div class="sim-controls">
 <label>Scenario <select id="sim-scenario"></select></label>
+<label>Response delay <select id="sim-response-delay"><option value="0">0 ms (current)</option><option value="10">10 ms</option><option value="25">25 ms</option><option value="50">50 ms</option><option value="100">100 ms</option></select></label>
 <button id="sim-load">Load scenario</button><button id="sim-export-csv">Export filtered CSV</button><button id="sim-export-json">Export filtered JSON</button><button id="sim-export-all-csv">Export whole log CSV</button><button id="sim-export-all-json">Export whole log JSON</button><button id="sim-pause" type="button">Pause logging</button><button id="sim-clear">Clear log</button>
 <label>Filter <input id="sim-filter" placeholder="OSC address or detail"></label>
 <label class="sim-check"><input type="checkbox" id="sim-exceptions-only"> Exceptions only</label>
@@ -243,6 +244,7 @@ async function renderSimulatorLogs(){
   const data=await fetch('/api/simulator/logs?'+q.toString()).then(r=>{if(!r.ok)throw new Error('Simulator mode only');return r.json();});
   const counts=data.counts||{},events=data.events||[];
   document.querySelector('#sim-pause').textContent=data.logging_paused?'Resume logging':'Pause logging';
+  document.querySelector('#sim-response-delay').value=String(data.response_delay_ms||0);
   summary.innerHTML='<span class="pill">UDP '+esc(data.host)+':'+data.port+'</span><span class="pill">'+data.clients.length+' M32-Edit/client endpoint(s)</span><span class="pill">'+data.event_count+' total messages</span><span class="pill">'+(data.logging_paused?'LOGGING PAUSED':'Logging active')+'</span><span class="pill">Showing '+events.length+' '+(exceptionsOnly?'exceptions':'messages')+'</span><span class="pill">'+(counts.in||0)+' inbound</span><span class="pill">'+(counts.out||0)+' outbound</span><span class="pill">'+(counts.unhandled_get||0)+' unhandled GET</span><span class="pill">'+(counts.unhandled_set||0)+' unhandled SET</span><span class="pill">'+(counts.malformed||0)+' malformed</span>';
   root.innerHTML=events.length?'<table><thead><tr><th>#</th><th>Time</th><th>Direction</th><th>Result</th><th>OSC address</th><th>Arguments / detail</th><th>Peer</th></tr></thead><tbody>'+events.slice().reverse().map(e=>{
    const bad=e.outcome.startsWith('unhandled')||e.outcome==='malformed'||e.outcome==='send_error';
@@ -280,6 +282,12 @@ document.querySelector('#sim-export-csv').addEventListener('click',()=>exportSim
 document.querySelector('#sim-export-json').addEventListener('click',()=>exportSimulatorLog('json'));
 document.querySelector('#sim-export-all-csv').addEventListener('click',()=>exportSimulatorLog('csv',true));
 document.querySelector('#sim-export-all-json').addEventListener('click',()=>exportSimulatorLog('json',true));
+document.querySelector('#sim-response-delay').addEventListener('change',async()=>{
+ const delayMs=Number(document.querySelector('#sim-response-delay').value);
+ const response=await fetch('/api/simulator/response-delay?delay_ms='+delayMs,{method:'POST'});
+ if(response.ok){await renderSimulatorLogs();}
+ else{const data=await response.json().catch(()=>({}));alert(data.detail||'Could not change simulator response delay.');}
+});
 document.querySelector('#sim-load').addEventListener('click',async()=>{
  const id=document.querySelector('#sim-scenario').value;if(!id)return;
  const response=await fetch('/api/simulator/scenarios/'+encodeURIComponent(id),{method:'POST'});
