@@ -411,7 +411,15 @@ class ConsoleState:
                 if (isinstance(value, bool) or not isinstance(value, (int, float))
                         or float(value) != int(value) or not 0 <= int(value) < len(choices)):
                     return False
-        if address not in CONFIG_LINK_ADDRESSES and not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/fx/", "/outputs/main/", "/outputs/aux/", "/outputs/p16/", "/outputs/aes/", "/outputs/rec/")) and self.routing.update(address, value):
+        if address in CONFIG_LINK_ADDRESSES:
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or float(value) not in (0.0, 1.0)):
+                return False
+            _, family, pair = address.strip("/").split("/")
+            self.config_links[family][pair] = int(value)
+            self.received.add(address)
+            return True
+        if not address.startswith(("/config/solo/", "/config/talk/", "/config/userrout/", "/fx/", "/outputs/main/", "/outputs/aux/", "/outputs/p16/", "/outputs/aes/", "/outputs/rec/")) and self.routing.update(address, value):
             self.received.add(address)
             return True
         parts = address.strip("/").split("/")
@@ -1272,11 +1280,26 @@ class ConsoleState:
                   [("aux", c) for c in self.auxins.values()] +
                   [("fx_return", c) for c in self.fx_returns.values()])
         result = []
+        linked_channel_numbers = set()
         for kind, channel in strips:
-            if channel.connected and channel.colour != 0:
-                item = channel.as_dict()
-                item["stripType"] = kind
-                result.append(item)
+            if channel.number in linked_channel_numbers:
+                continue
+            if not channel.connected or channel.colour == 0:
+                continue
+            item = channel.as_dict()
+            item["stripType"] = kind
+            if kind == "channel" and channel.number % 2 == 1:
+                pair = "%d-%d" % (channel.number, channel.number + 1)
+                if self.config_links["chlink"].get(pair, 0):
+                    partner = self.channels[channel.number + 1]
+                    item["stereoLinked"] = True
+                    item["linkedNumber"] = partner.number
+                    item["linkedName"] = partner.name
+                    item["linkedSource"] = self.source_label(partner.source)
+                    item["linkedFader"] = partner.fader
+                    item["linkedMuted"] = partner.muted
+                    linked_channel_numbers.add(partner.number)
+            result.append(item)
         return result
 
     def _known(self, address):
