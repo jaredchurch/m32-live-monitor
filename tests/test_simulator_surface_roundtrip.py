@@ -137,3 +137,95 @@ def test_real_jared_scene_imports_and_supported_nodes_read_back():
         "Real Jared.scn strip-node values did not round-trip semantically; first mismatches: "
         + repr(mismatches[:20])
     )
+
+
+def _canonical_state(value):
+    """Convert ConsoleState's nested dataclasses and routing objects to comparable data."""
+    if hasattr(value, "__dataclass_fields__"):
+        return {name: _canonical_state(getattr(value, name))
+                for name in value.__dataclass_fields__}
+    if isinstance(value, dict):
+        return {key: _canonical_state(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_canonical_state(item) for item in value]
+    if isinstance(value, set):
+        return sorted((_canonical_state(item) for item in value), key=repr)
+    if hasattr(value, "__dict__"):
+        return {key: _canonical_state(item) for key, item in vars(value).items()}
+    return value
+
+
+def test_real_jared_scene_round_trips_every_node_through_get_and_set():
+    """Import all scene records, export every node, re-import the export and compare all state."""
+    source_state = ConsoleState()
+    source = Simulator(source_state)
+    source.transport = FakeTransport()
+    records = [
+        line.strip() for line in FIXTURE.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    assert len(records) > 2000, f"Jared.scn fixture unexpectedly small: {len(records)} records"
+
+    # Import the complete real scene exactly as M32-Edit's text SET path does.
+    for record in records:
+        source.handle(CLIENT, packet("/", record))
+
+    import_errors = source.snapshot(outcome="unhandled_set", limit=3000)["events"]
+    assert not import_errors, (
+        f"Scene import rejected {len(import_errors)} records: "
+        + repr([(event["address"], event["detail"]) for event in import_errors[:30]])
+    )
+
+    # Export each distinct source node. Some GETs intentionally expand into
+    # multiple canonical X32node lines (routing banks, DCA, FX and outputs).
+    headers = list(dict.fromkeys(shlex.split(record)[0].lstrip("/") for record in records))
+    exported = []
+    get_errors = []
+    for header in headers:
+        before = len(source.transport.sent)
+        source.handle(CLIENT, packet("/node", header))
+        if len(source.transport.sent) != before + 1:
+            get_errors.append((header, "no single /node response"))
+            continue
+        message = OscMessage(source.transport.sent[-1][0])
+        if message.address != "/node" or len(message.params) != 1:
+            get_errors.append((header, "invalid response envelope", message.address, message.params))
+            continue
+        payload = message.params[0]
+        if not isinstance(payload, str) or not payload.strip():
+            get_errors.append((header, "empty/non-text node response", repr(payload)))
+            continue
+        exported.extend(line.strip() for line in payload.splitlines() if line.strip())
+
+    assert not get_errors, (
+        f"Scene export has {len(get_errors)} unsupported/unreadable nodes: {get_errors[:30]}"
+    )
+    assert len(exported) > 2000, f"Scene export unexpectedly small: {len(exported)} records"
+
+    # Re-import only what the simulator actually exported. This proves the
+    # GET representation is valid input to the same OSC SET interface.
+    restored_state = ConsoleState()
+    restored = Simulator(restored_state)
+    restored.transport = FakeTransport()
+    for record in exported:
+        restored.handle(CLIENT, packet("/", record))
+
+    export_import_errors = restored.snapshot(outcome="unhandled_set", limit=3000)["events"]
+    assert not export_import_errors, (
+        f"Exported scene contains {len(export_import_errors)} records the simulator cannot re-import: "
+        + repr([(event["address"], event["detail"]) for event in export_import_errors[:30]])
+    )
+
+    # Ignore only runtime telemetry. All mixer, routing, FX, DCA, output,
+    # headamp, global config and miscellaneous persisted state must match.
+    ignored_runtime_fields = {"last_seen", "received", "meters"}
+    original = {key: value for key, value in vars(source_state).items()
+                if key not in ignored_runtime_fields}
+    round_tripped = {key: value for key, value in vars(restored_state).items()
+                     if key not in ignored_runtime_fields}
+    expected = _canonical_state(original)
+    actual = _canonical_state(round_tripped)
+    assert actual == expected, (
+        "Full Jared.scn state changed during GET/export/SET round trip. "
+        "Compare state snapshots to identify the first differing subsystem."
+    )
