@@ -64,11 +64,18 @@ TYPE_NAMES_FX_5_8 = ("GEQ2", "GEQ", "TEQ2", "TEQ", "DES2", "DES", "P1A", "P1A2",
 class Simulator:
     def __init__(self, state, host="0.0.0.0", port=10023, log_limit=10000,
                  name="M32-Simulation", model="M32", firmware="4.06",
-                 server_version="V2.07"):
+                 server_version="V2.07", receive_buffer_bytes=4 * 1024 * 1024):
         self.state, self.host, self.port = state, host, port
         self.name, self.model = name, model
         self.firmware, self.server_version = firmware, server_version
         self.transport = None
+        self.receive_buffer_bytes = max(65536, int(receive_buffer_bytes))
+        self.actual_receive_buffer_bytes = None
+        self.datagrams_received = 0
+        self.datagram_bytes_received = 0
+        self.osc_messages_decoded = 0
+        self.malformed_datagrams = 0
+        self.last_datagram_at = None
         self.clients = set()
         self.events = deque(maxlen=log_limit)
         self.logging_paused = False
@@ -82,10 +89,25 @@ class Simulator:
 
     async def start(self):
         loop = asyncio.get_running_loop()
-        self.transport, _ = await loop.create_datagram_endpoint(
-            lambda: SimulatorProtocol(self), local_addr=(self.host, self.port)
+        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF,
+                                  self.receive_buffer_bytes)
+            self.actual_receive_buffer_bytes = udp_socket.getsockopt(
+                socket.SOL_SOCKET, socket.SO_RCVBUF)
+            udp_socket.bind((self.host, self.port))
+            self.transport, _ = await loop.create_datagram_endpoint(
+                lambda: SimulatorProtocol(self), sock=udp_socket
+            )
+        except Exception:
+            udp_socket.close()
+            raise
+        logger.info(
+            "M32 simulator listening on UDP %s:%s (receive buffer requested=%d actual=%d)",
+            self.host, self.port, self.receive_buffer_bytes,
+            self.actual_receive_buffer_bytes
         )
-        logger.info("M32 simulator listening on UDP %s:%s", self.host, self.port)
 
     async def stop(self):
         for task in tuple(self.subscription_tasks.values()):
@@ -158,6 +180,15 @@ class Simulator:
             "event_count": self.sequence,
             "retained_events": len(self.events),
             "logging_paused": self.logging_paused,
+            "udp": {
+                "receive_buffer_requested_bytes": self.receive_buffer_bytes,
+                "receive_buffer_actual_bytes": self.actual_receive_buffer_bytes,
+                "datagrams_received": self.datagrams_received,
+                "datagram_bytes_received": self.datagram_bytes_received,
+                "osc_messages_decoded": self.osc_messages_decoded,
+                "malformed_datagrams": self.malformed_datagrams,
+                "last_datagram_at": self.last_datagram_at,
+            },
             "counts": dict(self.counts),
             "events": events if limit is None else events[-max(1, min(int(limit), 2000)):],
         }
@@ -186,14 +217,21 @@ class Simulator:
             self.record("out", "send_error", address, values, client, exc)
 
     def handle(self, client, data):
+        # Count at the application receive boundary, before decoding or event
+        # logging. These counters continue while the detailed OSC log is paused.
+        self.datagrams_received += 1
+        self.datagram_bytes_received += len(data)
+        self.last_datagram_at = time.time()
         try:
             packet = OscPacket(data)
             messages = [timed.message for timed in packet.messages]
         except Exception as exc:
+            self.malformed_datagrams += 1
             self.record("in", "malformed", peer=client,
                         detail="%s; bytes=%s" % (exc, data[:48].hex()))
             return
 
+        self.osc_messages_decoded += len(messages)
         for message in messages:
             self._handle_message(client, message.address, message.params)
 
