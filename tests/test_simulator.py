@@ -2072,7 +2072,7 @@ def test_bus_insert_eq_mix_and_group_nodes_are_discoverable_and_writable():
     simulator.handle(client, packet("/", "bus/01/insert ON POST FX3L"))
     simulator.handle(client, packet("/", "bus/01/eq/6 PEQ 2500 -3.0 1.2"))
     simulator.handle(client, packet("/", "bus/01/mix ON -4.0 OFF 0 OFF -oo"))
-    simulator.handle(client, packet("/", "bus/01/mix/06 ON 0.50"))
+    simulator.handle(client, packet("/", "bus/01/mix/06 ON -10.0"))
     simulator.handle(client, packet("/", "bus/01/grp 3 5"))
 
     assert state.get("/bus/01/insert/on") == 1
@@ -2101,6 +2101,18 @@ def test_bus_matrix_send_node_accepts_five_fields_and_silent_db_level():
     assert state.get("/bus/01/mix/01/pan") == -100.0
     assert state.get("/bus/01/mix/01/type") == 4
     assert state.get("/bus/01/mix/01/panFollow") == 0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
+def test_bus_matrix_two_field_send_level_accepts_db_value():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "bus/09/mix/02 ON -10.0"))
+
+    assert state.get("/bus/09/mix/02/on") == 1
+    assert state.get("/bus/09/mix/02/level") == pytest.approx(0.5)
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
 
