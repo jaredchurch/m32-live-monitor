@@ -501,10 +501,16 @@ class ConsoleState:
                     fx["source_l" if field[-1] == "l" else "source_r"] = int(value)
                 elif len(field) == 2 and field[0] == "par" and field[1].isdigit():
                     parameter = int(field[1])
-                    if (not 1 <= parameter <= 64 or isinstance(value, bool)
-                            or not isinstance(value, (int, float)) or not math.isfinite(float(value))):
+                    if not 1 <= parameter <= 64 or isinstance(value, bool):
                         return False
-                    fx["par"][parameter] = float(value)
+                    if isinstance(value, (int, float)):
+                        if not math.isfinite(float(value)):
+                            return False
+                        fx["par"][parameter] = float(value)
+                    elif isinstance(value, str) and value and len(value) <= 32:
+                        fx["par"][parameter] = value
+                    else:
+                        return False
                 else:
                     return False
                 self.received.add(address)
