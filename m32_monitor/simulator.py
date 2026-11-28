@@ -455,6 +455,13 @@ class Simulator:
                 if len(values) != len(paths):
                     raise ValueError("Routing node requires %d patch values" % len(paths))
                 parsed = [routing_enum_index(path, token) for path, token in zip(paths, values)]
+            elif header.startswith("config/routing/") and len(values) == 1:
+                from m32_monitor.routing import ROUTING_PATHS, routing_enum_index
+                address = "/" + header
+                if address not in ROUTING_PATHS:
+                    raise ValueError("Unknown routing assignment %s" % address)
+                paths = [address]
+                parsed = [routing_enum_index(address, values[0])]
             elif header in ("config/userrout/out", "config/userrout/in"):
                 direction = header.rsplit("/", 1)[1]
                 slots = self.state.user_rout_out if direction == "out" else self.state.user_rout_in
