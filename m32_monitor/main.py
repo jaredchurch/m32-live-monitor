@@ -177,6 +177,20 @@ def osc_catalogue():
     return catalogue_snapshot()
 
 
+@app.post("/api/simulator/response-delay")
+def set_simulator_response_delay(delay_ms: int = 0):
+    """Set a diagnostic delay for simulator replies to test client timing sensitivity."""
+    if settings.mode != "simulator" or runtime is None:
+        raise HTTPException(status_code=409, detail="Response delay is only available in simulator mode")
+    try:
+        selected = runtime.set_response_delay(delay_ms)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    runtime.record("system", "response_delay_changed",
+                   detail="Simulator protocol response delay set to %d ms" % selected)
+    return {"response_delay_ms": selected}
+
+
 @app.get("/api/simulator/scenarios")
 def simulator_scenarios():
     """Available deterministic simulator presets."""
