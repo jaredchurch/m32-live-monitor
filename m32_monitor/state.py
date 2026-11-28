@@ -109,9 +109,15 @@ for _band in range(1, 7):
         "g": (0.0,-15.0,15.0,0.05,"float",None),
         "q": (1.0,0.3,10.0,0,"float",None)}
 for _matrix in range(1, 7):
-    STRIP_NODE_SCHEMA["bus"]["mix/%02d" % _matrix] = {
+    _send_fields = {
         "on": (1,0,1,1,"enum",("OFF","ON")),
         "level": (0.0,0.0,1.0,0,"float",None)}
+    if _matrix % 2:
+        _send_fields.update({
+            "pan": (0.0,-100.0,100.0,2.0,"float",None),
+            "type": (4,0,5,1,"enum",("IN/LC","<-EQ","EQ->","PRE","POST","GRP")),
+            "panFollow": (0,0,1,1,"enum",("OFF","ON"))})
+    STRIP_NODE_SCHEMA["bus"]["mix/%02d" % _matrix] = _send_fields
 
 # Matrix output strips: configuration, polarity, dynamics, insert, six-band EQ,
 # output level/mute and DCA/mute-group assignments.
