@@ -210,6 +210,14 @@ def simulator_logs(limit: int = 500, direction: str | None = None,
                             exceptions_only=exceptions_only)
 
 
+@app.post("/api/simulator/logs/pause")
+def pause_simulator_logs(paused: bool = True):
+    """Pause or resume capture of simulator OSC events."""
+    if settings.mode != "simulator" or runtime is None:
+        raise HTTPException(status_code=409, detail="Simulator logs are only available in simulator mode")
+    return {"logging_paused": runtime.set_logging_paused(paused)}
+
+
 @app.delete("/api/simulator/logs")
 def clear_simulator_logs():
     """Clear the in-memory simulator OSC event log."""
