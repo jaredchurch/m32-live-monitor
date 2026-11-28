@@ -22,6 +22,9 @@ h1{font-size:24px;margin:0}h2{font-size:17px;margin:0 0 12px}.muted{color:#9ca8b
 .channel-muted{background:#48282c;color:#ffb2b2}
 .dca-muted{background:#493b20;color:#f4d28b}
 .dca-unknown{background:#333b45;color:#c4ccd5}
+.dca-chip{background:#27394b;color:#b8d8f5;border:1px solid #3d5d78}
+.eq-mini{width:100%;height:42px;display:block;margin-top:7px;background:#111820;border-radius:5px}
+.eq-caption{display:flex;justify-content:space-between;color:#8997a6;font-size:9px;margin-top:2px}
 .channel-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}.swatch{width:10px;height:30px;border-radius:4px;background:var(--strip)}
 .name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.number{font-size:11px;color:#9ca8b6;margin-top:3px}
 .source{font-size:12px;color:#9ca8b6;margin-bottom:12px}.fader-track{height:7px;background:#303b48;border-radius:99px;overflow:hidden}
@@ -290,53 +293,66 @@ function renderRouting(data){
  document.querySelector('#routing-special').innerHTML=special.length?itemTable(special):'<div class="empty">No direct-route, insert, solo or talkback values received yet.</div>';
 }
 
+function eqSvg(c){
+ const bands=c.eqBands||[];
+ const response=f=>{
+  if(!c.eqOn)return 0;
+  let db=0;
+  for(const b of bands){
+   const fc=Math.max(20,Math.min(20000,Number(b.frequency)||1000));
+   const gain=Math.max(-15,Math.min(15,Number(b.gain)||0));
+   const q=Math.max(.3,Math.min(10,Number(b.q)||1));
+   const type=Number(b.type),oct=Math.log2(f/fc),width=Math.max(.12,1.15/q);
+   if(type===2||type===3)db+=gain*Math.exp(-.5*Math.pow(oct/width,2));
+   else if(type===1)db+=gain/(1+Math.exp(-oct*5));
+   else if(type===4)db+=gain/(1+Math.exp(oct*5));
+   else if(type===0)db-=15/(1+Math.exp(oct*5));
+   else if(type===5)db-=15/(1+Math.exp(-oct*5));
+  }
+  return Math.max(-15,Math.min(15,db));
+ };
+ const pts=[];
+ for(let i=0;i<=70;i++){
+  const f=20*Math.pow(1000,i/70),db=response(f),x=2+i*1.94,y=21-db*.95;
+  pts.push((i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1));
+ }
+ return '<svg class="eq-mini" viewBox="0 0 140 42" role="img" aria-label="Equaliser '+(c.eqOn?'curve':'off')+'"><path d="M2 21H138" stroke="#475463" stroke-width=".7" stroke-dasharray="2 2"/><path d="'+pts.join(' ')+'" fill="none" stroke="'+(c.eqOn?'#75c7a0':'#687482')+'" stroke-width="1.8" stroke-linejoin="round"/></svg><div class="eq-caption"><span>20 Hz</span><span>'+(c.eqOn?'EQ ON':'EQ OFF')+'</span><span>20 kHz</span></div>';
+}
 function renderChannels(channels){
  const root=document.querySelector('#channels');
  if(!channels.length){root.innerHTML='<div class="empty">No channel data received.</div>';return;}
  const banks=[
   {type:'channel',title:'Input channels',count:32,kind:'Channel'},
   {type:'aux',title:'Aux inputs',count:8,kind:'Aux input'},
-  {type:'fx_return',title:'FX returns',count:8,kind:'FX return'}
+  {type:'fx_return',title:'FX returns',count:8,kind:'FX return'},
+  {type:'bus',title:'Mix buses',count:16,kind:'Bus'}
  ];
  const card=c=>{
   const stereo=Boolean(c.stereoLinked);
-  const label=stereo?'CH '+String(c.number).padStart(2,'0')+'–'+String(c.linkedNumber).padStart(2,'0'):
-    (c.stripType==='fx_return'?'FX RTN':c.stripType==='aux'?'AUX':'CH')+' '+String(c.number).padStart(2,'0');
+  const typeLabel=c.stripType==='fx_return'?'FX RTN':c.stripType==='aux'?'AUX':c.stripType==='bus'?'BUS':'CH';
+  const label=stereo?'CH '+String(c.number).padStart(2,'0')+'–'+String(c.linkedNumber).padStart(2,'0'):typeLabel+' '+String(c.number).padStart(2,'0');
   const names=stereo?[c.name,c.linkedName].filter(Boolean).join(' / '):c.name;
   const source=stereo?c.sourceLabel+' + '+c.linkedSource:c.sourceLabel;
   const muted=Boolean(c.muted||(stereo&&c.linkedMuted));
-  const mutedDcas=c.mutedDcas||[];
-  const unknownDcas=c.dcaMuteUnknown||[];
+  const mutedDcas=c.mutedDcas||[],unknownDcas=c.dcaMuteUnknown||[];
   const badges=[];
-  if(muted)badges.push('<span class="channel-muted">CHANNEL MUTED</span>');
+  if(muted)badges.push('<span class="channel-muted">'+(c.stripType==='bus'?'BUS MUTED':'CHANNEL MUTED')+'</span>');
   if(mutedDcas.length)badges.push('<span class="dca-muted">DCA MUTED · '+mutedDcas.map(n=>'DCA '+n).join(', ')+'</span>');
   if(unknownDcas.length)badges.push('<span class="dca-unknown">DCA MUTE CHECK · '+unknownDcas.map(n=>'DCA '+n).join(', ')+'</span>');
   if(!badges.length)badges.push('<span class="open">NO MUTE</span>');
-  const fader=stereo?Math.round((Number(c.fader)+Number(c.linkedFader))/2*100):Math.round(Number(c.fader)*100);
-  return '<article class="channel '+(stereo?'stereo':'')+'" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name" title="'+esc(names)+'">'+esc(names)+'</div><div class="number">'+label+(stereo?' · STEREO':'')+'</div></div></div><div class="source">'+esc(source)+'</div><div class="fader-track"><span style="--level:'+fader+'%"></span></div><div class="footer"><span>Fader '+fader+'%</span></div><div class="mute-state">'+badges.join('')+'</div></article>';
+  const dcaChips=(c.dcaLabels||[]).map(d=>'<span class="dca-chip'+(d.muted?' dca-muted':'')+'">'+esc(d.name||('DCA '+d.number))+'</span>').join('');
+  const fader=Math.round(Number(c.fader)*100);
+  return '<article class="channel '+(stereo?'stereo':'')+'" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name" title="'+esc(names)+'">'+esc(names)+'</div><div class="number">'+label+(stereo?' · STEREO':'')+'</div></div></div><div class="source">'+esc(source)+'</div>'+eqSvg(c)+'<div class="fader-track"><span style="--level:'+fader+'%"></span></div><div class="footer"><span>Fader '+fader+'%</span></div><div class="mute-state">'+badges.join('')+'</div>'+(dcaChips?'<div class="mute-state">'+dcaChips+'</div>':'')+'</article>';
  };
  const bankHtml=banks.map(bank=>{
-  const strips=channels.filter(c=>c.stripType===bank.type);
-  const byNumber=new Map(strips.map(c=>[Number(c.number),c]));
-  const rows=[];
+  const strips=channels.filter(c=>c.stripType===bank.type),byNumber=new Map(strips.map(c=>[Number(c.number),c])),rows=[];
   for(let first=1;first<=bank.count;first+=8){
    const cells=[];
    for(let n=first;n<Math.min(first+8,bank.count+1);n++){
     const c=byNumber.get(n);
-    if(!c){
-     const covered=strips.some(x=>x.stereoLinked&&Number(x.number)+1===n);
-     if(covered)continue;
-     cells.push('<div class="channel off"><strong>'+bank.kind+' '+String(n).padStart(2,'0')+'</strong><span>NO DATA</span></div>');
-     continue;
-    }
-    if(!c.active){
-     const span=c.stereoLinked?2:1;
-     cells.push('<div class="channel off" style="grid-column:span '+span+'"><strong>'+bank.kind+' '+String(c.number).padStart(2,'0')+(c.stereoLinked?'–'+String(c.linkedNumber).padStart(2,'0'):'')+'</strong><span>'+esc(c.offReason||'OFF')+'</span></div>');
-     if(c.stereoLinked)n++;
-     continue;
-    }
-    cells.push(card(c));
-    if(c.stereoLinked)n++;
+    if(!c){const covered=strips.some(x=>x.stereoLinked&&Number(x.number)+1===n);if(covered)continue;cells.push('<div class="channel off"><strong>'+bank.kind+' '+String(n).padStart(2,'0')+'</strong><span>NO DATA</span></div>');continue;}
+    if(!c.active){const span=c.stereoLinked?2:1;cells.push('<div class="channel off" style="grid-column:span '+span+'"><strong>'+bank.kind+' '+String(c.number).padStart(2,'0')+(c.stereoLinked?'–'+String(c.linkedNumber).padStart(2,'0'):'')+'</strong><span>'+esc(c.offReason||'OFF')+'</span></div>';if(c.stereoLinked)n++;continue;}
+    cells.push(card(c));if(c.stereoLinked)n++;
    }
    rows.push('<div class="channel-row">'+cells.join('')+'</div>');
   }
