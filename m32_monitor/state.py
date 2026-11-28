@@ -169,7 +169,7 @@ MAIN_NODE_SCHEMA = {
     "dyn/filter": STRIP_NODE_SCHEMA["bus"]["dyn/filter"],
     "insert": STRIP_NODE_SCHEMA["bus"]["insert"],
     "eq": STRIP_NODE_SCHEMA["bus"]["eq"],
-    "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None)},
+    "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None), "pan": (0.0,-100.0,100.0,2.0,"float",None)},
     "grp": STRIP_NODE_SCHEMA["bus"]["grp"],
 }
 for _band in range(1, 7):
