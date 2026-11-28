@@ -872,7 +872,8 @@ class Simulator:
                 if len(values) != len(fields):
                     raise ValueError("Strip node %s requires %d values" % (header, len(fields)))
                 paths = [prefix + "/" + node + "/" + field for field in fields]
-                schema = self.state.main_node_schema if prefix in ("/main/st", "/main/m") else self.state.strip_node_schema[header.split("/")[0]]
+                schema = (self.state.main_node_schema if prefix == "/main/st" else
+                           self.state.main_mono_node_schema) if prefix in ("/main/st", "/main/m") else self.state.strip_node_schema[header.split("/")[0]]
                 parsed = [self._parse_strip_node_value(
                     schema[node][field], token, field,
                     fader_db=((prefix.startswith(("/ch/", "/auxin/", "/fxrtn/")) and
