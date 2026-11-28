@@ -344,10 +344,11 @@ function renderChannels(channels){
   if(mutedDcas.length)badges.push('<span class="dca-muted">DCA MUTED · '+mutedDcas.map(n=>'DCA '+n).join(', ')+'</span>');
   if(unknownDcas.length)badges.push('<span class="dca-unknown">DCA MUTE CHECK · '+unknownDcas.map(n=>'DCA '+n).join(', ')+'</span>');
   if(!badges.length)badges.push('<span class="open">NO MUTE</span>');
-  const dcaChips=(c.dcaLabels||[]).map(d=>'<span class="dca-chip'+(d.muted?' dca-muted':'')+'">'+esc(d.name||('DCA '+d.number))+'</span>').join('');
+  const dcaAssignments=(c.dcaLabels&&c.dcaLabels.length?c.dcaLabels:(c.dcaNumbers||[]).map(number=>({number,name:'DCA '+number})));
+  const dcaChips=dcaAssignments.map(d=>'<span class="dca-chip'+(d.muted?' dca-muted':'')+'" title="'+esc(d.muted?'Assigned · DCA muted':'Assigned to '+(d.name||('DCA '+d.number)))+'">'+esc(d.name||('DCA '+d.number))+'</span>').join('');
   const fader=Math.round(Number(c.fader)*100);
   const family=c.stripType==='channel'?'ch':c.stripType==='aux'?'auxin':c.stripType==='fx_return'?'fxrtn':'bus';
-  return '<article class="channel '+(stereo?'stereo':'')+'" data-strip-family="'+family+'" data-strip-number="'+c.number+'" data-strip-linked="'+(stereo?c.linkedNumber:'')+'" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name" title="'+esc(names)+'">'+esc(names)+'</div><div class="number">'+label+(stereo?' · STEREO':'')+'</div></div></div><div class="source">'+esc(source)+'</div>'+eqSvg(c)+'<div class="fader-track"><span style="--level:'+fader+'%"></span></div><div class="footer"><span>Fader '+fader+'%</span></div><div class="mute-state">'+badges.join('')+'</div>'+(dcaChips?'<div class="mute-state">'+dcaChips+'</div>':'')+'</article>';
+  return '<article class="channel '+(stereo?'stereo':'')+'" role="button" tabindex="0" aria-label="Open settings for '+esc(label)+' '+esc(names)+'" title="Open full strip settings" data-strip-family="'+family+'" data-strip-number="'+c.number+'" data-strip-linked="'+(stereo?c.linkedNumber:'')+'" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name" title="'+esc(names)+'">'+esc(names)+'</div><div class="number">'+label+(stereo?' · STEREO':'')+'</div></div></div><div class="source">'+esc(source)+'</div>'+eqSvg(c)+'<div class="fader-track"><span style="--level:'+fader+'%"></span></div><div class="footer"><span>Fader '+fader+'%</span></div><div class="mute-state">'+badges.join('')+'</div>'+(dcaChips?'<div class="mute-state">'+dcaChips+'</div>':'')+'</article>';
  };
  const bankHtml=banks.map(bank=>{
   const strips=channels.filter(c=>c.stripType===bank.type),byNumber=new Map(strips.map(c=>[Number(c.number),c])),rows=[];
@@ -416,11 +417,21 @@ async function loadStripDetail(family,number,linkedNumber){
   }).join('<div class="muted">Stereo-linked partner</div>');
  }catch(e){root.innerHTML='<div class="empty">Could not load the complete strip settings. '+esc(e.message)+'</div>';}
 }
-document.querySelector('#channels').addEventListener('click',event=>{
- const card=event.target.closest('.channel[data-strip-family]');
+function openStripCard(card){
  if(!card||card.classList.contains('off'))return;
  const family=card.dataset.stripFamily,number=Number(card.dataset.stripNumber),linked=card.dataset.stripLinked;
+ if(!family||!Number.isInteger(number)||number<1)return;
  location.hash='strip/'+family+'/'+String(number).padStart(2,'0')+(linked?'/'+linked:'');
+}
+document.querySelector('#channels').addEventListener('click',event=>{
+ openStripCard(event.target.closest('.channel[data-strip-family]'));
+});
+document.querySelector('#channels').addEventListener('keydown',event=>{
+ if(event.key!=='Enter'&&event.key!==' ')return;
+ const card=event.target.closest('.channel[data-strip-family]');
+ if(!card)return;
+ event.preventDefault();
+ openStripCard(card);
 });
 document.querySelector('#strip-back').addEventListener('click',()=>{location.hash='channels-panel';});
 function routeHash(){
