@@ -35,6 +35,23 @@ def test_channel_endpoint_has_channel_mapping(client):
     assert response.json()[0]["sourceLabel"] == "IN01"
     assert response.json()[0]["number"] == 1
 
+def test_strip_detail_returns_all_known_processing_sections(client):
+    from m32_monitor.main import state
+    state.strip_nodes["/ch/01/preamp/trim"] = 6.0
+    state.strip_nodes["/ch/01/gate/on"] = 1
+    state.strip_nodes["/ch/01/eq/2/g"] = -3.5
+    response = client.get("/api/strip/ch/1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["family"] == "ch" and data["number"] == 1
+    groups = {group["name"]: {v["name"]: v for v in group["values"]}
+              for group in data["groups"]}
+    assert groups["preamp"]["trim"]["value"] == 6.0
+    assert groups["gate"]["on"]["display"] == "ON"
+    assert groups["eq/2"]["g"]["value"] == -3.5
+    assert "mix/01" in groups
+
+
 def test_monitor_tabs_are_deep_linkable(client):
     response = client.get("/")
     assert response.status_code == 200
