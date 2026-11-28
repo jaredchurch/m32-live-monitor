@@ -75,7 +75,9 @@ def test_default_surface_all_processing_nodes_match_declared_defaults():
             value = state.get("/" + header + "/" + field)
             if value is None:
                 value = spec[0]
-            expected.append(simulator._format_strip_node_value(spec, value))
+            expected.append(simulator._format_strip_node_value(
+                spec, value, field, simulator._strip_node_fader_db(
+                    "/" + "/".join(header.split("/")[:2]), node, field)))
         expected_tokens = shlex.split(" ".join(expected))
         assert tokens[1:] == expected_tokens, (
             f"Default values differ for {header}: expected {expected_tokens}, got {tokens[1:]}"
