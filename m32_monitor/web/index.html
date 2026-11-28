@@ -351,7 +351,7 @@ function renderChannels(channels){
    for(let n=first;n<Math.min(first+8,bank.count+1);n++){
     const c=byNumber.get(n);
     if(!c){const covered=strips.some(x=>x.stereoLinked&&Number(x.number)+1===n);if(covered)continue;cells.push('<div class="channel off"><strong>'+bank.kind+' '+String(n).padStart(2,'0')+'</strong><span>NO DATA</span></div>');continue;}
-    if(!c.active){const span=c.stereoLinked?2:1;cells.push('<div class="channel off" style="grid-column:span '+span+'"><strong>'+bank.kind+' '+String(c.number).padStart(2,'0')+(c.stereoLinked?'–'+String(c.linkedNumber).padStart(2,'0'):'')+'</strong><span>'+esc(c.offReason||'OFF')+'</span></div>';if(c.stereoLinked)n++;continue;}
+    if(!c.active){const span=c.stereoLinked?2:1;cells.push('<div class="channel off" style="grid-column:span '+span+'"><strong>'+bank.kind+' '+String(c.number).padStart(2,'0')+(c.stereoLinked?'–'+String(c.linkedNumber).padStart(2,'0'):'')+'</strong><span>'+esc(c.offReason||'OFF')+'</span></div>');if(c.stereoLinked)n++;continue;}
     cells.push(card(c));if(c.stereoLinked)n++;
    }
    rows.push('<div class="channel-row">'+cells.join('')+'</div>');
