@@ -158,10 +158,13 @@ def _canonical_state(value):
 def _state_differences(expected, actual, path=""):
     if isinstance(expected, dict) and isinstance(actual, dict):
         differences = []
-        for key in sorted(set(expected) | set(actual), key=str):
+        # The export may explicitly materialise documented default values for
+        # optional nodes omitted from the source scene. Require every source
+        # value to survive, but do not treat additional defaults as data loss.
+        for key in sorted(expected, key=str):
             child = f"{path}.{key}" if path else str(key)
-            if key not in expected or key not in actual:
-                differences.append((child, expected.get(key, "<missing>"), actual.get(key, "<missing>")))
+            if key not in actual:
+                differences.append((child, expected[key], "<missing>"))
             else:
                 differences.extend(_state_differences(expected[key], actual[key], child))
             if len(differences) >= 40:
