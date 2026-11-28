@@ -73,7 +73,7 @@ OSC_CATALOGUE = [
         {"pattern":"/renew, /unsubscribe","purpose":"Maintain or cancel meter/format subscriptions","operations":"COMMAND"}
     ]},
     {"category":"Scenes, shows, snippets and libraries","support":"known-unsupported","items":[
-        {"pattern":"/-show, /showdump, /-showfile/*","purpose":"Show metadata and show-file transfer","operations":"COMMAND, /node","note":"Only the empty-show response is currently stubbed; no show data is stored."},
+        {"pattern":"/-show, /showdump, /-showfile/*","purpose":"Show metadata and show-file transfer","operations":"COMMAND, /node","note":"The empty-show metadata response is protocol-shaped; cue, scene and snippet data are not stored or transferred."},
         {"pattern":"/-libs/*","purpose":"Preset/library browsing and management","operations":"GET, SET, /node"},
         {"pattern":"/add, /copy, /save, /load, /delete, /rename","purpose":"Scene, snippet, preset and dataset operations","operations":"COMMAND"}
     ]},
