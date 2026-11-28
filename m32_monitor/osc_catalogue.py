@@ -72,8 +72,8 @@ OSC_CATALOGUE = [
         {"pattern":"/formatsubscribe","purpose":"Subscribe to packed groups of parameter values","operations":"COMMAND"},
         {"pattern":"/renew, /unsubscribe","purpose":"Maintain or cancel meter/format subscriptions","operations":"COMMAND"}
     ]},
-    {"category":"Scenes, shows, snippets and libraries","support":"known-unsupported","items":[
-        {"pattern":"/-show, /showdump, /-showfile/*","purpose":"Show metadata and show-file transfer","operations":"COMMAND, /node","note":"The empty-show metadata response is protocol-shaped; cue, scene and snippet data are not stored or transferred."},
+    {"category":"Scenes, shows, snippets and libraries","support":"partial","items":[
+        {"pattern":"/-show, /showdump, /-showfile/*","purpose":"Show metadata and show-file transfer","operations":"COMMAND, /node","note":"Show metadata and raw show-file X32node records are retained in simulator memory and returned verbatim; full scene/cue/snippet transfer and file lifecycle commands remain unimplemented."},
         {"pattern":"/-libs/*","purpose":"Preset/library browsing and management","operations":"GET, SET, /node"},
         {"pattern":"/add, /copy, /save, /load, /delete, /rename","purpose":"Scene, snippet, preset and dataset operations","operations":"COMMAND"}
     ]},
