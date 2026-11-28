@@ -1,19 +1,28 @@
-"""Acceptance checks for the simulator's default surface and show-file round trips.
-
-A real M32-Edit fixture can be supplied as tests/fixtures/real_m32_showfile_nodes.txt.
-Each non-comment line must be an X32node SET record exactly as captured on the wire,
-for example: /-showfile/show "Service" ...
-The fixture test deliberately skips when no real capture is present; it never
-pretends a synthetic example is a real console show.
-"""
+"""Acceptance checks for simulator surface and captured show-file round trips."""
 from pathlib import Path
+import shlex
 
 import pytest
 from pythonosc.osc_message import OscMessage
+from pythonosc.osc_message_builder import OscMessageBuilder
 
 from m32_monitor.simulator import Simulator
 from m32_monitor.state import ConsoleState
-from tests.test_simulator import FakeTransport, packet
+
+
+class FakeTransport:
+    def __init__(self):
+        self.sent = []
+
+    def sendto(self, data, address):
+        self.sent.append((data, address))
+
+
+def packet(address, *args):
+    builder = OscMessageBuilder(address=address)
+    for arg in args:
+        builder.add_arg(arg)
+    return builder.build().dgram
 
 
 CLIENT = ("127.0.0.1", 50123)
@@ -31,25 +40,23 @@ def _node_response(simulator, header):
 
 
 def test_default_surface_all_processing_nodes_match_declared_defaults():
-    """Extract every declared strip/main node and compare it with its schema defaults."""
+    """Extract every declared strip/main node and compare with its schema defaults."""
     state = ConsoleState()
     simulator = Simulator(state)
     simulator.transport = FakeTransport()
-
     requests = []
+
     for family, schema in state.strip_node_schema.items():
         limit = {"ch": 32, "auxin": 8, "fxrtn": 8, "bus": 16, "mtx": 6}[family]
         for number in range(1, limit + 1):
             prefix = f"{family}/{number:02d}"
-            for node, fields in schema.items():
-                requests.append((f"{prefix}/{node}", fields))
+            requests.extend((f"{prefix}/{node}", fields) for node, fields in schema.items())
 
     for prefix, schema in (("main/st", state.main_node_schema),
                            ("main/m", state.main_mono_node_schema)):
-        for node, fields in schema.items():
-            requests.append((f"{prefix}/{node}", fields))
+        requests.extend((f"{prefix}/{node}", fields) for node, fields in schema.items())
 
-    assert requests, "No processing nodes were included in the default surface"
+    assert requests
     for header, fields in requests:
         response = _node_response(simulator, header)
         tokens = shlex.split(response.strip())
@@ -60,11 +67,11 @@ def test_default_surface_all_processing_nodes_match_declared_defaults():
         schema = (state.main_node_schema if header.startswith("main/st/")
                   else state.main_mono_node_schema if header.startswith("main/m/")
                   else state.strip_node_schema[header.split("/")[0]])
-        node = "/".join(header.split("/")[2:] if header.startswith("main/")
-                        else header.split("/")[2:])
-        expected = [simulator._format_strip_node_value(schema[node][field],
-                                                        schema[node][field][0])
-                    for field in fields]
+        node = "/".join(header.split("/")[2:])
+        expected = [
+            simulator._format_strip_node_value(schema[node][field], schema[node][field][0])
+            for field in fields
+        ]
         assert tokens[1:] == expected, (
             f"Default values differ for {header}: expected {expected}, got {tokens[1:]}"
         )
@@ -73,10 +80,12 @@ def test_default_surface_all_processing_nodes_match_declared_defaults():
     assert not simulator.snapshot(outcome="unhandled_get")["events"]
 
 
-@pytest.mark.skipif(not FIXTURE.exists(),
-                    reason="Supply a real M32-Edit show-file node capture as the fixture")
+@pytest.mark.skipif(
+    not FIXTURE.exists(),
+    reason="Supply a real M32-Edit show-file node capture as the fixture",
+)
 def test_real_m32_showfile_fixture_round_trips_through_simulator():
-    """Load real captured show-file SET records, then GET every imported node."""
+    """Load captured show-file SET records and GET each imported node."""
     state = ConsoleState()
     simulator = Simulator(state)
     simulator.transport = FakeTransport()
@@ -97,8 +106,7 @@ def test_real_m32_showfile_fixture_round_trips_through_simulator():
         imported[header] = record
 
     for address, expected in imported.items():
-        header = address.lstrip("/")
-        actual = _node_response(simulator, header)
+        actual = _node_response(simulator, address.lstrip("/"))
         assert actual.rstrip("\\n") == expected, (
             f"Show-file round-trip mismatch for {address}: expected {expected!r}, got {actual!r}"
         )
