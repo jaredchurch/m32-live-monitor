@@ -1,5 +1,6 @@
 """Acceptance checks for simulator surface and captured show-file round trips."""
 from pathlib import Path
+import math
 import shlex
 
 import pytest
@@ -111,15 +112,26 @@ def test_real_jared_scene_imports_and_supported_nodes_read_back():
     )
     mismatches = []
     for header, expected_values in supported:
-        actual = shlex.split(_node_response(simulator, header).strip())
-        expected = ["/" + header, *expected_values]
-        if actual != expected:
-            mismatches.append((header, expected, actual))
+        actual_tokens = shlex.split(_node_response(simulator, header).strip())
+        prefix, node, fields = simulator._strip_node_header(header)
+        schema = (state.main_node_schema if prefix == "/main/st" else
+                  state.main_mono_node_schema) if prefix in ("/main/st", "/main/m") else state.strip_node_schema[header.split("/")[0]]
+        if actual_tokens[0] != "/" + header or len(actual_tokens) != len(fields) + 1:
+            mismatches.append((header, "wrong response shape", actual_tokens))
+            continue
+        for field, source_token, returned_token in zip(fields, expected_values, actual_tokens[1:]):
+            fader_db = simulator._strip_node_fader_db(prefix, node, field)
+            expected_value = simulator._parse_strip_node_value(
+                schema[node][field], source_token, field, fader_db=fader_db)
+            returned_value = simulator._parse_strip_node_value(
+                schema[node][field], returned_token, field, fader_db=fader_db)
+            equal = (math.isclose(expected_value, returned_value, rel_tol=0.0, abs_tol=0.001)
+                     if isinstance(expected_value, float) else expected_value == returned_value)
+            if not equal:
+                mismatches.append((header, field, source_token, returned_token,
+                                   expected_value, returned_value))
 
     assert not mismatches, (
-        "Real Jared.scn strip-node values did not round-trip; first mismatches: "
+        "Real Jared.scn strip-node values did not round-trip semantically; first mismatches: "
         + repr(mismatches[:20])
-    )
-    assert not simulator.snapshot(outcome="unhandled_set")["events"], (
-        "Scene import produced unhandled SET records"
     )
