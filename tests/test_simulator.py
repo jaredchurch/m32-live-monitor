@@ -2205,7 +2205,7 @@ def test_all_eight_dca_nodes_and_config_nodes_are_discoverable_and_writable():
         lines = response.params[0].splitlines()
         assert len(lines) == 5
         assert lines[0] == "/dca/%d/on ON" % number
-        assert lines[1] == "/dca/%d/fader 0.750" % number
+        assert lines[1] == "/dca/%d/fader 0.750000" % number
         assert lines[2] == '/dca/%d/config/name "DCA %d"' % (number, number)
         assert lines[3] == "/dca/%d/config/icon 1" % number
         assert lines[4] == "/dca/%d/config/color RD" % number
@@ -2225,7 +2225,7 @@ def test_all_eight_dca_nodes_and_config_nodes_are_discoverable_and_writable():
         simulator.handle(client, packet("/node", "dca/%d" % number))
         response = OscMessage(simulator.transport.sent[-1][0])
         assert response.params[0].splitlines() == [
-            "/dca/%d/on OFF" % number, "/dca/%d/fader 0.625" % number,
+            "/dca/%d/on OFF" % number, "/dca/%d/fader 0.625000" % number,
             '/dca/%d/config/name "Monitor %d"' % (number, number),
             "/dca/%d/config/icon %d" % (number, number + 1),
             "/dca/%d/config/color %s" % (number, colour),
