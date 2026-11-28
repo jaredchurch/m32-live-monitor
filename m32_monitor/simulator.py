@@ -682,7 +682,7 @@ class Simulator:
                 # records contain mixed strings, integers and firmware metadata;
                 # coercing them into numbered scalar paths loses their structure.
                 paths = ["/" + header]
-                parsed = [args[0]]
+                parsed = [args[0] if args[0].lstrip().startswith("/") else "/" + args[0].lstrip()]
             elif header.startswith(("-show/", "-prefs/", "-action/")):
                 if not values:
                     raise ValueError("Show, preference and action nodes require at least one value")
@@ -1702,7 +1702,8 @@ class Simulator:
             address = "/" + header
             stored = self.state.get(address)
             if isinstance(stored, str) and stored:
-                self.send(client, "/node", stored, outcome="node_response")
+                self.send(client, "/node", stored if stored.endswith("\n") else stored + "\n",
+                          outcome="node_response")
                 self.record("in", "handled_node_get", "/node", args, client,
                             "Returned stored show-file node verbatim")
                 return
@@ -1790,7 +1791,8 @@ class Simulator:
                 detail = "Returned valid empty-show metadata (no show metadata has been imported)"
             else:
                 detail = "Returned stored show-file metadata"
-            self.send(client, "/node", show_response, outcome="showdump_response")
+            self.send(client, "/node", show_response if show_response.endswith("\n") else show_response + "\n",
+                      outcome="showdump_response")
             self.record("in", "handled_showdump", address, args, client, detail)
             return
 
