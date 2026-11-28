@@ -2342,9 +2342,16 @@ def test_fx_grouped_node_writes_and_invalid_values():
     simulator.handle(client, packet("/", "fx/01/source MIX1 MIX2"))
     assert state.get("/fx/01/source/l") == 1
     assert state.get("/fx/01/source/r") == 2
-    params = " ".join(["0.25"] * 64)
-    simulator.handle(client, packet("/", "fx/01/par " + params))
+    parameters = ["0.25"] * 64
+    parameters[3] = "6k50"
+    parameters[7] = "7k2"
+    simulator.handle(client, packet("/", "fx/01/par " + " ".join(parameters)))
+    assert state.get("/fx/01/par/04") == pytest.approx(6500.0)
+    assert state.get("/fx/01/par/08") == pytest.approx(7200.0)
     assert state.get("/fx/01/par/64") == 0.25
+
+    simulator.handle(client, packet("/", "fx/01/par/04 6k50"))
+    assert state.get("/fx/01/par/04") == pytest.approx(6500.0)
 
     assert not state.update("/fx/01/type", 61)
     assert not state.update("/fx/05/type", 34)
