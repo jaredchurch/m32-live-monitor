@@ -303,6 +303,7 @@ class ConsoleState:
         self.fx_returns = {n: ChannelState(n, "FX RTN %02d" % n, 0.72, False, 1, 0, False) for n in range(1, 9)}
         self.strip_node_schema = STRIP_NODE_SCHEMA
         self.main_node_schema = MAIN_NODE_SCHEMA
+        self.main_mono_node_schema = MAIN_MONO_NODE_SCHEMA
         self.strip_nodes = {}
         for family, nodes in STRIP_NODE_SCHEMA.items():
             counts = {"ch": 32, "auxin": 8, "fxrtn": 8, "bus": 16, "mtx": 6}[family]
