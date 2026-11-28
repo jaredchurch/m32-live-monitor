@@ -8,8 +8,11 @@ h1{font-size:24px;margin:0}h2{font-size:17px;margin:0 0 12px}.muted{color:#9ca8b
 #connection{padding:7px 11px;border:1px solid #46515e;border-radius:99px;font-size:12px}
 .tabs{display:flex;gap:8px;margin:18px 0}.tab{border:1px solid #46515e;border-radius:8px;background:#1b222b;color:#cbd5df;padding:9px 14px;cursor:pointer}.tab.active{background:#30465a;border-color:#6b91b2;color:white}
 .panel{display:none}.panel.active{display:block}
-#channels{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
-.channel{background:#1b222b;border:1px solid #303b48;border-radius:12px;padding:14px;min-height:150px}
+#channels{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+.channel{background:#1b222b;border:1px solid #303b48;border-radius:10px;padding:10px;min-width:0;min-height:118px}
+@media(max-width:1400px){#channels{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(max-width:1050px){#channels{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:650px){#channels{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .channel-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}.swatch{width:10px;height:30px;border-radius:4px;background:var(--strip)}
 .name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.number{font-size:11px;color:#9ca8b6;margin-top:3px}
 .source{font-size:12px;color:#9ca8b6;margin-bottom:12px}.fader-track{height:7px;background:#303b48;border-radius:99px;overflow:hidden}
@@ -280,7 +283,13 @@ function renderRouting(data){
 
 function renderChannels(channels){
  const root=document.querySelector('#channels');if(!channels.length){root.innerHTML='<div class="empty">No connected channels with an enabled scribble strip reported.</div>';return;}
- root.innerHTML=channels.map(c=>'<article class="channel" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name">'+esc(c.name)+'</div><div class="number">'+(c.stripType==='fx_return'?'FX return':c.stripType==='aux'?'Aux input':'Channel')+' '+String(c.number).padStart(2,'0')+'</div></div></div><div class="source">'+(c.stripType==='fx_return'?'FX return':c.stripType==='aux'?'Aux input':'Input')+': '+c.sourceLabel+'</div><div class="fader-track"><span style="--level:'+Math.round(c.fader*100)+'%"></span></div><div class="footer"><span>Fader '+Math.round(c.fader*100)+'%</span><strong class="'+(c.muted?'mute':'open')+'">'+(c.muted?'MUTED':'OPEN')+'</strong></div></article>').join('');
+ root.innerHTML=channels.map(c=>{
+  const stereo=Boolean(c.stereoLinked),label=stereo?'Channel '+String(c.number).padStart(2,'0')+'–'+String(c.linkedNumber).padStart(2,'0'):(c.stripType==='fx_return'?'FX return':c.stripType==='aux'?'Aux input':'Channel')+' '+String(c.number).padStart(2,'0');
+  const name=stereo?[c.name,c.linkedName].filter(Boolean).join(' / '):c.name;
+  const source=stereo?c.sourceLabel+' + '+c.linkedSource:c.sourceLabel;
+  const muted=Boolean(c.muted|| (stereo&&c.linkedMuted));
+  return '<article class="channel" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name" title="'+esc(name)+'">'+esc(name)+'</div><div class="number">'+label+(stereo?' · STEREO':'')+'</div></div></div><div class="source">'+(c.stripType==='fx_return'?'FX return':c.stripType==='aux'?'Aux input':'Input')+': '+esc(source)+'</div><div class="fader-track"><span style="--level:'+Math.round(c.fader*100)+'%"></span></div><div class="footer"><span>Fader '+Math.round(c.fader*100)+'%</span><strong class="'+(muted?'mute':'open')+'">'+(muted?'MUTED':'OPEN')+'</strong></div></article>';
+ }).join('');
 }
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
 async function refresh(){try{
