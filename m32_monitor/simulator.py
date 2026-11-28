@@ -882,7 +882,8 @@ class Simulator:
                                ((node == "mix" and field in ("fader", "mlevel")) or
                                 (node.startswith("mix/") and field == "level"))) or
                               (prefix in ("/main/st", "/main/m") and
-                               node == "mix" and field == "fader")))
+                               ((node == "mix" and field == "fader") or
+                                (node.startswith("mix/") and field == "level")))))
                           for field, token in zip(fields, values)]
                 for path, value in zip(paths, parsed):
                     valid = (self.state._valid_main_node_value(path, value)
