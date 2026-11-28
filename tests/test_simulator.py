@@ -2038,6 +2038,21 @@ def test_main_output_mix_node_accepts_db_fader_and_pan():
     assert state.outputs["main_st"]["pan"] == 0.0
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
+def test_main_mono_mix_node_accepts_two_fields_and_silent_fader():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/node", "main/m/mix"))
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/main/m/mix ON 0.000\\n"]
+
+    simulator.handle(client, packet("/", "main/m/mix ON -oo"))
+    assert state.get("/main/m/mix/on") == 1
+    assert state.get("/main/m/mix/fader") == 0.0
+    assert state.outputs["main_mono"]["fader"] == 0.0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
 
 def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
     state = ConsoleState()
