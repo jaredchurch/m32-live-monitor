@@ -202,11 +202,11 @@ def select_simulator_scenario(scenario_id: str):
 @app.get("/api/simulator/logs")
 def simulator_logs(limit: int = 500, direction: str | None = None,
                    outcome: str | None = None, search: str | None = None,
-                   exceptions_only: bool = False):
+                   exceptions_only: bool = False, all_events: bool = False):
     """Recent inbound/outbound OSC traffic, including unsupported requests."""
     if settings.mode != "simulator" or runtime is None:
         raise HTTPException(status_code=409, detail="Simulator logs are only available in simulator mode")
-    return runtime.snapshot(limit=limit, direction=direction, outcome=outcome, search=search,
+    return runtime.snapshot(limit=None if all_events else limit, direction=direction, outcome=outcome, search=search,
                             exceptions_only=exceptions_only)
 
 
