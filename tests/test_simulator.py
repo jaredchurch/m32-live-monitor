@@ -2728,3 +2728,18 @@ def test_auxin_preamp_trim_accepts_tenth_db_values():
     assert state.get("/auxin/05/preamp/invert") == 0
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
+def test_fx_return_mix_node_accepts_db_fader_and_silent_mono_level():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "fxrtn/01/mix ON -12.2 ON -100 OFF -oo"))
+
+    assert state.get("/fxrtn/01/mix/on") == 1
+    assert state.get("/fxrtn/01/mix/fader") == pytest.approx((-12.2 + 50.0) / 80.0)
+    assert state.get("/fxrtn/01/mix/st") == 1
+    assert state.get("/fxrtn/01/mix/pan") == -100.0
+    assert state.get("/fxrtn/01/mix/mono") == 0
+    assert state.get("/fxrtn/01/mix/mlevel") == 0.0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
