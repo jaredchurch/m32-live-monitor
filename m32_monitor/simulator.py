@@ -62,7 +62,7 @@ TYPE_NAMES_FX_5_8 = ("GEQ2", "GEQ", "TEQ2", "TEQ", "DES2", "DES", "P1A", "P1A2",
 
 
 class Simulator:
-    def __init__(self, state, host="0.0.0.0", port=10023, log_limit=3000,
+    def __init__(self, state, host="0.0.0.0", port=10023, log_limit=10000,
                  name="M32-Simulation", model="M32", firmware="4.06",
                  server_version="V2.07"):
         self.state, self.host, self.port = state, host, port
