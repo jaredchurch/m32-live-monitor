@@ -905,7 +905,7 @@ class ConsoleState:
                 self.received.add(address)
                 return True
 
-            if (address.startswith(("/-show/", "/-action/")) or
+            if (address.startswith(("/-show/", "/-showfile/", "/-action/")) or
                     (address.startswith("/-prefs/") and not address.startswith(("/-prefs/rta/", "/-prefs/card/"))
                      and address not in ("/-prefs/dcamute", "/-prefs/hardmute"))):
                 if isinstance(value, bool) or not isinstance(value, (str, int, float)):
@@ -1175,7 +1175,7 @@ class ConsoleState:
                 return self.solo_switches.get(int(parts[2]))
             if len(parts) == 3 and parts[:2] == ["-prefs", "card"]:
                 return self.card_preferences.get(parts[2])
-            if address.startswith(("/-show/", "/-prefs/", "/-action/")):
+            if address.startswith(("/-show/", "/-showfile/", "/-prefs/", "/-action/")):
                 return self.misc_nodes.get(address)
             if address == "/-prefs/dcamute":
                 return int(self.dca_mutes_enabled) if self.dca_mutes_enabled is not None else None
