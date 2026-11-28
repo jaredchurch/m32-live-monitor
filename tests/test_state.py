@@ -53,3 +53,17 @@ def test_stereo_link_values_must_be_binary():
     assert state.update("/config/chlink/1-2", 1) is True
     assert state.update("/config/chlink/3-4", 2) is False
     assert state.update("/config/chlink/5-6", "ON") is False
+
+
+def test_channel_layout_includes_off_slots_and_stereo_pair_metadata():
+    state = ConsoleState()
+    state.update("/ch/01/config/source", 0)
+    state.update("/config/chlink/3-4", 1)
+    strips = state.visible_channels(include_off=True)
+    channel_strips = [item for item in strips if item["stripType"] == "channel"]
+    assert len(channel_strips) == 31
+    assert channel_strips[0]["active"] is False
+    pair = next(item for item in channel_strips if item["number"] == 3)
+    assert pair["stereoLinked"] is True
+    assert pair["linkedNumber"] == 4
+    assert pair["linkedDcaMask"] == state.channels[4].dca_mask
