@@ -26,7 +26,7 @@ def packet(address, *args):
 
 
 CLIENT = ("127.0.0.1", 50123)
-FIXTURE = Path(__file__).parent / "fixtures" / "Jared.scn""
+FIXTURE = Path(__file__).parent / "fixtures" / "Jared.scn"
 
 
 def _node_response(simulator, header):
