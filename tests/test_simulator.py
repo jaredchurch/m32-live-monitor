@@ -617,6 +617,25 @@ def test_default_log_retains_at_least_ten_thousand_events_for_full_export():
     assert result["events"][-1]["sequence"] == 10050
 
 
+def test_individual_mute_mono_and_empty_dp48_groupname_node_sets():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    for address, value in (
+        ("/config/mute/3", "ON"),
+        ("/config/mono/mode", "LCR"),
+        ("/config/mono/link", "ON"),
+        ('/config/dp48/grpname/09', '""'),
+    ):
+        simulator.handle(client, packet("/", address.lstrip("/") + " " + value))
+
+    assert state.mute_groups[3] is True
+    assert state.mono_config == {"mode": 1, "link": 1}
+    assert state.dp48_config["grpname"][9] == ""
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
 def test_snapshot_can_filter_only_protocol_exceptions():
     simulator = Simulator(ConsoleState())
     simulator.record("in", "handled_get", "/ch/01/mix/fader")
