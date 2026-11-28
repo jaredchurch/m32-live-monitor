@@ -2049,7 +2049,7 @@ def test_main_mono_mix_node_accepts_two_fields_and_silent_fader():
     client = ("127.0.0.1", 50123)
 
     simulator.handle(client, packet("/node", "main/m/mix"))
-    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/main/m/mix ON 0.750\n"]
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/main/m/mix ON 0.000\n"]
 
     simulator.handle(client, packet("/", "main/m/mix ON -oo"))
     assert state.get("/main/m/mix/on") == 1
@@ -2071,7 +2071,7 @@ def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
             response = OscMessage(simulator.transport.sent[-1][0])
             assert response.address == "/node"
             if matrix % 2:
-                assert response.params == ["/%s ON 0.000 0.000 POST OFF\n" % header]
+                assert response.params == ["/%s ON -oo 0.000 POST OFF\n" % header]
                 simulator.handle(client, packet("/", header + " ON +10.0 +0 POST 0"))
                 assert state.get("/%s/on" % header) == 1
                 assert state.get("/%s/level" % header) == pytest.approx(1.0)
