@@ -106,6 +106,27 @@ def test_channel_endpoint_preserves_off_strips_and_reports_dca_state(client):
     assert bus["dcaNumbers"] == [2] and bus["mutedDcas"] == [2]
 
 
+def test_simulator_logging_can_be_paused_and_resumed(client):
+    from m32_monitor.main import runtime
+    runtime.clear_events()
+    runtime.record("in", "received", address="/before-pause")
+    paused = client.post("/api/simulator/logs/pause?paused=true")
+    assert paused.status_code == 200
+    assert paused.json()["logging_paused"] is True
+    runtime.record("in", "received", address="/during-pause")
+    snapshot = client.get("/api/simulator/logs?all_events=true").json()
+    assert snapshot["logging_paused"] is True
+    assert snapshot["event_count"] == 1
+    assert [event["address"] for event in snapshot["events"]] == ["/before-pause"]
+    resumed = client.post("/api/simulator/logs/pause?paused=false")
+    assert resumed.status_code == 200
+    runtime.record("in", "received", address="/after-resume")
+    snapshot = client.get("/api/simulator/logs?all_events=true").json()
+    assert snapshot["logging_paused"] is False
+    assert snapshot["event_count"] == 2
+    assert [event["address"] for event in snapshot["events"]] == ["/after-resume", "/before-pause"]
+
+
 def test_simulator_log_export_can_return_all_retained_events(client):
     from m32_monitor.main import runtime
     runtime.clear_events()
