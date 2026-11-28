@@ -13,6 +13,8 @@ h1{font-size:24px;margin:0}h2{font-size:17px;margin:0 0 12px}.muted{color:#9ca8b
 .channel-bank{display:grid;gap:7px}
 .channel-bank h3{font-size:13px;color:#9ca8b6;margin:8px 0 0}
 .channel-row{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;align-items:stretch}
+.channel{cursor:pointer;transition:border-color .12s,transform .12s}.channel:hover{border-color:#86abc9;transform:translateY(-1px)}
+.strip-detail{display:grid;gap:14px}.detail-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.detail-toolbar button{background:#202832;color:#e9edf2;border:1px solid #46515e;border-radius:7px;padding:9px 12px;cursor:pointer}.detail-hero{background:#1b222b;border:1px solid #3b4c5e;border-radius:12px;padding:16px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.detail-section{background:#1b222b;border:1px solid #303b48;border-radius:10px;padding:13px;min-width:0}.detail-section h3{font-size:14px;margin:0 0 10px;text-transform:capitalize}.detail-values{display:grid;grid-template-columns:minmax(100px,1fr) minmax(90px,1fr);gap:7px 12px;font-size:12px}.detail-values .key{color:#9ca8b6}.detail-values .value{text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.detail-values .unknown{color:#f4d28b}.detail-eq{display:grid;gap:8px}.detail-eq-row{display:grid;grid-template-columns:35px 1fr 1fr 1fr;gap:8px;font-size:11px;color:#cbd5df}.detail-eq-row span{min-width:0}
 .channel{background:#1b222b;border:1px solid #303b48;border-radius:10px;padding:9px;min-width:0;min-height:118px}
 .channel.stereo{grid-column:span 2;border-color:#577b99}
 .channel.off{background:#151a20;border-style:dashed;border-color:#46515e;color:#7f8b98;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:118px}
@@ -126,6 +128,7 @@ td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;ba
 <div id="sim-summary" class="summary"><span class="pill">Waiting for simulator…</span></div>
 <div id="sim-log" class="matrix-wrap"><div class="empty">No simulator messages recorded yet.</div></div>
 </section>
+<section id="strip-panel" class="panel"><div class="detail-toolbar"><button id="strip-back" type="button">← Back to channel strips</button><span class="muted">Complete read-only strip snapshot</span></div><div id="strip-detail" class="strip-detail"><div class="empty">Select a channel or bus.</div></div></section>
 <section id="channels-panel" class="panel"><h2>Channel strips</h2><div class="muted">Fixed channel positions in banks of eight. Stereo-linked pairs share one card across their two channel positions. OFF strips remain visible as placeholders. Channel mute and DCA mute are shown separately.</div><div id="meter-streams" class="summary"></div><div class="channels-scroll"><div id="channels"><div class="empty">Waiting for console data…</div></div></div></section>
 <script>
 const colours=['#59616b','#d66b6b','#64b77b','#d9bd5a','#5b9fd0','#bb78b5','#55b9b0','#e2e8f0','#7d4141','#36784b','#918132','#315e8c','#754d80','#327d79','#9aa4b0','#f4f6f8'];
@@ -343,7 +346,8 @@ function renderChannels(channels){
   if(!badges.length)badges.push('<span class="open">NO MUTE</span>');
   const dcaChips=(c.dcaLabels||[]).map(d=>'<span class="dca-chip'+(d.muted?' dca-muted':'')+'">'+esc(d.name||('DCA '+d.number))+'</span>').join('');
   const fader=Math.round(Number(c.fader)*100);
-  return '<article class="channel '+(stereo?'stereo':'')+'" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name" title="'+esc(names)+'">'+esc(names)+'</div><div class="number">'+label+(stereo?' · STEREO':'')+'</div></div></div><div class="source">'+esc(source)+'</div>'+eqSvg(c)+'<div class="fader-track"><span style="--level:'+fader+'%"></span></div><div class="footer"><span>Fader '+fader+'%</span></div><div class="mute-state">'+badges.join('')+'</div>'+(dcaChips?'<div class="mute-state">'+dcaChips+'</div>':'')+'</article>';
+  const family=c.stripType==='channel'?'ch':c.stripType==='aux'?'auxin':c.stripType==='fx_return'?'fxrtn':'bus';
+  return '<article class="channel '+(stereo?'stereo':'')+'" data-strip-family="'+family+'" data-strip-number="'+c.number+'" data-strip-linked="'+(stereo?c.linkedNumber:'')+'" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name" title="'+esc(names)+'">'+esc(names)+'</div><div class="number">'+label+(stereo?' · STEREO':'')+'</div></div></div><div class="source">'+esc(source)+'</div>'+eqSvg(c)+'<div class="fader-track"><span style="--level:'+fader+'%"></span></div><div class="footer"><span>Fader '+fader+'%</span></div><div class="mute-state">'+badges.join('')+'</div>'+(dcaChips?'<div class="mute-state">'+dcaChips+'</div>':'')+'</article>';
  };
  const bankHtml=banks.map(bank=>{
   const strips=channels.filter(c=>c.stripType===bank.type),byNumber=new Map(strips.map(c=>[Number(c.number),c])),rows=[];
@@ -367,9 +371,57 @@ function activatePanel(panelId){
  document.querySelectorAll('.tab').forEach(link=>link.classList.toggle('active',link.dataset.panel===panelId));
  document.querySelectorAll('.panel').forEach(panel=>panel.classList.toggle('active',panel.id===panelId));
 }
+
+const stripFamilyNames={ch:'Input channel',auxin:'Aux input',fxrtn:'FX return',bus:'Mix bus'};
+const stripFieldNames={on:'Enabled',fader:'Fader',st:'Stereo main bus',pan:'Pan',mono:'Mono/C send',mlevel:'Mono/C level',trim:'Preamp trim',invert:'Polarity invert',hpon:'High-pass filter',hpslope:'HPF slope',hpf:'HPF frequency',thr:'Threshold',ratio:'Ratio',attack:'Attack',hold:'Hold',release:'Release',range:'Range',mgain:'Make-up gain',mix:'Wet/dry mix',pos:'Position',keysrc:'Key source',auto:'Auto',det:'Detector',env:'Envelope',knee:'Knee',mode:'Mode',type:'Type',f:'Frequency',g:'Gain',q:'Q',sel:'Effect / insert source',dca:'DCA assignment mask',mute:'Mute-group assignment mask',source:'Input source',color:'Strip colour',icon:'Icon',group:'Automix group',weight:'Automix weight',level:'Send level',panFollow:'Pan follows'};
+function formatStripValue(v){
+ if(v===null||v===undefined)return '—';
+ if(typeof v==='number')return Number.isInteger(v)?String(v):v.toFixed(2);
+ return String(v);
+}
+async function loadStripDetail(family,number,linkedNumber){
+ const root=document.querySelector('#strip-detail');
+ root.innerHTML='<div class="empty">Loading strip settings…</div>';
+ const requests=[number,...(linkedNumber?[linkedNumber]:[])].map(n=>fetch('/api/strip/'+family+'/'+n).then(r=>{if(!r.ok)throw new Error('Strip settings unavailable');return r.json();}));
+ try{
+  const data=await Promise.all(requests);
+  root.innerHTML=data.map((item,index)=>{
+   const strip=item.strip||{},name=strip.name||((stripFamilyNames[family]||'Strip')+' '+item.number);
+   const heading=(stripFamilyNames[family]||'Strip')+' '+String(item.number).padStart(2,'0')+' · '+name;
+   const dca=(strip.dca_mask||0),muteMask=(strip.mute_mask||0);
+   const sections=item.groups.map(group=>{
+    const rows=group.values.map(v=>{
+     const label=stripFieldNames[v.name]||v.name.replace(/([A-Z])/g,' $1').replace(/^./,x=>x.toUpperCase());
+     const value=v.display===null||v.display===undefined?formatStripValue(v.value):formatStripValue(v.display);
+     return '<div class="key">'+esc(label)+'</div><div class="value '+(!v.known?'unknown':'')+'" title="'+esc(v.known?'Received / simulator state':'Not yet received from console')+'">'+esc(value)+(v.known?'':' · CHECK')+'</div>';
+    }).join('');
+    return '<section class="detail-section"><h3>'+esc(group.name.replaceAll('/',' · '))+'</h3><div class="detail-values">'+rows+'</div></section>';
+   }).join('');
+   const dcas=Array.from({length:8},(_,n)=>dca&(1<<n)?'DCA '+(n+1):null).filter(Boolean);
+   const muteGroups=Array.from({length:6},(_,n)=>muteMask&(1<<n)?'Mute '+(n+1):null).filter(Boolean);
+   const summary='<div class="detail-hero"><div><h2>'+esc(heading)+'</h2><div class="muted">Fader '+formatStripValue(strip.fader)+' · '+(strip.muted?'MUTED':'Not muted')+' · '+(item.mode==='simulator'?'Simulator values':'Hardware snapshot')+'</div><div class="muted">DCA: '+esc(dcas.join(', ')||'None')+' · Mute groups: '+esc(muteGroups.join(', ')||'None')+'</div></div><div>'+eqSvg({eqBands:(item.groups.find(g=>g.name==='eq')?.values||[]).length?[]:[],eqOn:false})+'</div></div>';
+   return summary+'<div class="detail-grid">'+sections+'</div>';
+  }).join('<div class="muted">Stereo-linked partner</div>');
+ }catch(e){root.innerHTML='<div class="empty">Could not load the complete strip settings. '+esc(e.message)+'</div>';}
+}
+document.querySelector('#channels').addEventListener('click',event=>{
+ const card=event.target.closest('.channel[data-strip-family]');
+ if(!card||card.classList.contains('off'))return;
+ const family=card.dataset.stripFamily,number=Number(card.dataset.stripNumber),linked=card.dataset.stripLinked;
+ location.hash='strip/'+family+'/'+String(number).padStart(2,'0')+(linked?'/'+linked:'');
+});
+document.querySelector('#strip-back').addEventListener('click',()=>{location.hash='channels-panel';});
+function routeHash(){
+ const hash=location.hash.slice(1);
+ const match=hash.match(/^strip\/(ch|auxin|fxrtn|bus)\/(\d{1,2})(?:\/(\d{1,2}))?$/);
+ if(match){
+  activatePanel('strip-panel');
+  loadStripDetail(match[1],Number(match[2]),match[3]?Number(match[3]):null);
+ }else activatePanel(hash||'matrix');
+}
 document.querySelectorAll('.tab').forEach(link=>link.addEventListener('click',()=>activatePanel(link.dataset.panel)));
-window.addEventListener('hashchange',()=>activatePanel(location.hash.slice(1)||'matrix'));
-activatePanel(location.hash.slice(1)||'matrix');
+window.addEventListener('hashchange',routeHash);
+routeHash();
 async function refresh(){try{
  const pair=await Promise.all([fetch('/api/status').then(r=>r.json()),fetch('/api/channels').then(r=>r.json()),fetch('/api/output-matrix').then(r=>r.json()),fetch('/api/matrix-inputs').then(r=>r.json()),fetch('/api/routing-map').then(r=>r.json()),fetch('/api/meters').then(r=>r.json()),fetch('/api/diagnostics').then(r=>r.json())]);
  const status=pair[0],badge=document.querySelector('#connection');badge.textContent=status.mode.toUpperCase()+' · '+status.connection;badge.style.borderColor=status.online?'#4b9b70':'#a66b55';
