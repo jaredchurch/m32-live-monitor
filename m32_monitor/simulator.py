@@ -1105,7 +1105,8 @@ class Simulator:
         parts = header.split("/")
         if len(parts) >= 3 and parts[:2] in (["main", "st"], ["main", "m"]):
             node = "/".join(parts[2:])
-            schema = self.state.main_node_schema
+            schema = (self.state.main_node_schema if parts[1] == "st" else
+                      self.state.main_mono_node_schema)
             if node in schema:
                 return "/" + "/".join(parts[:2]), node, tuple(schema[node])
             if len(parts) >= 4:
