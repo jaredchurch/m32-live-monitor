@@ -2052,7 +2052,7 @@ def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
             response = OscMessage(simulator.transport.sent[-1][0])
             assert response.address == "/node"
             if matrix % 2:
-                assert response.params == ["/%s ON 0.000 0.0 4 OFF\n" % header]
+                assert response.params == ["/%s ON 0.000 0.000 POST OFF\n" % header]
                 simulator.handle(client, packet("/", header + " ON +10.0 +0 POST 0"))
                 assert state.get("/%s/on" % header) == 1
                 assert state.get("/%s/level" % header) == pytest.approx(1.0)
