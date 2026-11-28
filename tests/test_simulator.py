@@ -1913,7 +1913,7 @@ def test_matrix_config_processing_and_output_nodes_are_discoverable_and_writable
 
     expected_counts = {
         "config": 3, "preamp": 1, "dyn": 14, "dyn/filter": 3,
-        "insert": 3, "eq": 1, "eq/6": 4, "mix": 2, "grp": 2,
+        "insert": 3, "eq": 1, "eq/6": 4, "mix": 3, "grp": 2,
     }
     for matrix_number in range(1, 7):
         for node, count in expected_counts.items():
@@ -2022,6 +2022,21 @@ def test_main_output_dynamics_node_accepts_fourteen_fields_without_key_source():
     assert state.get("/main/st/dyn/mix") == 100.0
     assert state.get("/main/st/dyn/auto") == 0
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+def test_main_output_mix_node_accepts_db_fader_and_pan():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "main/st/mix ON -7.5 +0"))
+
+    assert state.get("/main/st/mix/on") == 1
+    assert state.get("/main/st/mix/fader") == pytest.approx(0.5625)
+    assert state.get("/main/st/mix/pan") == 0.0
+    assert state.outputs["main_st"]["fader"] == pytest.approx(0.5625)
+    assert state.outputs["main_st"]["pan"] == 0.0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
 
 def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
     state = ConsoleState()
