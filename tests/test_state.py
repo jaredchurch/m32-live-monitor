@@ -34,3 +34,22 @@ def test_hardware_connection_times_out():
     assert state.online is True
     state.last_seen=0
     assert state.online is False
+
+
+def test_stereo_linked_channels_render_as_one_monitor_strip():
+    state = ConsoleState()
+    assert state.update("/config/chlink/1-2", 1)
+    visible = state.visible_channels()
+    pair = next(channel for channel in visible if channel["number"] == 1)
+    assert pair["stereoLinked"] is True
+    assert pair["linkedNumber"] == 2
+    assert pair["linkedName"] == state.channels[2].name
+    assert 2 not in [channel["number"] for channel in visible]
+    assert len(visible) == 31
+
+
+def test_stereo_link_values_must_be_binary():
+    state = ConsoleState()
+    assert state.update("/config/chlink/1-2", 1) is True
+    assert state.update("/config/chlink/3-4", 2) is False
+    assert state.update("/config/chlink/5-6", "ON") is False
