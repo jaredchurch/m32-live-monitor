@@ -1690,7 +1690,7 @@ class Simulator:
             colour_names = ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
                             "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi")
             if len(dca_parts) == 2:
-                response = ("%s/on %s\n%s/fader %.3f\n%s/config/name %s\n"
+                response = ("%s/on %s\n%s/fader %.6f\n%s/config/name %s\n"
                             "%s/config/icon %d\n%s/config/color %s\n" % (
                                 prefix, "ON" if dca["on"] else "OFF", prefix, dca["fader"],
                                 prefix, json.dumps(dca["name"], ensure_ascii=False), prefix,
