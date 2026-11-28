@@ -71,6 +71,7 @@ class Simulator:
         self.transport = None
         self.clients = set()
         self.events = deque(maxlen=log_limit)
+        self.logging_paused = False
         self.counts = Counter()
         self.started_at = time.time()
         self.sequence = 0
@@ -110,6 +111,8 @@ class Simulator:
         return result
 
     def record(self, direction, outcome, address=None, args=(), peer=None, detail=None):
+        if self.logging_paused:
+            return None
         self.sequence += 1
         event = {
             "sequence": self.sequence,
@@ -154,9 +157,15 @@ class Simulator:
             "clients": ["%s:%s" % client for client in sorted(self.clients)],
             "event_count": self.sequence,
             "retained_events": len(self.events),
+            "logging_paused": self.logging_paused,
             "counts": dict(self.counts),
             "events": events if limit is None else events[-max(1, min(int(limit), 2000)):],
         }
+
+    def set_logging_paused(self, paused):
+        """Pause or resume event capture without discarding retained events."""
+        self.logging_paused = bool(paused)
+        return self.logging_paused
 
     def clear_events(self):
         self.events.clear()
