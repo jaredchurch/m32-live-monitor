@@ -1970,7 +1970,7 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
     simulator = Simulator(state)
     simulator.transport = FakeTransport()
     client = ("127.0.0.1", 50123)
-    expected = {"config": 3, "dyn": 15, "dyn/filter": 3, "insert": 3,
+    expected = {"config": 3, "dyn": 14, "dyn/filter": 3, "insert": 3,
                 "eq": 1, "eq/6": 4, "mix": 2, "grp": 2}
     for prefix in ("main/st", "main/m"):
         for node, count in expected.items():
@@ -1981,7 +1981,7 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
             assert len(shlex.split(response.params[0])) - 1 == count
             assert response.params[0].startswith("/" + header + " ")
         simulator.handle(client, packet("/", prefix + '/config "Main Out" 12 YE'))
-        simulator.handle(client, packet("/", prefix + "/dyn ON COMP RMS LIN -30 4.0 2 3 15 20 150 POST 0 75 OFF"))
+        simulator.handle(client, packet("/", prefix + "/dyn ON COMP RMS LIN -30 4.0 2 3 15 20 150 POST 75 OFF"))
         simulator.handle(client, packet("/", prefix + "/dyn/filter ON HC12 120"))
         simulator.handle(client, packet("/", prefix + "/insert ON POST FX3L"))
         simulator.handle(client, packet("/", prefix + "/eq ON"))
@@ -1998,6 +1998,30 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
         assert state.get("/" + prefix + "/mix/fader") == 0.65
         assert state.get("/" + prefix + "/grp/mute") == 5
 
+
+
+def test_main_output_dynamics_node_accepts_fourteen_fields_without_key_source():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "main/st/dyn OFF COMP RMS LOG -35.0 5.0 1 0.00 10 10.0 151 POST 100 OFF"))
+
+    assert state.get("/main/st/dyn/on") == 0
+    assert state.get("/main/st/dyn/mode") == 0
+    assert state.get("/main/st/dyn/det") == 1
+    assert state.get("/main/st/dyn/env") == 1
+    assert state.get("/main/st/dyn/thr") == -35.0
+    assert state.get("/main/st/dyn/ratio") == 7
+    assert state.get("/main/st/dyn/knee") == 1.0
+    assert state.get("/main/st/dyn/mgain") == 0.0
+    assert state.get("/main/st/dyn/attack") == 10.0
+    assert state.get("/main/st/dyn/hold") == 10.0
+    assert state.get("/main/st/dyn/release") == 151.0
+    assert state.get("/main/st/dyn/pos") == 1
+    assert state.get("/main/st/dyn/mix") == 100.0
+    assert state.get("/main/st/dyn/auto") == 0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
 def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
     state = ConsoleState()
