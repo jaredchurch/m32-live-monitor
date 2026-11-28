@@ -1971,9 +1971,9 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
     simulator.transport = FakeTransport()
     client = ("127.0.0.1", 50123)
     expected = {"config": 3, "dyn": 14, "dyn/filter": 3, "insert": 3,
-                "eq": 1, "eq/6": 4, "mix": 3, "grp": 2}
+                "eq": 1, "eq/6": 4, "grp": 2}
     for prefix in ("main/st", "main/m"):
-        for node, count in expected.items():
+        for node, count in {**expected, "mix": 3 if prefix == "main/st" else 2}.items():
             header = prefix + "/" + node
             simulator.handle(client, packet("/node", header))
             response = OscMessage(simulator.transport.sent[-1][0])
