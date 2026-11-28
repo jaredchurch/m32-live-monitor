@@ -54,6 +54,13 @@ def test_osc_catalogue_endpoint_lists_categories_and_commands(client):
 
 
 def test_channel_endpoint_preserves_off_strips_and_reports_dca_state(client):
+    from m32_monitor.main import state
+    state.channels[1].dca_mask = 1
+    state.buses[1]["dca_mask"] = 2
+    state.dca_mutes_enabled = True
+    state.dcas[2]["on"] = False
+    state.strip_nodes["/ch/01/eq/on"] = 1
+    state.strip_nodes["/ch/01/eq/1/g"] = 5.0
     response = client.get("/api/channels")
     assert response.status_code == 200
     data = response.json()
@@ -64,3 +71,8 @@ def test_channel_endpoint_preserves_off_strips_and_reports_dca_state(client):
     assert all("dcaLabels" in item and "eqBands" in item for item in data)
     assert all(len(item["eqBands"]) == (6 if item["stripType"] == "bus" else 4)
                for item in data)
+    channel = next(item for item in data if item["stripType"] == "channel" and item["number"] == 1)
+    bus = next(item for item in data if item["stripType"] == "bus" and item["number"] == 1)
+    assert channel["dcaNumbers"] == [1]
+    assert channel["eqOn"] is True and channel["eqBands"][0]["gain"] == 5.0
+    assert bus["dcaNumbers"] == [2] and bus["mutedDcas"] == [2]
