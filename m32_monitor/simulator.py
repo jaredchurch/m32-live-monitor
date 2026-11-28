@@ -1184,7 +1184,8 @@ class Simulator:
 
     def _strip_node_response(self, prefix, node, fields):
         family = prefix.strip("/")
-        schema = self.state.main_node_schema if family in ("main/st", "main/m") else self.state.strip_node_schema[family.split("/")[0]]
+        schema = (self.state.main_node_schema if family == "main/st" else
+                  self.state.main_mono_node_schema) if family in ("main/st", "main/m") else self.state.strip_node_schema[family.split("/")[0]]
         specs = schema[node]
         values = []
         for field in fields:
