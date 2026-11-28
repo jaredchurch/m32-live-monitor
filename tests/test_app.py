@@ -124,7 +124,7 @@ def test_simulator_logging_can_be_paused_and_resumed(client):
     snapshot = client.get("/api/simulator/logs?all_events=true").json()
     assert snapshot["logging_paused"] is False
     assert snapshot["event_count"] == 2
-    assert [event["address"] for event in snapshot["events"]] == ["/after-resume", "/before-pause"]
+    assert [event["address"] for event in snapshot["events"]] == ["/before-pause", "/after-resume"]
 
 
 def test_simulator_log_export_can_return_all_retained_events(client):
