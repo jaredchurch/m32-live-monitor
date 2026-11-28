@@ -2232,12 +2232,6 @@ def test_all_eight_dca_nodes_and_config_nodes_are_discoverable_and_writable():
         ]
 
 
-@pytest.mark.parametrize(("address", "value"), [
-    ("/dca/1/on", 2), ("/dca/1/on", True), ("/dca/1/fader", 1.01),
-    ("/dca/1/config/name", "Name is too long"),
-    ("/dca/1/config/icon", 0), ("/dca/1/config/icon", 75),
-    ("/dca/1/config/color", 16), ("/dca/9/on", 1),
-])
 def test_dca_grouped_live_update_accepts_on_and_db_fader_without_changing_config():
     simulator = Simulator(ConsoleState())
     simulator.transport = FakeTransport()
@@ -2265,6 +2259,12 @@ def test_dca_grouped_live_update_accepts_silent_fader():
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
 
+@pytest.mark.parametrize(("address", "value"), [
+    ("/dca/1/on", 2), ("/dca/1/on", True), ("/dca/1/fader", 1.01),
+    ("/dca/1/config/name", "Name is too long"),
+    ("/dca/1/config/icon", 0), ("/dca/1/config/icon", 75),
+    ("/dca/1/config/color", 16), ("/dca/9/on", 1),
+])
 def test_dca_individual_values_reject_invalid_inputs(address, value):
     assert not ConsoleState().update(address, value)
 
