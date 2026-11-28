@@ -3015,3 +3015,50 @@ def test_udp_socket_starts_with_configured_receive_buffer():
             await simulator.stop()
 
     asyncio.run(exercise_socket())
+
+
+
+def test_configurable_response_delay_delays_protocol_replies_but_not_meter_streams():
+    async def exercise_delay():
+        simulator = Simulator(ConsoleState())
+        simulator.transport = FakeTransport()
+        client = ("127.0.0.1", 50123)
+        simulator.set_response_delay(25)
+
+        simulator.send(client, "/ch/02/eq/2", "PEQ", 479.8, -2.25, 1.6,
+                       outcome="node_set_echo")
+        simulator.send(client, "/meters/0", b"meter", outcome="batch_meter_response")
+
+        assert len(simulator.transport.sent) == 1
+        assert OscMessage(simulator.transport.sent[0][0]).address == "/meters/0"
+        assert simulator.snapshot()["response_delay_ms"] == 25
+
+        await asyncio.sleep(0.04)
+        assert len(simulator.transport.sent) == 2
+        assert OscMessage(simulator.transport.sent[1][0]).address == "/ch/02/eq/2"
+
+        await simulator.stop()
+
+    asyncio.run(exercise_delay())
+
+
+def test_response_delay_rejects_unsupported_values():
+    simulator = Simulator(ConsoleState())
+    with pytest.raises(ValueError, match="Response delay"):
+        simulator.set_response_delay(15)
+    assert simulator.response_delay_ms == 0
+
+
+def test_stopping_simulator_cancels_pending_delayed_responses():
+    async def exercise_stop():
+        simulator = Simulator(ConsoleState())
+        simulator.transport = FakeTransport()
+        simulator.set_response_delay(100)
+        simulator.send(("127.0.0.1", 50123), "/ch/02/eq/2", 1,
+                       outcome="node_set_echo")
+        assert len(simulator.pending_send_handles) == 1
+        await simulator.stop()
+        assert not simulator.pending_send_handles
+        assert simulator.transport is None
+
+    asyncio.run(exercise_stop())
