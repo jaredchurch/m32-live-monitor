@@ -2061,7 +2061,7 @@ def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
                 assert state.get("/%s/panFollow" % header) == 0
                 expected_send = {"on": 1, "level": 1.0, "pan": 0.0, "type": 4, "panFollow": 0}
             else:
-                assert response.params == ["/%s ON 0.000\\n" % header]
+                assert response.params == ["/%s ON 0.000\n" % header]
                 simulator.handle(client, packet("/", header + " OFF 0.65"))
                 assert state.get("/%s/on" % header) == 0
                 assert state.get("/%s/level" % header) == 0.65
