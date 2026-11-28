@@ -155,7 +155,7 @@ class Simulator:
             "event_count": self.sequence,
             "retained_events": len(self.events),
             "counts": dict(self.counts),
-            "events": events if limit is None else events[-max(1, int(limit)):],
+            "events": events if limit is None else events[-max(1, min(int(limit), 2000)):],
         }
 
     def clear_events(self):
