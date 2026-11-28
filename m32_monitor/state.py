@@ -889,13 +889,16 @@ class ConsoleState:
                 return True
 
             if len(parts) == 5 and parts[0] == "bus" and parts[2] == "mix":
-                number, matrix = int(parts[1]), int(parts[3])
-                if number not in self.buses or not 1 <= matrix <= 6 or parts[4] not in ("on", "level"):
+                number, matrix, field_name = int(parts[1]), int(parts[3]), parts[4]
+                if (number not in self.buses or not 1 <= matrix <= 6
+                        or field_name not in ("on", "level", "pan", "type", "panFollow")):
                     return False
                 if not self._valid_strip_node_value(address, value):
                     return False
-                send = self.buses[number].setdefault("matrix_sends", {}).setdefault(matrix, {"on": True, "level": 0.0})
-                send[parts[4]] = int(value) if parts[4] == "on" else float(value)
+                send = self.buses[number].setdefault("matrix_sends", {}).setdefault(
+                    matrix, {"on": True, "level": 0.0})
+                send[field_name] = int(value) if field_name in ("on", "type", "panFollow") else float(value)
+                self.strip_nodes[address] = send[field_name]
                 self.received.add(address)
                 return True
 
@@ -1148,7 +1151,9 @@ class ConsoleState:
             if len(parts) >= 4 and parts[0] == "bus" and parts[2] not in ("config", "mix", "grp") and address in self.strip_nodes:
                 return self.strip_nodes.get(address)
             if len(parts) == 5 and parts[0] == "bus" and parts[2] == "mix":
-                return self.buses[int(parts[1])].get("matrix_sends", {}).get(int(parts[3]), {"on": True, "level": 0.0}).get(parts[4])
+                send = self.buses[int(parts[1])].get("matrix_sends", {}).get(
+                    int(parts[3]), {"on": True, "level": 0.0})
+                return send.get(parts[4], self.strip_nodes.get(address))
             if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
                 key = "main_st" if address.startswith("/main/st/") else "main_mono"
                 return self.outputs[key]["sends"].get(int(parts[3]), {"on": True, "level": 0.0}).get(parts[4])
