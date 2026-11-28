@@ -786,7 +786,7 @@ class Simulator:
                     paths, parsed = [prefix + "/delay/on"], [("OFF", "ON").index(values[0])]
                 elif family == "main" and len(parts) == 5 and parts[3:5] == ["delay", "time"] and len(values) == 1:
                     paths, parsed = [prefix + "/delay/time"], [float(values[0])]
-                elif len(parts) == 4 and parts[3] in ("src", "pos", "invert") and (parts[3] != "invert" or family in ("main", "aux", "aes")) and len(values) == 1:
+                elif len(parts) == 4 and parts[3] in ("src", "pos", "invert") and (parts[3] != "invert" or family in ("main", "aux", "p16", "aes")) and len(values) == 1:
                     field = parts[3]
                     if field == "src": parsed = [int(values[0], 0)]
                     elif field == "pos": parsed = [positions.index(values[0])]
