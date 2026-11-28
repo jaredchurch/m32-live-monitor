@@ -771,7 +771,9 @@ class Simulator:
                         paths.append(prefix + "/invert")
                         parsed.append(("OFF", "ON").index(values[2]))
                 elif family == "p16" and parts[3] == "iQ" and len(parts) == 4:
-                    if len(values) != 2: raise ValueError("P16 iQ node requires group and speaker")
+                    # The console sends four fields here: group, speaker, EQ type,
+                    # and EQ value. This monitor currently models the first two.
+                    if len(values) < 2: raise ValueError("P16 iQ node requires group and speaker")
                     paths = [prefix + "/iQ/group", prefix + "/iQ/speaker"]
                     parsed = [("OFF", "A", "B").index(values[0]), speakers.index(values[1])]
                 elif family == "p16" and len(parts) == 5 and parts[3:5] == ["iQ", "group"] and len(values) == 1:
