@@ -763,11 +763,11 @@ class Simulator:
                 positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
                 speakers = ("none", "iQ8", "iQ10", "iQ12", "iQ15", "iQ15B", "iQ18B")
                 if len(parts) == 3:
-                    expected = 2 if family in ("p16", "rec") else 3
+                    expected = 2 if family == "rec" else 3
                     if len(values) != expected: raise ValueError("Output node requires %d values" % expected)
                     paths = [prefix + "/src", prefix + "/pos"]
                     parsed = [int(values[0], 0), positions.index(values[1])]
-                    if family in ("main", "aux", "aes"):
+                    if family in ("main", "aux", "p16", "aes"):
                         paths.append(prefix + "/invert")
                         parsed.append(("OFF", "ON").index(values[2]))
                 elif family == "p16" and parts[3] == "iQ" and len(parts) == 4:
@@ -1562,7 +1562,7 @@ class Simulator:
                 output = collection[number]
                 positions = ("IN/LC", "IN/LC+M", "<-EQ", "<-EQ+M", "EQ->", "EQ->+M", "PRE", "PRE+M", "POST")
                 speakers = ("none", "iQ8", "iQ10", "iQ12", "iQ15", "iQ15B", "iQ18B")
-                if len(output_parts) == 3 and family in ("p16", "rec"):
+                if len(output_parts) == 3 and family == "rec":
                     response = "%s/src %d\n%s/pos %s\n" % (prefix, output["src"], prefix, positions[output["pos"]])
                 elif len(output_parts) == 3:
                     response = ("%s/src %d\n%s/pos %s\n%s/invert %s\n" % (
@@ -1576,7 +1576,7 @@ class Simulator:
                         prefix, ("OFF", "ON")[output["delay_on"]], prefix, output["delay_time"])
                 elif output_parts[3] == "src": response = "%s/src %d\n" % (prefix, output["src"])
                 elif output_parts[3] == "pos": response = "%s/pos %s\n" % (prefix, positions[output["pos"]])
-                elif output_parts[3] == "invert" and family in ("main", "aux", "aes"): response = "%s/invert %s\n" % (prefix, ("OFF", "ON")[output["invert"]])
+                elif output_parts[3] == "invert" and family in ("main", "aux", "p16", "aes"): response = "%s/invert %s\n" % (prefix, ("OFF", "ON")[output["invert"]])
                 else: response = None
                 if response is not None:
                     self.send(client, "/node", response, outcome="node_response")
