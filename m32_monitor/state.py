@@ -141,7 +141,7 @@ STRIP_NODE_SCHEMA["mtx"] = {
     "insert": {"on": (0,0,1,1,"enum",("OFF","ON")), "pos": (0,0,1,1,"enum",("PRE","POST")),
                "sel": (0,0,22,1,"enum",("OFF","FX1L","FX1R","FX2L","FX2R","FX3L","FX3R","FX4L","FX4R","FX5L","FX5R","FX6L","FX6R","FX7L","FX7R","FX8L","FX8R","AUX1","AUX2","AUX3","AUX4","AUX5","AUX6"))},
     "eq": {"on": (0,0,1,1,"enum",("OFF","ON"))},
-    "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None), "pan": (0.0,-100.0,100.0,2.0,"float",None)},
+    "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None)},
     "grp": {"dca": (0,0,255,1,"int",None), "mute": (0,0,63,1,"int",None)},
 }
 for _band in range(1, 7):
