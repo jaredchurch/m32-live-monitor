@@ -1258,7 +1258,8 @@ class Simulator:
             value = self.state.get(address)
             if value is None:
                 value = specs[field][0]
-            values.append(self._format_strip_node_value(\n                specs[field], value, field, self._strip_node_fader_db(prefix, node, field)))
+            values.append(self._format_strip_node_value(
+                specs[field], value, field, self._strip_node_fader_db(prefix, node, field)))
         return "%s %s\n" % (prefix + "/" + node, " ".join(values))
 
     def _handle_node(self, client, args):
