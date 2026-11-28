@@ -881,7 +881,7 @@ class Simulator:
                               (prefix.startswith("/bus/") and
                                ((node == "mix" and field in ("fader", "mlevel")) or
                                 (node.startswith("mix/") and field == "level"))) or
-                              (prefix.startswith(("/main/st/", "/main/m/")) and
+                              (prefix in ("/main/st", "/main/m") and
                                node == "mix" and field == "fader")))
                           for field, token in zip(fields, values)]
                 for path, value in zip(paths, parsed):
