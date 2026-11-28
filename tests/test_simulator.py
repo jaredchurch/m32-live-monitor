@@ -2059,7 +2059,7 @@ def test_bus_insert_eq_mix_and_group_nodes_are_discoverable_and_writable():
     client = ("127.0.0.1", 50123)
 
     expected_counts = {
-        "insert": 3, "eq": 1, "eq/6": 4, "mix": 2,
+        "insert": 3, "eq": 1, "eq/6": 4, "mix": 6,
         "mix/06": 2, "grp": 2,
     }
     for node, count in expected_counts.items():
