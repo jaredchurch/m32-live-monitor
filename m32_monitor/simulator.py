@@ -86,6 +86,8 @@ class Simulator:
         self.subscription_tasks = {}
         self.format_subscriptions = {}
         self.format_tasks = {}
+        self.response_delay_ms = 0
+        self.pending_send_handles = set()
 
     async def start(self):
         loop = asyncio.get_running_loop()
@@ -114,6 +116,9 @@ class Simulator:
             task.cancel()
         for task in tuple(self.format_tasks.values()):
             task.cancel()
+        for handle in tuple(self.pending_send_handles):
+            handle.cancel()
+        self.pending_send_handles.clear()
         self.format_tasks.clear()
         self.subscription_tasks.clear()
         self.batch_subscriptions.clear()
@@ -180,6 +185,7 @@ class Simulator:
             "event_count": self.sequence,
             "retained_events": len(self.events),
             "logging_paused": self.logging_paused,
+            "response_delay_ms": self.response_delay_ms,
             "udp": {
                 "receive_buffer_requested_bytes": self.receive_buffer_bytes,
                 "receive_buffer_actual_bytes": self.actual_receive_buffer_bytes,
@@ -203,11 +209,17 @@ class Simulator:
         self.counts.clear()
         self.sequence = 0
 
-    def send(self, client, address, *values, outcome="response"):
-        builder = OscMessageBuilder(address=address)
-        for value in values:
-            builder.add_arg(value)
-        packet = builder.build().dgram
+    def set_response_delay(self, delay_ms):
+        """Set a diagnostic delay for protocol replies, without delaying meter streams."""
+        allowed = (0, 10, 25, 50, 100)
+        delay_ms = int(delay_ms)
+        if delay_ms not in allowed:
+            raise ValueError("Response delay must be one of: %s ms" %
+                             ", ".join(str(value) for value in allowed))
+        self.response_delay_ms = delay_ms
+        return self.response_delay_ms
+
+    def _send_now(self, client, address, packet, values, outcome):
         try:
             if self.transport is None:
                 raise RuntimeError("UDP transport is not running")
@@ -215,6 +227,38 @@ class Simulator:
             self.record("out", outcome, address, values, client)
         except (OSError, RuntimeError) as exc:
             self.record("out", "send_error", address, values, client, exc)
+
+    def send(self, client, address, *values, outcome="response"):
+        builder = OscMessageBuilder(address=address)
+        for value in values:
+            builder.add_arg(value)
+        packet = builder.build().dgram
+
+        # Keep periodic meter streams at their normal cadence. Delay protocol
+        # replies and parameter echoes/updates so M32-Edit timing can be tested.
+        delay_ms = (0 if outcome in ("batch_meter_response",
+                                     "format_subscription_response")
+                   else self.response_delay_ms)
+        if delay_ms <= 0:
+            self._send_now(client, address, packet, values, outcome)
+            return
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # Unit tests and offline callers without an event loop retain the
+            # synchronous behaviour.
+            self._send_now(client, address, packet, values, outcome)
+            return
+
+        handle = None
+
+        def deliver():
+            self.pending_send_handles.discard(handle)
+            self._send_now(client, address, packet, values, outcome)
+
+        handle = loop.call_later(delay_ms / 1000.0, deliver)
+        self.pending_send_handles.add(handle)
 
     def handle(self, client, data):
         # Count at the application receive boundary, before decoding or event
