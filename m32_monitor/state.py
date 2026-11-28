@@ -155,7 +155,7 @@ MAIN_NODE_SCHEMA = {
     "dyn/filter": STRIP_NODE_SCHEMA["bus"]["dyn/filter"],
     "insert": STRIP_NODE_SCHEMA["bus"]["insert"],
     "eq": STRIP_NODE_SCHEMA["bus"]["eq"],
-    "mix": STRIP_NODE_SCHEMA["bus"]["mix"],
+    "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None)},
     "grp": STRIP_NODE_SCHEMA["bus"]["grp"],
 }
 for _band in range(1, 7):
@@ -907,6 +907,7 @@ class ConsoleState:
                     self.buses[number]["on"] = self._bool(value)
                 elif parts[2:] == ["mix", "fader"] and self._valid_strip_node_value(address, value):
                     self.buses[number]["fader"] = float(value)
+                    self.strip_nodes[address] = float(value)
                 elif parts[2] == "mix" and parts[3] in ("st", "pan", "mono", "mlevel") and self._valid_strip_node_value(address, value):
                     self.strip_nodes[address] = value
                 elif parts[2:] == ["grp", "dca"] and self._valid_strip_node_value(address, value):
