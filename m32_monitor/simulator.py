@@ -1699,7 +1699,7 @@ class Simulator:
                         "Returned %s processing node (%d values)" % (node, len(fields)))
             return
         if header.startswith("showfile/"):
-            address = "/" + header
+            address = "/-" + header
             stored = self.state.get(address)
             if isinstance(stored, str) and stored:
                 self.send(client, "/node", stored if stored.endswith("\n") else stored + "\n",
@@ -1791,8 +1791,7 @@ class Simulator:
                 detail = "Returned valid empty-show metadata (no show metadata has been imported)"
             else:
                 detail = "Returned stored show-file metadata"
-            self.send(client, "/node", show_response if show_response.endswith("\n") else show_response + "\n",
-                      outcome="showdump_response")
+            self.send(client, "/node", show_response, outcome="showdump_response")
             self.record("in", "handled_showdump", address, args, client, detail)
             return
 
