@@ -1240,6 +1240,8 @@ class ConsoleState:
                 if parts[2:] == ["config", "color"]: return self.buses[int(parts[1])]["colour"]
                 if parts[2:] == ["grp", "dca"]: return self.buses[int(parts[1])]["dca_mask"]
                 if parts[2:] == ["grp", "mute"]: return self.buses[int(parts[1])]["mute_mask"]
+                if parts[2:] == ["mix", "on"]: return int(self.buses[int(parts[1])]["on"])
+                if parts[2:] == ["mix", "fader"]: return self.buses[int(parts[1])]["fader"]
                 if parts[2] == "mix":
                     return self.strip_nodes.get(address, self.buses[int(parts[1])].get(parts[3]))
                 return None
