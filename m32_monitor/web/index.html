@@ -8,11 +8,20 @@ h1{font-size:24px;margin:0}h2{font-size:17px;margin:0 0 12px}.muted{color:#9ca8b
 #connection{padding:7px 11px;border:1px solid #46515e;border-radius:99px;font-size:12px}
 .tabs{display:flex;gap:8px;margin:18px 0}.tab{border:1px solid #46515e;border-radius:8px;background:#1b222b;color:#cbd5df;padding:9px 14px;cursor:pointer}.tab.active{background:#30465a;border-color:#6b91b2;color:white}
 .panel{display:none}.panel.active{display:block}
-#channels{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
-.channel{background:#1b222b;border:1px solid #303b48;border-radius:10px;padding:10px;min-width:0;min-height:118px}
-@media(max-width:1400px){#channels{grid-template-columns:repeat(6,minmax(0,1fr))}}
-@media(max-width:1050px){#channels{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:650px){#channels{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#channels{display:flex;flex-direction:column;gap:14px;min-width:1040px}
+.channels-scroll{overflow-x:auto;padding-bottom:6px}
+.channel-bank{display:grid;gap:7px}
+.channel-bank h3{font-size:13px;color:#9ca8b6;margin:8px 0 0}
+.channel-row{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;align-items:stretch}
+.channel{background:#1b222b;border:1px solid #303b48;border-radius:10px;padding:9px;min-width:0;min-height:118px}
+.channel.stereo{grid-column:span 2;border-color:#577b99}
+.channel.off{background:#151a20;border-style:dashed;border-color:#46515e;color:#7f8b98;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:118px}
+.channel.off strong{font-size:13px}.channel.off span{font-size:11px;margin-top:5px}
+.mute-state{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.mute-state span{font-size:10px;font-weight:700;border-radius:4px;padding:3px 5px;letter-spacing:.02em}
+.channel-muted{background:#48282c;color:#ffb2b2}
+.dca-muted{background:#493b20;color:#f4d28b}
+.dca-unknown{background:#333b45;color:#c4ccd5}
 .channel-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}.swatch{width:10px;height:30px;border-radius:4px;background:var(--strip)}
 .name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.number{font-size:11px;color:#9ca8b6;margin-top:3px}
 .source{font-size:12px;color:#9ca8b6;margin-bottom:12px}.fader-track{height:7px;background:#303b48;border-radius:99px;overflow:hidden}
@@ -56,7 +65,7 @@ td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;ba
 @media(max-width:700px){body{padding:14px}th,td{padding:6px 5px}.matrix-wrap{max-height:68vh}}
 </style></head><body>
 <header><div><h1>M32 Simulation</h1><div class="muted">Read-only console overview and signal-path mute analysis</div></div><div id="connection">Connecting…</div></header>
-<nav class="tabs"><button class="tab active" data-panel="matrix">Output mute matrix</button><button class="tab" data-panel="channels-panel">Channel strips</button><button class="tab" data-panel="routing-panel">Routing map</button><button class="tab" data-panel="diagnostics-panel">Diagnostics</button><button class="tab" data-panel="simulator-panel">Simulator / OSC log</button><button class="tab" data-panel="catalogue-panel">OSC catalogue</button></nav>
+<nav class="tabs"><a class="tab" href="#matrix" data-panel="matrix">Output mute matrix</a><a class="tab" href="#channels-panel" data-panel="channels-panel">Channel strips</a><a class="tab" href="#routing-panel" data-panel="routing-panel">Routing map</a><a class="tab" href="#diagnostics-panel" data-panel="diagnostics-panel">Diagnostics</a><a class="tab" href="#simulator-panel" data-panel="simulator-panel">Simulator / OSC log</a><a class="tab" href="#catalogue-panel" data-panel="catalogue-panel">OSC catalogue</a></nav>
 <section id="matrix" class="panel active">
 <h2>Channel → output signal paths</h2>
 <div class="muted">A cell is green only when the channel has an enabled, non-zero path to that destination and no upstream mute is active. OPEN means the routing permits signal, not that audio is present. Matrix feeds are shown in the downstream Matrix view. Physical output patching is shown in the Routing map. Hover a cell for every detected reason.</div>
@@ -114,7 +123,7 @@ td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;ba
 <div id="sim-summary" class="summary"><span class="pill">Waiting for simulator…</span></div>
 <div id="sim-log" class="matrix-wrap"><div class="empty">No simulator messages recorded yet.</div></div>
 </section>
-<section id="channels-panel" class="panel"><h2>Live audio meters</h2><div class="muted">Read-only meter streams from the console. Streams appear when the M32 responds to the meter subscription.</div><div id="meter-streams" class="summary"></div><div id="channels"><div class="empty">Waiting for console data…</div></div></section>
+<section id="channels-panel" class="panel"><h2>Channel strips</h2><div class="muted">Fixed channel positions in banks of eight. Stereo-linked pairs share one card across their two channel positions. OFF strips remain visible as placeholders. Channel mute and DCA mute are shown separately.</div><div id="meter-streams" class="summary"></div><div class="channels-scroll"><div id="channels"><div class="empty">Waiting for console data…</div></div></div></section>
 <script>
 const colours=['#59616b','#d66b6b','#64b77b','#d9bd5a','#5b9fd0','#bb78b5','#55b9b0','#e2e8f0','#7d4141','#36784b','#918132','#315e8c','#754d80','#327d79','#9aa4b0','#f4f6f8'];
 const reasonNames={source_muted:'Source strip muted',source_fader_zero:'Source fader at zero',matrix_source_state_unknown:'Matrix source state not received',matrix_source_groups_unknown:'Matrix source DCA/mute groups not received',matrix_send_switch_unknown:'Matrix send switch not received',matrix_send_level_unknown:'Matrix send level not received',matrix_output_mute_unknown:'Matrix output mute not received',matrix_output_fader_unknown:'Matrix output fader not received',channel_muted:'Channel mute',channel_fader_zero:'Channel fader at zero',channel_mute_unknown:'Channel mute state not received',channel_fader_unknown:'Channel fader state not received',mute_group_assignments_unknown:'Mute group assignments not received',dca_assignments_unknown:'DCA assignments not received',dca_mute_setting_unknown:'DCA Mutes preference not received',output_mute_group_assignments_unknown:'Output mute-group assignments not received',output_dca_assignments_unknown:'Output DCA assignments not received',hard_mute_setting_unknown:'Hard Mutes preference not received',send_tap_point_unknown:'Send tap point not received',send_switch_state_unknown:'Send switch state not received',send_level_state_unknown:'Send level not received',output_mute_state_unknown:'Output mute state not received',output_fader_state_unknown:'Output fader not received',main_send_state_unknown:'Main send state not received',main_mono_send_level_unknown:'Mono/C send level not received',send_off:'Send switched off',send_level_zero:'Send fader at zero',output_muted:'Destination muted',output_fader_zero:'Destination fader at zero'};
@@ -282,16 +291,68 @@ function renderRouting(data){
 }
 
 function renderChannels(channels){
- const root=document.querySelector('#channels');if(!channels.length){root.innerHTML='<div class="empty">No connected channels with an enabled scribble strip reported.</div>';return;}
- root.innerHTML=channels.map(c=>{
-  const stereo=Boolean(c.stereoLinked),label=stereo?'Channel '+String(c.number).padStart(2,'0')+'–'+String(c.linkedNumber).padStart(2,'0'):(c.stripType==='fx_return'?'FX return':c.stripType==='aux'?'Aux input':'Channel')+' '+String(c.number).padStart(2,'0');
-  const name=stereo?[c.name,c.linkedName].filter(Boolean).join(' / '):c.name;
+ const root=document.querySelector('#channels');
+ if(!channels.length){root.innerHTML='<div class="empty">No channel data received.</div>';return;}
+ const banks=[
+  {type:'channel',title:'Input channels',count:32,kind:'Channel'},
+  {type:'aux',title:'Aux inputs',count:8,kind:'Aux input'},
+  {type:'fx_return',title:'FX returns',count:8,kind:'FX return'}
+ ];
+ const card=c=>{
+  const stereo=Boolean(c.stereoLinked);
+  const label=stereo?'CH '+String(c.number).padStart(2,'0')+'–'+String(c.linkedNumber).padStart(2,'0'):
+    (c.stripType==='fx_return'?'FX RTN':c.stripType==='aux'?'AUX':'CH')+' '+String(c.number).padStart(2,'0');
+  const names=stereo?[c.name,c.linkedName].filter(Boolean).join(' / '):c.name;
   const source=stereo?c.sourceLabel+' + '+c.linkedSource:c.sourceLabel;
-  const muted=Boolean(c.muted|| (stereo&&c.linkedMuted));
-  return '<article class="channel" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name" title="'+esc(name)+'">'+esc(name)+'</div><div class="number">'+label+(stereo?' · STEREO':'')+'</div></div></div><div class="source">'+(c.stripType==='fx_return'?'FX return':c.stripType==='aux'?'Aux input':'Input')+': '+esc(source)+'</div><div class="fader-track"><span style="--level:'+Math.round(c.fader*100)+'%"></span></div><div class="footer"><span>Fader '+Math.round(c.fader*100)+'%</span><strong class="'+(muted?'mute':'open')+'">'+(muted?'MUTED':'OPEN')+'</strong></div></article>';
+  const muted=Boolean(c.muted||(stereo&&c.linkedMuted));
+  const mutedDcas=c.mutedDcas||[];
+  const unknownDcas=c.dcaMuteUnknown||[];
+  const badges=[];
+  if(muted)badges.push('<span class="channel-muted">CHANNEL MUTED</span>');
+  if(mutedDcas.length)badges.push('<span class="dca-muted">DCA MUTED · '+mutedDcas.map(n=>'DCA '+n).join(', ')+'</span>');
+  if(unknownDcas.length)badges.push('<span class="dca-unknown">DCA MUTE CHECK · '+unknownDcas.map(n=>'DCA '+n).join(', ')+'</span>');
+  if(!badges.length)badges.push('<span class="open">NO MUTE</span>');
+  const fader=stereo?Math.round((Number(c.fader)+Number(c.linkedFader))/2*100):Math.round(Number(c.fader)*100);
+  return '<article class="channel '+(stereo?'stereo':'')+'" style="--strip:'+colours[(c.colour||0)%colours.length]+'"><div class="channel-head"><span class="swatch"></span><div style="min-width:0"><div class="name" title="'+esc(names)+'">'+esc(names)+'</div><div class="number">'+label+(stereo?' · STEREO':'')+'</div></div></div><div class="source">'+esc(source)+'</div><div class="fader-track"><span style="--level:'+fader+'%"></span></div><div class="footer"><span>Fader '+fader+'%</span></div><div class="mute-state">'+badges.join('')+'</div></article>';
+ };
+ const bankHtml=banks.map(bank=>{
+  const strips=channels.filter(c=>c.stripType===bank.type);
+  const byNumber=new Map(strips.map(c=>[Number(c.number),c]));
+  const rows=[];
+  for(let first=1;first<=bank.count;first+=8){
+   const cells=[];
+   for(let n=first;n<Math.min(first+8,bank.count+1);n++){
+    const c=byNumber.get(n);
+    if(!c){
+     const covered=strips.some(x=>x.stereoLinked&&Number(x.number)+1===n);
+     if(covered)continue;
+     cells.push('<div class="channel off"><strong>'+bank.kind+' '+String(n).padStart(2,'0')+'</strong><span>NO DATA</span></div>');
+     continue;
+    }
+    if(!c.active){
+     const span=c.stereoLinked?2:1;
+     cells.push('<div class="channel off" style="grid-column:span '+span+'"><strong>'+bank.kind+' '+String(c.number).padStart(2,'0')+(c.stereoLinked?'–'+String(c.linkedNumber).padStart(2,'0'):'')+'</strong><span>'+esc(c.offReason||'OFF')+'</span></div>');
+     if(c.stereoLinked)n++;
+     continue;
+    }
+    cells.push(card(c));
+    if(c.stereoLinked)n++;
+   }
+   rows.push('<div class="channel-row">'+cells.join('')+'</div>');
+  }
+  return '<section class="channel-bank"><h3>'+bank.title+'</h3>'+rows.join('')+'</section>';
  }).join('');
+ root.innerHTML=bankHtml;
 }
-document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
+function activatePanel(panelId){
+ const target=document.getElementById(panelId);
+ if(!target||!target.classList.contains('panel'))return;
+ document.querySelectorAll('.tab').forEach(link=>link.classList.toggle('active',link.dataset.panel===panelId));
+ document.querySelectorAll('.panel').forEach(panel=>panel.classList.toggle('active',panel.id===panelId));
+}
+document.querySelectorAll('.tab').forEach(link=>link.addEventListener('click',()=>activatePanel(link.dataset.panel)));
+window.addEventListener('hashchange',()=>activatePanel(location.hash.slice(1)||'matrix'));
+activatePanel(location.hash.slice(1)||'matrix');
 async function refresh(){try{
  const pair=await Promise.all([fetch('/api/status').then(r=>r.json()),fetch('/api/channels').then(r=>r.json()),fetch('/api/output-matrix').then(r=>r.json()),fetch('/api/matrix-inputs').then(r=>r.json()),fetch('/api/routing-map').then(r=>r.json()),fetch('/api/meters').then(r=>r.json()),fetch('/api/diagnostics').then(r=>r.json())]);
  const status=pair[0],badge=document.querySelector('#connection');badge.textContent=status.mode.toUpperCase()+' · '+status.connection;badge.style.borderColor=status.online?'#4b9b70':'#a66b55';
