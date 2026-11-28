@@ -2496,9 +2496,9 @@ def test_p16_output_node_get_set_and_iq_configuration(number):
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.params == ["/%s/iQ/group OFF\n/%s/iQ/speaker none\n" % (prefix, prefix)]
 
-    simulator.handle(client, packet("/", prefix + "/iQ OFF none Linear 0"))
-    assert state.get("/" + prefix + "/iQ/group") == 0
-    assert state.get("/" + prefix + "/iQ/speaker") == 0
+    simulator.handle(client, packet("/", prefix + "/iQ A iQ12 Linear 0"))
+    assert state.get("/" + prefix + "/iQ/group") == 1
+    assert state.get("/" + prefix + "/iQ/speaker") == 3
     assert not simulator.snapshot(outcome="unhandled_set")["events"]
 
     simulator.handle(client, packet("/node", prefix + "/iQ/group"))
