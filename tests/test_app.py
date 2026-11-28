@@ -35,6 +35,12 @@ def test_channel_endpoint_has_channel_mapping(client):
     assert response.json()[0]["sourceLabel"] == "IN01"
     assert response.json()[0]["number"] == 1
 
+def test_monitor_tabs_are_deep_linkable(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    for panel in ("matrix", "channels-panel", "routing-panel", "diagnostics-panel", "simulator-panel", "catalogue-panel"):
+        assert f'href="#{panel}"' in response.text
+
 
 def test_osc_catalogue_endpoint_lists_categories_and_commands(client):
     response = client.get("/api/osc-catalogue")
