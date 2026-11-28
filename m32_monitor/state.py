@@ -587,8 +587,10 @@ class ConsoleState:
                 if not 1 <= matrix <= 6 or parts[4] not in MAIN_NODE_SCHEMA["mix/%02d" % matrix] or not self._valid_main_node_value(address, value):
                     return False
                 output_key = "main_st" if parts[1] == "st" else "main_mono"
-                send = self.outputs[output_key].setdefault("sends", {}).setdefault(
-                    matrix, {"on": 1, "level": 0.0, "pan": 0.0, "type": 4, "panFollow": 0})
+                default_send = {"on": 1, "level": 0.0}
+                if matrix % 2:
+                    default_send.update({"pan": 0.0, "type": 4, "panFollow": 0})
+                send = self.outputs[output_key].setdefault("sends", {}).setdefault(matrix, default_send)
                 send[parts[4]] = int(value) if parts[4] in ("on", "type", "panFollow") else float(value)
                 self.strip_nodes[address] = value
                 self.received.add(address)
@@ -1182,7 +1184,11 @@ class ConsoleState:
                 return send.get(parts[4], self.strip_nodes.get(address))
             if address.startswith(("/main/st/mix/", "/main/m/mix/")) and len(parts) == 5:
                 key = "main_st" if address.startswith("/main/st/") else "main_mono"
-                return self.outputs[key]["sends"].get(int(parts[3]), {"on": 1, "level": 0.0, "pan": 0.0, "type": 4, "panFollow": 0}).get(parts[4])
+                matrix = int(parts[3])
+                default_send = {"on": 1, "level": 0.0}
+                if matrix % 2:
+                    default_send.update({"pan": 0.0, "type": 4, "panFollow": 0})
+                return self.outputs[key]["sends"].get(matrix, default_send).get(parts[4])
             if len(parts) == 3 and parts[0] == "headamp" and parts[1].isdigit():
                 number = int(parts[1])
                 if number not in self.headamps or parts[2] not in ("gain", "phantom"):
