@@ -155,6 +155,32 @@ def _canonical_state(value):
     return value
 
 
+def _state_differences(expected, actual, path=""):
+    if isinstance(expected, dict) and isinstance(actual, dict):
+        differences = []
+        for key in sorted(set(expected) | set(actual), key=str):
+            child = f"{path}.{key}" if path else str(key)
+            if key not in expected or key not in actual:
+                differences.append((child, expected.get(key, "<missing>"), actual.get(key, "<missing>")))
+            else:
+                differences.extend(_state_differences(expected[key], actual[key], child))
+            if len(differences) >= 40:
+                break
+        return differences
+    if isinstance(expected, list) and isinstance(actual, list):
+        differences = []
+        if len(expected) != len(actual):
+            differences.append((path + ".length", len(expected), len(actual)))
+        for index, (left, right) in enumerate(zip(expected, actual)):
+            differences.extend(_state_differences(left, right, f"{path}[{index}]"))
+            if len(differences) >= 40:
+                break
+        return differences
+    if expected != actual:
+        return [(path, expected, actual)]
+    return []
+
+
 def test_real_jared_scene_round_trips_every_node_through_get_and_set():
     """Import all scene records, export every node, re-import the export and compare all state."""
     source_state = ConsoleState()
@@ -227,5 +253,5 @@ def test_real_jared_scene_round_trips_every_node_through_get_and_set():
     actual = _canonical_state(round_tripped)
     assert actual == expected, (
         "Full Jared.scn state changed during GET/export/SET round trip. "
-        "Compare state snapshots to identify the first differing subsystem."
+        "First state differences: " + repr(_state_differences(expected, actual))
     )
