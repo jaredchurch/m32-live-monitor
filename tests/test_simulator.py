@@ -2743,3 +2743,19 @@ def test_fx_return_mix_node_accepts_db_fader_and_silent_mono_level():
     assert state.get("/fxrtn/01/mix/mlevel") == 0.0
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
+
+    
+def test_bus_mix_node_accepts_six_fields_and_db_fader_levels():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "bus/01/mix ON +4.0 OFF -100 OFF -oo"))
+
+    assert state.get("/bus/01/mix/on") == 1
+    assert state.get("/bus/01/mix/fader") == pytest.approx((4.0 + 30.0) / 40.0)
+    assert state.get("/bus/01/mix/st") == 0
+    assert state.get("/bus/01/mix/pan") == -100.0
+    assert state.get("/bus/01/mix/mono") == 0
+    assert state.get("/bus/01/mix/mlevel") == 0.0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
