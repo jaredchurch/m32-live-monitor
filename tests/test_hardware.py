@@ -123,3 +123,21 @@ def test_hardware_monitor_rejects_unexpected_peer():
     monitor._process_datagram(message("/info").dgram, ("198.51.100.7", 10023))
     assert monitor.diagnostics.counters["unexpected_peers"] == 1
     assert state.last_seen is None
+
+def test_hardware_query_cycle_includes_every_eq_band_parameter():
+    monitor = HardwareMonitor(ConsoleState(), "192.0.2.10", 10023, "127.0.0.1", 10024)
+
+    addresses = monitor._complete_parameter_enquiries([
+        "/ch/01/mix/fader",
+        "/ch/01/eq/2/f",
+    ])
+
+    for field in ("type", "f", "g", "q"):
+        assert "/ch/01/eq/2/" + field in addresses
+    assert "/ch/32/eq/2/g" in addresses
+    assert "/auxin/01/eq/2/q" in addresses
+    assert "/fxrtn/01/eq/2/type" in addresses
+    assert "/bus/01/eq/2/f" in addresses
+    assert "/mtx/01/eq/2/g" in addresses
+    assert "/main/st/eq/2/q" in addresses
+    assert len(addresses) == len(set(addresses))
