@@ -2979,3 +2979,36 @@ def test_showfile_cue_node_write_is_stored_and_returned_verbatim():
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
     assert response.params == [cue_record + "\n"]
+
+
+def test_udp_receive_counters_count_datagrams_and_decoded_messages_even_when_logging_paused():
+    simulator = Simulator(ConsoleState())
+    client = ("127.0.0.1", 50123)
+    simulator.set_logging_paused(True)
+
+    simulator.handle(client, packet("/ch/02/eq/2", "PEQ", 479.8, -2.25, 1.6))
+    simulator.handle(client, b"not-an-osc-packet")
+
+    snapshot = simulator.snapshot()
+    assert snapshot["udp"]["datagrams_received"] == 2
+    assert snapshot["udp"]["datagram_bytes_received"] == len(
+        packet("/ch/02/eq/2", "PEQ", 479.8, -2.25, 1.6)
+    ) + len(b"not-an-osc-packet")
+    assert snapshot["udp"]["osc_messages_decoded"] == 1
+    assert snapshot["udp"]["malformed_datagrams"] == 1
+    assert snapshot["udp"]["last_datagram_at"] is not None
+    assert snapshot["events"] == []
+
+
+@pytest.mark.asyncio
+async def test_udp_socket_starts_with_configured_receive_buffer():
+    simulator = Simulator(ConsoleState(), host="127.0.0.1", port=0,
+                          receive_buffer_bytes=2 * 1024 * 1024)
+    await simulator.start()
+    try:
+        snapshot = simulator.snapshot()
+        assert snapshot["udp"]["receive_buffer_requested_bytes"] == 2 * 1024 * 1024
+        assert snapshot["udp"]["receive_buffer_actual_bytes"] >= 65536
+        assert simulator.transport.get_extra_info("sockname")[1] > 0
+    finally:
+        await simulator.stop()
