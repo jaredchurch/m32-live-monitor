@@ -344,7 +344,7 @@ class ConsoleState:
         }
         # Sixteen Ultranet/P16 personal-monitor output assignments.
         self.output_p16 = {
-            n: {"src": 0, "pos": 8, "iq_group": 0, "iq_speaker": 0}
+            n: {"src": 0, "pos": 8, "invert": 0, "iq_group": 0, "iq_speaker": 0}
             for n in range(1, 17)
         }
         # Remote headamps: local XLR (000-031), AES50 A (032-079), AES50 B (080-127).
@@ -546,7 +546,7 @@ class ConsoleState:
                 elif field == ["pos"]:
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != int(value) or not 0 <= int(value) <= 8: return False
                     output["pos"] = int(value)
-                elif field == ["invert"] and parts[1] in ("main", "aux", "aes"):
+                elif field == ["invert"] and parts[1] in ("main", "aux", "p16", "aes"):
                     if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) not in (0.0, 1.0): return False
                     output["invert"] = int(value)
                 elif parts[1] == "p16" and field == ["iQ", "group"]:
