@@ -2927,7 +2927,7 @@ def test_showfile_metadata_node_write_is_stored_and_returned_by_node_and_showdum
     simulator.handle(client, packet("/showdump"))
     response = OscMessage(simulator.transport.sent[-1][0])
     assert response.address == "/node"
-    assert response.params == [show_record + "\n"]
+    assert response.params == [show_record]
     event = simulator.snapshot(outcome="handled_showdump")["events"][-1]
     assert "stored show-file metadata" in event["detail"]
 
