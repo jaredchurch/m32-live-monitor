@@ -121,7 +121,7 @@ td.osc-unhandled{color:#ffb2b2;background:#48282c}td.osc-system{color:#f4d28b;ba
 <div class="muted">Select a repeatable console state, then scan for M32-Simulation in M32-Edit. If discovery does not find it, enter 127.0.0.1 and UDP port 10023 manually. Every decoded incoming and outgoing OSC message is recorded. Unsupported addresses and malformed packets are highlighted so we can extend compatibility from observed traffic.</div>
 <div class="sim-controls">
 <label>Scenario <select id="sim-scenario"></select></label>
-<button id="sim-load">Load scenario</button><button id="sim-export-csv">Export CSV</button><button id="sim-export-json">Export JSON</button><button id="sim-clear">Clear log</button>
+<button id="sim-load">Load scenario</button><button id="sim-export-csv">Export CSV</button><button id="sim-export-json">Export JSON</button><button id="sim-pause" type="button">Pause logging</button><button id="sim-clear">Clear log</button>
 <label>Filter <input id="sim-filter" placeholder="OSC address or detail"></label>
 <label class="sim-check"><input type="checkbox" id="sim-exceptions-only"> Exceptions only</label>
 </div>
@@ -242,7 +242,8 @@ async function renderSimulatorLogs(){
   if(exceptionsOnly)q.set('exceptions_only','true');
   const data=await fetch('/api/simulator/logs?'+q.toString()).then(r=>{if(!r.ok)throw new Error('Simulator mode only');return r.json();});
   const counts=data.counts||{},events=data.events||[];
-  summary.innerHTML='<span class="pill">UDP '+esc(data.host)+':'+data.port+'</span><span class="pill">'+data.clients.length+' M32-Edit/client endpoint(s)</span><span class="pill">'+data.event_count+' total messages</span><span class="pill">Showing '+events.length+' '+(exceptionsOnly?'exceptions':'messages')+'</span><span class="pill">'+(counts.in||0)+' inbound</span><span class="pill">'+(counts.out||0)+' outbound</span><span class="pill">'+(counts.unhandled_get||0)+' unhandled GET</span><span class="pill">'+(counts.unhandled_set||0)+' unhandled SET</span><span class="pill">'+(counts.malformed||0)+' malformed</span>';
+  document.querySelector('#sim-pause').textContent=data.logging_paused?'Resume logging':'Pause logging';
+  summary.innerHTML='<span class="pill">UDP '+esc(data.host)+':'+data.port+'</span><span class="pill">'+data.clients.length+' M32-Edit/client endpoint(s)</span><span class="pill">'+data.event_count+' total messages</span><span class="pill">'+(data.logging_paused?'LOGGING PAUSED':'Logging active')+'</span><span class="pill">Showing '+events.length+' '+(exceptionsOnly?'exceptions':'messages')+'</span><span class="pill">'+(counts.in||0)+' inbound</span><span class="pill">'+(counts.out||0)+' outbound</span><span class="pill">'+(counts.unhandled_get||0)+' unhandled GET</span><span class="pill">'+(counts.unhandled_set||0)+' unhandled SET</span><span class="pill">'+(counts.malformed||0)+' malformed</span>';
   root.innerHTML=events.length?'<table><thead><tr><th>#</th><th>Time</th><th>Direction</th><th>Result</th><th>OSC address</th><th>Arguments / detail</th><th>Peer</th></tr></thead><tbody>'+events.slice().reverse().map(e=>{
    const bad=e.outcome.startsWith('unhandled')||e.outcome==='malformed'||e.outcome==='send_error';
    const system=e.direction==='system'||e.outcome==='scenario_loaded';
@@ -278,6 +279,12 @@ document.querySelector('#sim-load').addEventListener('click',async()=>{
  const id=document.querySelector('#sim-scenario').value;if(!id)return;
  const response=await fetch('/api/simulator/scenarios/'+encodeURIComponent(id),{method:'POST'});
  if(response.ok){await refresh();await renderSimulatorLogs();}
+});
+document.querySelector('#sim-pause').addEventListener('click',async()=>{
+ const data=await fetch('/api/simulator/logs?limit=1').then(r=>r.json());
+ const paused=!data.logging_paused;
+ const response=await fetch('/api/simulator/logs/pause?paused='+paused,{method:'POST'});
+ if(response.ok)await renderSimulatorLogs();
 });
 document.querySelector('#sim-clear').addEventListener('click',async()=>{
  await fetch('/api/simulator/logs',{method:'DELETE'});await renderSimulatorLogs();
