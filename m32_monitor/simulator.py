@@ -824,14 +824,26 @@ class Simulator:
                     raise ValueError("Unknown DCA node")
                 number = int(parts[1])
                 if len(parts) == 2:
-                    if len(values) != 5:
-                        raise ValueError("DCA node requires on, fader, name, icon and colour")
-                    paths = ["/dca/%d/on" % number, "/dca/%d/fader" % number,
-                             "/dca/%d/config/name" % number, "/dca/%d/config/icon" % number,
-                             "/dca/%d/config/color" % number]
-                    parsed = [("OFF", "ON").index(values[0]), float(values[1]), values[2],
-                              int(values[3], 0), ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
-                              "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi").index(values[4])]
+                    if len(values) == 2:
+                        # Live DCA updates contain only mute/on and fader. The
+                        # fader is sent in dB; retain the separately configured
+                        # name, icon and colour.
+                        paths = ["/dca/%d/on" % number, "/dca/%d/fader" % number]
+                        parsed = [
+                            ("OFF", "ON").index(values[0]),
+                            self._parse_strip_node_value(
+                                (0.75, 0.0, 1.0, 0, "float", None),
+                                values[1], "fader", fader_db=True),
+                        ]
+                    elif len(values) == 5:
+                        paths = ["/dca/%d/on" % number, "/dca/%d/fader" % number,
+                                 "/dca/%d/config/name" % number, "/dca/%d/config/icon" % number,
+                                 "/dca/%d/config/color" % number]
+                        parsed = [("OFF", "ON").index(values[0]), float(values[1]), values[2],
+                                  int(values[3], 0), ("OFF", "RD", "GN", "YE", "BL", "MG", "CY", "WH",
+                                  "OFFi", "RDi", "GNi", "YEi", "BLi", "MGi", "CYi", "WHi").index(values[4])]
+                    else:
+                        raise ValueError("DCA node requires on/fader or on, fader, name, icon and colour")
                 elif len(parts) == 3 and parts[2] == "config":
                     if len(values) != 3:
                         raise ValueError("DCA config node requires name, icon and colour")
