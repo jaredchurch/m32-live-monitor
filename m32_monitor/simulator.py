@@ -677,6 +677,12 @@ class Simulator:
                 else:
                     raise ValueError("Unknown RTA preference")
                 paths, parsed = [path], parsed
+            elif header.startswith("-showfile/"):
+                # Preserve the complete X32node text record verbatim. Show-file
+                # records contain mixed strings, integers and firmware metadata;
+                # coercing them into numbered scalar paths loses their structure.
+                paths = ["/" + header]
+                parsed = [args[0]]
             elif header.startswith(("-show/", "-prefs/", "-action/")):
                 if not values:
                     raise ValueError("Show, preference and action nodes require at least one value")
@@ -1692,6 +1698,14 @@ class Simulator:
             self.record("in", "handled_node_get", "/node", args, client,
                         "Returned %s processing node (%d values)" % (node, len(fields)))
             return
+        if header.startswith("showfile/"):
+            address = "/" + header
+            stored = self.state.get(address)
+            if isinstance(stored, str) and stored:
+                self.send(client, "/node", stored, outcome="node_response")
+                self.record("in", "handled_node_get", "/node", args, client,
+                            "Returned stored show-file node verbatim")
+                return
         self.record("in", "unhandled_command", "/node", args, client,
                     "No X32node response is defined for header %r" % header)
 
@@ -1770,10 +1784,14 @@ class Simulator:
             # eleven integer metadata fields before the firmware version.
             # An empty show still returns metadata; an empty name and a
             # truncated field list are not a valid empty-show response.
-            show_response = '/-showfile/show "M32 Simulator" 0 0 0 0 0 0 0 0 0 0 0 "4.06"'
+            show_response = self.state.get("/-showfile/show")
+            if not isinstance(show_response, str) or not show_response.strip():
+                show_response = '/-showfile/show "M32 Simulator" 0 0 0 0 0 0 0 0 0 0 0 "4.06"'
+                detail = "Returned valid empty-show metadata (no show metadata has been imported)"
+            else:
+                detail = "Returned stored show-file metadata"
             self.send(client, "/node", show_response, outcome="showdump_response")
-            self.record("in", "handled_showdump", address, args, client,
-                        "Returned valid empty-show metadata (no cues, scenes or snippets are stored)")
+            self.record("in", "handled_showdump", address, args, client, detail)
             return
 
         # Scene files send routing patch banks as ordered multi-value OSC
