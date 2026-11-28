@@ -166,6 +166,12 @@ class HardwareMonitor:
                     addresses.extend((prefix + "/config/name", prefix + "/mix/on",
                                       prefix + "/mix/fader", prefix + "/grp/dca",
                                       prefix + "/grp/mute"))
+                # Query every schema-backed processing node, not just the
+                # fader/routing subset above. In particular this includes each
+                # channel EQ band's type, frequency, gain and Q; without these
+                # enquiries the monitor can only display defaults for parameters
+                # that have not happened to change since /xremote was enabled.
+                addresses = self._complete_parameter_enquiries(addresses)
                 self.diagnostics.begin_cycle(addresses)
                 for address in addresses:
                     self._send(address)
@@ -175,6 +181,12 @@ class HardwareMonitor:
                 logger.exception("M32 OSC enquiry failed")
             self.diagnostics.last_cycle_at = time.time()
             await asyncio.sleep(30)
+
+    def _complete_parameter_enquiries(self, addresses):
+        """Include every schema-backed strip node in the hardware snapshot."""
+        # ConsoleState builds this map from the strip schemas for channels,
+        # Aux/FX returns, buses, matrices and Main outputs.
+        return list(dict.fromkeys([*addresses, *self.state.strip_nodes]))
 
     @staticmethod
     def _response_format_error(address, params):
