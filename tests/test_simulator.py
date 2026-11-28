@@ -1913,7 +1913,7 @@ def test_matrix_config_processing_and_output_nodes_are_discoverable_and_writable
 
     expected_counts = {
         "config": 3, "preamp": 1, "dyn": 14, "dyn/filter": 3,
-        "insert": 3, "eq": 1, "eq/6": 4, "mix": 3, "grp": 2,
+        "insert": 3, "eq": 1, "eq/6": 4, "mix": 2, "grp": 2,
     }
     for matrix_number in range(1, 7):
         for node, count in expected_counts.items():
@@ -1971,7 +1971,7 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
     simulator.transport = FakeTransport()
     client = ("127.0.0.1", 50123)
     expected = {"config": 3, "dyn": 14, "dyn/filter": 3, "insert": 3,
-                "eq": 1, "eq/6": 4, "mix": 2, "grp": 2}
+                "eq": 1, "eq/6": 4, "mix": 3, "grp": 2}
     for prefix in ("main/st", "main/m"):
         for node, count in expected.items():
             header = prefix + "/" + node
