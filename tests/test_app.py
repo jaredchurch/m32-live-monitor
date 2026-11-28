@@ -60,6 +60,15 @@ def test_monitor_tabs_are_deep_linkable(client):
     for panel in ("matrix", "channels-panel", "routing-panel", "diagnostics-panel", "simulator-panel", "catalogue-panel"):
         assert f'href="#{panel}"' in response.text
 
+def test_channel_cards_are_keyboard_and_mouse_activatable(client):
+    response = client.get("/")
+    page = response.text
+    assert 'role="button" tabindex="0"' in page
+    assert 'data-strip-family="' in page
+    assert "openStripCard(event.target.closest('.channel[data-strip-family]'))" in page
+    assert "event.key!=='Enter'&&event.key!==' '" in page
+    assert "(c.dcaNumbers||[]).map(number=>" in page
+
 
 def test_osc_catalogue_endpoint_lists_categories_and_commands(client):
     response = client.get("/api/osc-catalogue")
