@@ -1986,7 +1986,7 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
         simulator.handle(client, packet("/", prefix + "/insert ON POST FX3L"))
         simulator.handle(client, packet("/", prefix + "/eq ON"))
         simulator.handle(client, packet("/", prefix + "/eq/6 PEQ 2500 -3.0 1.2"))
-        simulator.handle(client, packet("/", prefix + "/mix OFF 0.65"))
+        simulator.handle(client, packet("/", prefix + "/mix OFF -4.0 +0"))
         simulator.handle(client, packet("/", prefix + "/grp 3 5"))
         assert state.get("/" + prefix + "/config/name") == "Main Out"
         assert state.get("/" + prefix + "/config/icon") == 12
@@ -1996,6 +1996,7 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
         assert state.get("/" + prefix + "/insert/sel") == 5
         assert state.get("/" + prefix + "/eq/6/g") == -3.0
         assert state.get("/" + prefix + "/mix/fader") == 0.65
+        assert state.get("/" + prefix + "/mix/pan") == 0.0
         assert state.get("/" + prefix + "/grp/mute") == 5
 
 
