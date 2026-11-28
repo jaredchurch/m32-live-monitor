@@ -504,6 +504,12 @@ class Simulator:
                     raise ValueError("%s node requires %d ON/OFF values" % (family, len(pairs)))
                 paths = ["/config/%s/%s" % (family, pair) for pair in pairs]
                 parsed = [("OFF", "ON").index(token) for token in values]
+            elif len(header.split("/")) == 3 and header.split("/")[0] == "config" and header.split("/")[1] in self.state.config_links and len(values) == 1:
+                family, pair = header.split("/")[1:]
+                if pair not in self.state.config_links[family]:
+                    raise ValueError("Unknown %s stereo-link pair %s" % (family, pair))
+                paths = ["/" + header]
+                parsed = [("OFF", "ON").index(values[0])]
             elif header == "config/linkcfg":
                 fields = ("hadly", "eq", "dyn", "fdrmute")
                 if len(values) != len(fields):
@@ -1696,7 +1702,7 @@ class Simulator:
             else:
                 field = "/".join(dca_parts[2:])
                 if field == "on": rendered = ("OFF", "ON")[int(dca["on"])]
-                elif field == "fader": rendered = "%.3f" % dca["fader"]
+                elif field == "fader": rendered = "%.6f" % dca["fader"]
                 elif field == "config/name": rendered = json.dumps(dca["name"], ensure_ascii=False)
                 elif field == "config/icon": rendered = str(dca["icon"])
                 elif field == "config/color": rendered = colour_names[dca["colour"]]
