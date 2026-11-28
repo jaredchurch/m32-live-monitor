@@ -68,10 +68,13 @@ def test_default_surface_all_processing_nodes_match_declared_defaults():
                   else state.main_mono_node_schema if header.startswith("main/m/")
                   else state.strip_node_schema[header.split("/")[0]])
         node = "/".join(header.split("/")[2:])
-        expected = [
-            simulator._format_strip_node_value(schema[node][field], schema[node][field][0])
-            for field in fields
-        ]
+        expected = []
+        for field in fields:
+            spec = schema[node][field]
+            value = state.get("/" + header + "/" + field)
+            if value is None:
+                value = spec[0]
+            expected.append(simulator._format_strip_node_value(spec, value))
         assert tokens[1:] == expected, (
             f"Default values differ for {header}: expected {expected}, got {tokens[1:]}"
         )
