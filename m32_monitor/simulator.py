@@ -598,7 +598,7 @@ class Simulator:
                     raise ValueError("DP48 %s node requires %d values" % (section, len(slots)))
                 paths = ["/config/dp48/%s/%02d" % (section, n) for n in slots]
                 parsed = values if section == "grpname" else [int(v, 0) for v in values]
-            elif header.startswith("config/dp48/grpname/") and not values and args[0].rstrip().endswith('""'):
+            elif header.startswith("config/dp48/grpname/") and not values:
                 # Empty DP48 group names are valid and are emitted as quoted empty strings.
                 paths, parsed = ["/" + header], [""]
             elif header.startswith("config/dp48/") and len(values) == 1:
