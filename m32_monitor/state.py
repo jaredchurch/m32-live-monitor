@@ -175,6 +175,14 @@ MAIN_NODE_SCHEMA = {
 for _band in range(1, 7):
     MAIN_NODE_SCHEMA["eq/%d" % _band] = STRIP_NODE_SCHEMA["bus"]["eq/%d" % _band]
 
+# Mono/Centre master mix has no pan field; keep its node schema separate
+# while sharing the remaining processing and matrix-send nodes.
+MAIN_MONO_NODE_SCHEMA = dict(MAIN_NODE_SCHEMA)
+MAIN_MONO_NODE_SCHEMA["mix"] = {
+    "on": MAIN_NODE_SCHEMA["mix"]["on"],
+    "fader": MAIN_NODE_SCHEMA["mix"]["fader"],
+}
+
 # Main output matrix sends use the extended five-field M32 send format.
 for _matrix in range(1, 7):
     MAIN_NODE_SCHEMA["mix/%02d" % _matrix] = {
@@ -352,8 +360,8 @@ class ConsoleState:
             n: {"src": 0, "pos": 8}
             for n in range(1, 3)
         }
-        for prefix in ("/main/st", "/main/m"):
-            for node, fields in MAIN_NODE_SCHEMA.items():
+        for prefix, schema in (("/main/st", MAIN_NODE_SCHEMA), ("/main/m", MAIN_MONO_NODE_SCHEMA)):
+            for node, fields in schema.items():
                 for field_name, spec in fields.items():
                     self.strip_nodes["%s/%s/%s" % (prefix, node, field_name)] = spec[0]
         self.matrices = {n: {"number": n, "name": "Matrix %02d" % n, "icon": 1, "colour": 1,
@@ -584,7 +592,8 @@ class ConsoleState:
 
             if len(parts) == 5 and parts[0] == "main" and parts[1] in ("st", "m") and parts[2] == "mix":
                 matrix = int(parts[3])
-                if not 1 <= matrix <= 6 or parts[4] not in MAIN_NODE_SCHEMA["mix/%02d" % matrix] or not self._valid_main_node_value(address, value):
+                schema = MAIN_MONO_NODE_SCHEMA if parts[1] == "m" else MAIN_NODE_SCHEMA
+                if not 1 <= matrix <= 6 or parts[4] not in schema["mix/%02d" % matrix] or not self._valid_main_node_value(address, value):
                     return False
                 output_key = "main_st" if parts[1] == "st" else "main_mono"
                 default_send = {"on": 1, "level": 0.0}
@@ -1005,8 +1014,9 @@ class ConsoleState:
             return False
         node = "/".join(parts[2:-1])
         field_name = parts[-1]
+        schema = MAIN_MONO_NODE_SCHEMA if address.startswith("/main/m/") else MAIN_NODE_SCHEMA
         try:
-            spec = MAIN_NODE_SCHEMA[node][field_name]
+            spec = schema[node][field_name]
         except KeyError:
             return False
         default, minimum, maximum, step, kind, labels = spec
