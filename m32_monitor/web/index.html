@@ -23,7 +23,7 @@ h1{font-size:24px;margin:0}h2{font-size:17px;margin:0 0 12px}.muted{color:#9ca8b
 .dca-muted{background:#493b20;color:#f4d28b}
 .dca-unknown{background:#333b45;color:#c4ccd5}
 .dca-chip{background:#27394b;color:#b8d8f5;border:1px solid #3d5d78}
-.eq-mini{width:100%;height:42px;display:block;margin-top:7px;background:#111820;border-radius:5px}
+.eq-mini{width:100%;height:52px;display:block;margin-top:7px;background:#111820;border:1px solid #303b48;border-radius:5px}.eq-caption{font-size:10px}
 .eq-caption{display:flex;justify-content:space-between;color:#8997a6;font-size:9px;margin-top:2px}
 .channel-head{display:flex;align-items:center;gap:9px;margin-bottom:14px}.swatch{width:10px;height:30px;border-radius:4px;background:var(--strip)}
 .name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.number{font-size:11px;color:#9ca8b6;margin-top:3px}
@@ -296,7 +296,6 @@ function renderRouting(data){
 function eqSvg(c){
  const bands=c.eqBands||[];
  const response=f=>{
-  if(!c.eqOn)return 0;
   let db=0;
   for(const b of bands){
    const fc=Math.max(20,Math.min(20000,Number(b.frequency)||1000));
@@ -304,8 +303,8 @@ function eqSvg(c){
    const q=Math.max(.3,Math.min(10,Number(b.q)||1));
    const type=Number(b.type),oct=Math.log2(f/fc),width=Math.max(.12,1.15/q);
    if(type===2||type===3)db+=gain*Math.exp(-.5*Math.pow(oct/width,2));
-   else if(type===1)db+=gain/(1+Math.exp(-oct*5));
-   else if(type===4)db+=gain/(1+Math.exp(oct*5));
+   else if(type===1)db+=gain/(1+Math.exp(oct*5));
+   else if(type===4)db+=gain/(1+Math.exp(-oct*5));
    else if(type===0)db-=15/(1+Math.exp(oct*5));
    else if(type===5)db-=15/(1+Math.exp(-oct*5));
   }
@@ -313,10 +312,12 @@ function eqSvg(c){
  };
  const pts=[];
  for(let i=0;i<=70;i++){
-  const f=20*Math.pow(1000,i/70),db=response(f),x=2+i*1.94,y=21-db*.95;
+  const f=20*Math.pow(1000,i/70),db=response(f),x=2+i*1.94,y=26-db*1.35;
   pts.push((i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1));
  }
- return '<svg class="eq-mini" viewBox="0 0 140 42" role="img" aria-label="Equaliser '+(c.eqOn?'curve':'off')+'"><path d="M2 21H138" stroke="#475463" stroke-width=".7" stroke-dasharray="2 2"/><path d="'+pts.join(' ')+'" fill="none" stroke="'+(c.eqOn?'#75c7a0':'#687482')+'" stroke-width="1.8" stroke-linejoin="round"/></svg><div class="eq-caption"><span>20 Hz</span><span>'+(c.eqOn?'EQ ON':'EQ OFF')+'</span><span>20 kHz</span></div>';
+ const colour=c.eqOn?'#78e0ad':'#e0b86b';
+ const dash=c.eqOn?'':' stroke-dasharray="4 2"';
+ return '<svg class="eq-mini" viewBox="0 0 140 52" role="img" aria-label="Configured equaliser response '+(c.eqOn?'active':'bypassed')+'"><path d="M2 26H138" stroke="#667587" stroke-width="1" stroke-dasharray="2 2"/><path d="M2 6H138M2 46H138" stroke="#293440" stroke-width=".6"/><path d="M36 4V48M70 4V48M104 4V48" stroke="#293440" stroke-width=".6"/><path d="'+pts.join(' ')+'" fill="none" stroke="'+colour+'" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"'+dash+'/></svg><div class="eq-caption"><span>20 Hz</span><span>'+(c.eqOn?'EQ ON':'EQ BYPASSED · SETTINGS')+'</span><span>20 kHz</span></div>';
 }
 function renderChannels(channels){
  const root=document.querySelector('#channels');
