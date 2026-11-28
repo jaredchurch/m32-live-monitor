@@ -877,7 +877,7 @@ class Simulator:
                     schema[node][field], token, field,
                     fader_db=((prefix.startswith(("/ch/", "/auxin/", "/fxrtn/")) and
                                ((node == "mix" and field in ("fader", "mlevel")) or
-                                (node.startswith("mix/") and field == "level" and "type" in schema[node]))) or
+                                (node.startswith("mix/") and field == "level"))) or
                               (prefix.startswith("/bus/") and node == "mix" and
                                field in ("fader", "mlevel"))))
                           for field, token in zip(fields, values)]
