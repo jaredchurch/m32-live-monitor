@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 import shlex
 from pythonosc.osc_message import OscMessage
@@ -3000,15 +3001,17 @@ def test_udp_receive_counters_count_datagrams_and_decoded_messages_even_when_log
     assert snapshot["events"] == []
 
 
-@pytest.mark.asyncio
-async def test_udp_socket_starts_with_configured_receive_buffer():
-    simulator = Simulator(ConsoleState(), host="127.0.0.1", port=0,
-                          receive_buffer_bytes=2 * 1024 * 1024)
-    await simulator.start()
-    try:
-        snapshot = simulator.snapshot()
-        assert snapshot["udp"]["receive_buffer_requested_bytes"] == 2 * 1024 * 1024
-        assert snapshot["udp"]["receive_buffer_actual_bytes"] >= 65536
-        assert simulator.transport.get_extra_info("sockname")[1] > 0
-    finally:
-        await simulator.stop()
+def test_udp_socket_starts_with_configured_receive_buffer():
+    async def exercise_socket():
+        simulator = Simulator(ConsoleState(), host="127.0.0.1", port=0,
+                              receive_buffer_bytes=2 * 1024 * 1024)
+        await simulator.start()
+        try:
+            snapshot = simulator.snapshot()
+            assert snapshot["udp"]["receive_buffer_requested_bytes"] == 2 * 1024 * 1024
+            assert snapshot["udp"]["receive_buffer_actual_bytes"] >= 65536
+            assert simulator.transport.get_extra_info("sockname")[1] > 0
+        finally:
+            await simulator.stop()
+
+    asyncio.run(exercise_socket())
