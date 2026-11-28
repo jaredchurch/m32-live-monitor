@@ -2907,3 +2907,42 @@ def test_bus_mix_node_accepts_six_fields_and_db_fader_levels():
     assert state.get("/bus/01/mix/mono") == 0
     assert state.get("/bus/01/mix/mlevel") == 0.0
     assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
+def test_showfile_metadata_node_write_is_stored_and_returned_by_node_and_showdump():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    show_record = '/-showfile/show "Weekend Service" 2 3 4 5 6 7 8 9 10 11 12 "4.06"'
+
+    simulator.handle(client, packet("/", show_record.lstrip("/")))
+
+    assert state.get("/-showfile/show") == show_record
+    simulator.handle(client, packet("/node", "showfile/show"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == [show_record + "\\n"]
+
+    simulator.handle(client, packet("/showdump"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == [show_record + "\\n"]
+    event = simulator.snapshot(outcome="handled_showdump")["events"][-1]
+    assert "stored show-file metadata" in event["detail"]
+
+
+def test_showfile_cue_node_write_is_stored_and_returned_verbatim():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    cue_record = '/-showfile/cue/001 "Opening" 1 0 0 0'
+
+    simulator.handle(client, packet("/", cue_record.lstrip("/")))
+    assert state.get("/-showfile/cue/001") == cue_record
+
+    simulator.handle(client, packet("/node", "showfile/cue/001"))
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == [cue_record + "\\n"]
