@@ -52,7 +52,7 @@ def test_default_surface_all_processing_nodes_match_declared_defaults():
     assert requests, "No processing nodes were included in the default surface"
     for header, fields in requests:
         response = _node_response(simulator, header)
-        tokens = response.strip().split()
+        tokens = shlex.split(response.strip())
         assert tokens[0] == "/" + header, f"Wrong node returned for {header}: {response!r}"
         assert len(tokens) == len(fields) + 1, (
             f"Incomplete default node {header}: expected {len(fields)} values, got {tokens[1:]}"
