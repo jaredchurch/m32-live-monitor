@@ -1275,7 +1275,7 @@ class ConsoleState:
         if 49 <= source <= 64: return "BUS%02d" % (source - 48)
         return "SRC %d" % source
 
-    def visible_channels(self):
+    def visible_channels(self, include_off=False):
         strips = ([("channel", c) for c in self.channels.values()] +
                   [("aux", c) for c in self.auxins.values()] +
                   [("fx_return", c) for c in self.fx_returns.values()])
@@ -1284,10 +1284,15 @@ class ConsoleState:
         for kind, channel in strips:
             if channel.number in linked_channel_numbers:
                 continue
-            if not channel.connected or channel.colour == 0:
+            active = bool(channel.connected and channel.colour != 0)
+            if not active and not include_off:
                 continue
             item = channel.as_dict()
             item["stripType"] = kind
+            item["active"] = active
+            item["offReason"] = ("SOURCE OFF" if kind == "channel" and channel.source == 0
+                                 else "STRIP OFF" if channel.colour == 0
+                                 else "NOT CONNECTED" if not channel.connected else "")
             if kind == "channel" and channel.number % 2 == 1:
                 pair = "%d-%d" % (channel.number, channel.number + 1)
                 if self.config_links["chlink"].get(pair, 0):
@@ -1298,6 +1303,11 @@ class ConsoleState:
                     item["linkedSource"] = self.source_label(partner.source)
                     item["linkedFader"] = partner.fader
                     item["linkedMuted"] = partner.muted
+                    item["linkedDcaMask"] = partner.dca_mask
+                    item["linkedActive"] = bool(partner.connected and partner.colour != 0)
+                    item["linkedOffReason"] = ("SOURCE OFF" if partner.source == 0
+                                               else "STRIP OFF" if partner.colour == 0
+                                               else "NOT CONNECTED" if not partner.connected else "")
                     linked_channel_numbers.add(partner.number)
             result.append(item)
         return result
