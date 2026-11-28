@@ -537,6 +537,10 @@ class Simulator:
                     raise ValueError("Mono configuration node requires mode and link")
                 paths = ["/config/mono/mode", "/config/mono/link"]
                 parsed = [("LR+M", "LCR").index(values[0]), ("OFF", "ON").index(values[1])]
+            elif header in ("config/mono/mode", "config/mono/link") and len(values) == 1:
+                field = header.rsplit("/", 1)[1]
+                choices = ("LR+M", "LCR") if field == "mode" else ("OFF", "ON")
+                paths, parsed = ["/" + header], [choices.index(values[0])]
             elif header == "config/solo":
                 fields = ("level", "source", "sourcetrim", "chmode", "busmode", "dcamode",
                           "exclusive", "followsel", "followsolo", "dimatt", "dim", "mono",
@@ -559,6 +563,11 @@ class Simulator:
                     raise ValueError("Mute group node requires six ON/OFF values")
                 paths = ["/config/mute/%d" % number for number in range(1, 7)]
                 parsed = [("OFF", "ON").index(token) for token in values]
+            elif header.startswith("config/mute/") and len(values) == 1:
+                group = int(header.rsplit("/", 1)[1])
+                if group not in range(1, 7):
+                    raise ValueError("Unknown mute group")
+                paths, parsed = ["/" + header], [("OFF", "ON").index(values[0])]
             elif header == "config/tape":
                 if len(values) != 3:
                     raise ValueError("Tape node requires gainL, gainR and autoplay")
@@ -589,6 +598,9 @@ class Simulator:
                     raise ValueError("DP48 %s node requires %d values" % (section, len(slots)))
                 paths = ["/config/dp48/%s/%02d" % (section, n) for n in slots]
                 parsed = values if section == "grpname" else [int(v, 0) for v in values]
+            elif header.startswith("config/dp48/grpname/") and not values and args[0].rstrip().endswith('""'):
+                # Empty DP48 group names are valid and are emitted as quoted empty strings.
+                paths, parsed = ["/" + header], [""]
             elif header.startswith("config/dp48/") and len(values) == 1:
                 parts = header.split("/")
                 if len(parts) == 3:
