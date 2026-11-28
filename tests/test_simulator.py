@@ -603,6 +603,20 @@ def test_node_get_returns_card_preferences():
     assert response.params == ["/-prefs/card " + " ".join(["0"] * 13) + chr(10)]
 
 
+def test_default_log_retains_at_least_ten_thousand_events_for_full_export():
+    simulator = Simulator(ConsoleState())
+    for number in range(10050):
+        simulator.record("in", "handled_get", "/test/%d" % number)
+
+    result = simulator.snapshot(limit=None)
+
+    assert result["event_count"] == 10050
+    assert result["retained_events"] == 10000
+    assert len(result["events"]) == 10000
+    assert result["events"][0]["sequence"] == 51
+    assert result["events"][-1]["sequence"] == 10050
+
+
 def test_snapshot_can_filter_only_protocol_exceptions():
     simulator = Simulator(ConsoleState())
     simulator.record("in", "handled_get", "/ch/01/mix/fader")
