@@ -257,7 +257,8 @@ def test_real_jared_scene_round_trips_every_node_through_get_and_set():
                      if key not in ignored_runtime_fields}
     expected = _canonical_state(original)
     actual = _canonical_state(round_tripped)
-    assert actual == expected, (
+    differences = _state_differences(expected, actual)
+    assert not differences, (
         "Full Jared.scn state changed during GET/export/SET round trip. "
-        "First state differences: " + repr(_state_differences(expected, actual))
+        "First state differences: " + repr(differences)
     )
