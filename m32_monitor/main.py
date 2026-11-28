@@ -109,6 +109,36 @@ def channels():
     return result
 
 
+@app.get("/api/strip/{family}/{number}")
+def strip_detail(family: str, number: int):
+    """Return the complete known parameter snapshot for one console strip."""
+    collections = {"ch": state.channels, "auxin": state.auxins,
+                   "fxrtn": state.fx_returns, "bus": state.buses}
+    if family not in collections or number not in collections[family]:
+        raise HTTPException(status_code=404, detail="Unknown strip")
+    schema = state.strip_node_schema[family]
+    prefix = "/%s/%02d/" % (family, number)
+    groups = []
+    for node, fields in schema.items():
+        values = []
+        for field_name, spec in fields.items():
+            address = prefix + node + "/" + field_name
+            value = state.strip_nodes.get(address)
+            enum = spec[5]
+            display = (enum[int(value)] if enum and isinstance(value, (int, float))
+                       and int(value) == value and 0 <= int(value) < len(enum)
+                       else value)
+            values.append({"name": field_name, "value": value, "display": display,
+                           "enum": list(enum) if enum else None,
+                           "known": address in state.received or settings.mode == "simulator"})
+        groups.append({"name": node, "values": values})
+    strip = collections[family][number]
+    if hasattr(strip, "as_dict"):
+        strip = strip.as_dict()
+    return {"family": family, "number": number, "strip": strip,
+            "groups": groups, "mode": settings.mode}
+
+
 @app.get("/api/output-matrix")
 def output_matrix():
     """Effective per-channel signal paths, including the reason for each mute."""
