@@ -25,7 +25,9 @@ STRIP_NODE_SCHEMA = {
         "insert": {"on": (0,0,1,1,"enum",("OFF","ON")), "pos": (0,0,1,1,"enum",("PRE","POST")),
                    "sel": (0,0,22,1,"enum",("OFF","FX1L","FX1R","FX2L","FX2R","FX3L","FX3R","FX4L","FX4R","FX5L","FX5R","FX6L","FX6R","FX7L","FX7R","FX8L","FX8R","AUX1","AUX2","AUX3","AUX4","AUX5","AUX6"))},
         "eq": {"on": (0,0,1,1,"enum",("OFF","ON"))},
-        "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None)},
+        "mix": {"on": (1,0,1,1,"enum",("OFF","ON")), "fader": (0.75,0.0,1.0,0,"float",None),
+                "st": (1,0,1,1,"enum",("OFF","ON")), "pan": (0.0,-100.0,100.0,2.0,"float",None),
+                "mono": (0,0,1,1,"enum",("OFF","ON")), "mlevel": (0.75,0.0,1.0,0,"float",None)},
         "grp": {"dca": (0,0,255,1,"int",None), "mute": (0,0,63,1,"int",None)},
     },
     "ch": {
@@ -905,6 +907,8 @@ class ConsoleState:
                     self.buses[number]["on"] = self._bool(value)
                 elif parts[2:] == ["mix", "fader"] and self._valid_strip_node_value(address, value):
                     self.buses[number]["fader"] = float(value)
+                elif parts[2] == "mix" and parts[3] in ("st", "pan", "mono", "mlevel") and self._valid_strip_node_value(address, value):
+                    self.strip_nodes[address] = value
                 elif parts[2:] == ["grp", "dca"] and self._valid_strip_node_value(address, value):
                     self.buses[number]["dca_mask"] = int(value)
                 elif parts[2:] == ["grp", "mute"] and self._valid_strip_node_value(address, value):
@@ -1175,7 +1179,9 @@ class ConsoleState:
                 if parts[2:] == ["config", "color"]: return self.buses[int(parts[1])]["colour"]
                 if parts[2:] == ["grp", "dca"]: return self.buses[int(parts[1])]["dca_mask"]
                 if parts[2:] == ["grp", "mute"]: return self.buses[int(parts[1])]["mute_mask"]
-                return self.buses[int(parts[1])].get(parts[3]) if parts[2] == "mix" else None
+                if parts[2] == "mix":
+                    return self.strip_nodes.get(address, self.buses[int(parts[1])].get(parts[3]))
+                return None
             if address.startswith(("/main/st/", "/main/m/")):
                 key = "main_st" if address.startswith("/main/st/") else "main_mono"
                 if address.endswith("/grp/dca"): return self.outputs[key]["dca_mask"]
