@@ -801,13 +801,13 @@ class Simulator:
                     if len(values) != 64:
                         raise ValueError("FX parameter node requires 64 values")
                     paths = ["/fx/%02d/par/%02d" % (number, n) for n in range(1, 65)]
-                    parsed = [float(value) for value in values]
+                    parsed = [_parse_osc_frequency(value) for value in values]
                 elif len(parts) == 4 and parts[2] == "par" and parts[3].isdigit() and len(values) == 1:
                     parameter = int(parts[3])
                     if not 1 <= parameter <= 64:
                         raise ValueError("FX parameter index must be 01-64")
                     paths = ["/fx/%02d/par/%02d" % (number, parameter)]
-                    parsed = [float(values[0])]
+                    parsed = [_parse_osc_frequency(values[0])]
                 elif len(parts) == 4 and parts[2] == "source" and parts[3] in ("l", "r") and len(values) == 1:
                     if number > 4:
                         raise ValueError("FX source is only available on slots 1-4")
