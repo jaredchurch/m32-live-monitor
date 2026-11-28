@@ -2089,6 +2089,21 @@ def test_bus_insert_eq_mix_and_group_nodes_are_discoverable_and_writable():
     assert state.get("/bus/01/grp/mute") == 5
 
 
+def test_bus_matrix_send_node_accepts_five_fields_and_silent_db_level():
+    state = ConsoleState()
+    simulator = Simulator(state)
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "bus/01/mix/01 ON -oo -100 POST 0"))
+
+    assert state.get("/bus/01/mix/01/on") == 1
+    assert state.get("/bus/01/mix/01/level") == 0.0
+    assert state.get("/bus/01/mix/01/pan") == -100.0
+    assert state.get("/bus/01/mix/01/type") == 4
+    assert state.get("/bus/01/mix/01/panFollow") == 0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
 def test_bus_insert_eq_and_matrix_send_validation():
     state = ConsoleState()
     assert not state.update("/bus/01/insert/sel", 23)
