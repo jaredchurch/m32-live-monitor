@@ -184,11 +184,18 @@ for _matrix in range(1, 7):
         "type": (4,0,5,1,"enum",("IN/LC","<-EQ","EQ->","PRE","POST","GRP")),
         "panFollow": (0,0,1,1,"enum",("OFF","ON"))}
 
-# Main L/R and Mono/Centre can each feed Matrix outputs 1–6.
+# Main L/R and Mono/Centre matrix sends follow the M32 send layout:
+# odd-numbered sends carry pan, tap type and pan-follow as well as level.
 for _matrix in range(1, 7):
-    MAIN_NODE_SCHEMA["mix/%02d" % _matrix] = {
+    _send_fields = {
         "on": (1,0,1,1,"enum",("OFF","ON")),
         "level": (0.0,0.0,1.0,0,"float",None)}
+    if _matrix % 2:
+        _send_fields.update({
+            "pan": (0.0,-100.0,100.0,2.0,"float",None),
+            "type": (4,0,5,1,"enum",("IN/LC","<-EQ","EQ->","PRE","POST","GRP")),
+            "panFollow": (0,0,1,1,"enum",("OFF","ON"))})
+    MAIN_NODE_SCHEMA["mix/%02d" % _matrix] = _send_fields
 
 
 @dataclass
@@ -577,11 +584,12 @@ class ConsoleState:
 
             if len(parts) == 5 and parts[0] == "main" and parts[1] in ("st", "m") and parts[2] == "mix":
                 matrix = int(parts[3])
-                if not 1 <= matrix <= 6 or parts[4] not in ("on", "level") or not self._valid_main_node_value(address, value):
+                if not 1 <= matrix <= 6 or parts[4] not in MAIN_NODE_SCHEMA["mix/%02d" % matrix] or not self._valid_main_node_value(address, value):
                     return False
                 output_key = "main_st" if parts[1] == "st" else "main_mono"
-                send = self.outputs[output_key].setdefault("sends", {}).setdefault(matrix, {"on": True, "level": 0.0})
-                send[parts[4]] = int(value) if parts[4] == "on" else float(value)
+                send = self.outputs[output_key].setdefault("sends", {}).setdefault(
+                    matrix, {"on": 1, "level": 0.0, "pan": 0.0, "type": 4, "panFollow": 0})
+                send[parts[4]] = int(value) if parts[4] in ("on", "type", "panFollow") else float(value)
                 self.strip_nodes[address] = value
                 self.received.add(address)
                 return True
