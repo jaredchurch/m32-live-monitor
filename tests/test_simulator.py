@@ -11,8 +11,11 @@ from m32_monitor.state import ConsoleState
 class FakeTransport:
     def __init__(self):
         self.sent = []
+        self.closed = False
     def sendto(self, data, address):
         self.sent.append((data, address))
+    def close(self):
+        self.closed = True
 
 
 def packet(address, *args):
