@@ -192,11 +192,22 @@ def test_real_jared_scene_round_trips_every_node_through_get_and_set():
     source_state = ConsoleState()
     source = Simulator(source_state)
     source.transport = FakeTransport()
-    records = [
-        line.strip() for line in FIXTURE.read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.lstrip().startswith("#")
-    ]
+    raw_lines = FIXTURE.read_text(encoding="utf-8").splitlines()
+    scene_headers = [line for line in raw_lines if line.strip().startswith("#")]
+    assert len(scene_headers) == 1, (
+        f"Expected one documented SCN file header, found {scene_headers!r}"
+    )
+    scene_header = scene_headers[0]
+    header_tokens = shlex.split(scene_header)
+    assert header_tokens[0] == "#4.0#" and len(header_tokens) == 5, (
+        f"Unexpected SCN file header format: {scene_header!r}"
+    )
+    records = [line.strip() for line in raw_lines
+               if line.strip() and line not in scene_headers]
     assert len(records) > 2000, f"Jared.scn fixture unexpectedly small: {len(records)} records"
+    assert all(record.startswith("/") for record in records), (
+        "Found an unrecognised non-OSC record in Jared.scn"
+    )
 
     # Import the complete real scene exactly as M32-Edit's text SET path does.
     for record in records:
