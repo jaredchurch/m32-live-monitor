@@ -57,6 +57,10 @@ def test_channel_endpoint_preserves_off_strips_and_reports_dca_state(client):
     response = client.get("/api/channels")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 48
+    assert len(data) == 64
+    assert sum(item["stripType"] == "bus" for item in data) == 16
     assert all("active" in item for item in data)
     assert all("mutedDcas" in item and "dcaMuteUnknown" in item for item in data)
+    assert all("dcaLabels" in item and "eqBands" in item for item in data)
+    assert all(len(item["eqBands"]) == (6 if item["stripType"] == "bus" else 4)
+               for item in data)
