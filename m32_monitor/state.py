@@ -175,6 +175,15 @@ MAIN_NODE_SCHEMA = {
 for _band in range(1, 7):
     MAIN_NODE_SCHEMA["eq/%d" % _band] = STRIP_NODE_SCHEMA["bus"]["eq/%d" % _band]
 
+# Main output matrix sends use the extended five-field M32 send format.
+for _matrix in range(1, 7):
+    MAIN_NODE_SCHEMA["mix/%02d" % _matrix] = {
+        "on": (1,0,1,1,"enum",("OFF","ON")),
+        "level": (0.0,0.0,1.0,0,"float",None),
+        "pan": (0.0,-100.0,100.0,2.0,"float",None),
+        "type": (4,0,5,1,"enum",("IN/LC","<-EQ","EQ->","PRE","POST","GRP")),
+        "panFollow": (0,0,1,1,"enum",("OFF","ON"))}
+
 # Main L/R and Mono/Centre can each feed Matrix outputs 1–6.
 for _matrix in range(1, 7):
     MAIN_NODE_SCHEMA["mix/%02d" % _matrix] = {
