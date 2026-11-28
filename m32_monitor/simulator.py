@@ -30,6 +30,24 @@ def _parse_osc_frequency(token):
     return float(text)
 
 
+def _parse_fx_parameter(token):
+    """Parse numeric FX values while preserving M32 textual enum/rhythm values."""
+    text = str(token).strip()
+    if not text or len(text) > 32:
+        raise ValueError("Invalid FX parameter value")
+    try:
+        return _parse_osc_frequency(text)
+    except ValueError:
+        # FX parameter nodes mix numbers/frequencies with values such as 3/4,
+        # OFF, or other algorithm-specific labels. Keep those labels intact.
+        return text
+
+
+def _format_fx_parameter(value):
+    """Render numeric FX values as floats and preserve textual parameter values."""
+    return "%.6f" % value if isinstance(value, (int, float)) else str(value)
+
+
 TYPE_NAMES_FX_1_4 = ("HALL", "AMBI", "RPLT", "ROOM", "CHAM", "PLAT", "VREV", "VRM",
     "GATE", "RVRS", "DLY", "3TAP", "4TAP", "CRS", "FLNG", "PHAS", "DIMC", "FILT",
     "ROTA", "PAN", "SUB", "D/RV", "CR/R", "FL/R", "D/CR", "D/FL", "MODD", "GEQ2",
@@ -801,13 +819,13 @@ class Simulator:
                     if len(values) != 64:
                         raise ValueError("FX parameter node requires 64 values")
                     paths = ["/fx/%02d/par/%02d" % (number, n) for n in range(1, 65)]
-                    parsed = [_parse_osc_frequency(value) for value in values]
+                    parsed = [_parse_fx_parameter(value) for value in values]
                 elif len(parts) == 4 and parts[2] == "par" and parts[3].isdigit() and len(values) == 1:
                     parameter = int(parts[3])
                     if not 1 <= parameter <= 64:
                         raise ValueError("FX parameter index must be 01-64")
                     paths = ["/fx/%02d/par/%02d" % (number, parameter)]
-                    parsed = [_parse_osc_frequency(values[0])]
+                    parsed = [_parse_fx_parameter(values[0])]
                 elif len(parts) == 4 and parts[2] == "source" and parts[3] in ("l", "r") and len(values) == 1:
                     if number > 4:
                         raise ValueError("FX source is only available on slots 1-4")
@@ -1599,7 +1617,8 @@ class Simulator:
                 response = "%s/source %s %s\n" % (
                     prefix, source_names[fx["source_l"]], source_names[fx["source_r"]])
             elif fx_parts[2] == "par":
-                response = "".join("%s/par/%02d %.6f\n" % (prefix, n, fx["par"][n])
+                response = "".join("%s/par/%02d %s\n" % (
+                    prefix, n, _format_fx_parameter(fx["par"][n]))
                                    for n in range(1, 65))
             else:
                 response = None
@@ -1614,7 +1633,8 @@ class Simulator:
                 parameter = int(fx_parts[3])
                 if 1 <= parameter <= 64:
                     value = self.state.fx[number]["par"][parameter]
-                    self.send(client, "/node", "%s %.6f\n" % ("/" + header, value), outcome="node_response")
+                    self.send(client, "/node", "%s %s\n" % (
+                        "/" + header, _format_fx_parameter(value)), outcome="node_response")
                     self.record("in", "handled_node_get", "/node", args, client, "Returned FX parameter")
                     return
             if number in self.state.fx and fx_parts[2] == "source" and fx_parts[3] in ("l", "r") and number <= 4:
