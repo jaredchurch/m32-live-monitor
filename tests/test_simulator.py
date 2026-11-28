@@ -2071,7 +2071,7 @@ def test_bus_insert_eq_mix_and_group_nodes_are_discoverable_and_writable():
 
     simulator.handle(client, packet("/", "bus/01/insert ON POST FX3L"))
     simulator.handle(client, packet("/", "bus/01/eq/6 PEQ 2500 -3.0 1.2"))
-    simulator.handle(client, packet("/", "bus/01/mix ON 0.65"))
+    simulator.handle(client, packet("/", "bus/01/mix ON -4.0 OFF 0 OFF -oo"))
     simulator.handle(client, packet("/", "bus/01/mix/06 ON 0.50"))
     simulator.handle(client, packet("/", "bus/01/grp 3 5"))
 
