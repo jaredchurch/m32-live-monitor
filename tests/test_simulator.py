@@ -2627,6 +2627,22 @@ def test_invalid_headamp_node_write_is_atomic():
 
 
 
+def test_showdump_returns_protocol_complete_empty_show_metadata():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/showdump"))
+
+    response = OscMessage(simulator.transport.sent[-1][0])
+    assert response.address == "/node"
+    assert response.params == [
+        '/-showfile/show "M32 Simulator" 0 0 0 0 0 0 0 0 0 0 0 "4.06"'
+    ]
+    event = simulator.snapshot(outcome="handled_showdump")["events"][-1]
+    assert "valid empty-show metadata" in event["detail"]
+
+
 def test_m32_edit_showfile_preferences_and_action_options_accept_node_writes():
     state = ConsoleState()
     simulator = Simulator(state)
