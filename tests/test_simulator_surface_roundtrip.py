@@ -26,7 +26,7 @@ def packet(address, *args):
 
 
 CLIENT = ("127.0.0.1", 50123)
-FIXTURE = Path(__file__).parent / "fixtures" / "real_m32_showfile_nodes.txt"
+FIXTURE = Path(__file__).parent / "fixtures" / "Jared.scn""
 
 
 def _node_response(simulator, header):
@@ -84,12 +84,8 @@ def test_default_surface_all_processing_nodes_match_declared_defaults():
     assert not simulator.snapshot(outcome="unhandled_get")["events"]
 
 
-@pytest.mark.skipif(
-    not FIXTURE.exists(),
-    reason="Supply a real M32-Edit show-file node capture as the fixture",
-)
-def test_real_m32_showfile_fixture_round_trips_through_simulator():
-    """Load captured show-file SET records and GET each imported node."""
+def test_real_jared_scene_imports_and_supported_nodes_read_back():
+    """Import the real Jared.scn through the OSC text-write path and compare node values."""
     state = ConsoleState()
     simulator = Simulator(state)
     simulator.transport = FakeTransport()
@@ -97,23 +93,33 @@ def test_real_m32_showfile_fixture_round_trips_through_simulator():
         line.strip() for line in FIXTURE.read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     ]
-    assert records, "Real show-file fixture is empty"
+    assert len(records) > 1000, f"Jared.scn fixture unexpectedly small: {len(records)} records"
 
-    imported = {}
+    # M32-Edit sends each scene record as the sole string argument to OSC '/'.
     for record in records:
-        header, _, _ = record.partition(" ")
-        assert header.startswith("/-showfile/"), (
-            f"Fixture must contain captured show-file node records, got {record!r}"
-        )
-        simulator.handle(CLIENT, packet("/", record.lstrip("/")))
-        assert state.get(header) is not None, f"Simulator did not retain {header}"
-        imported[header] = record
+        simulator.handle(CLIENT, packet("/", record))
 
-    for address, expected in imported.items():
-        actual = _node_response(simulator, address.lstrip("/"))
-        assert actual.rstrip("\\n") == expected, (
-            f"Show-file round-trip mismatch for {address}: expected {expected!r}, got {actual!r}"
-        )
+    supported = []
+    for record in records:
+        source_tokens = shlex.split(record)
+        header = source_tokens[0].lstrip("/")
+        if simulator._strip_node_header(header) is not None:
+            supported.append((header, source_tokens[1:]))
 
-    assert not simulator.snapshot(outcome="unhandled_set")["events"]
-    assert not simulator.snapshot(outcome="unhandled_command")["events"]
+    assert len(supported) > 500, (
+        f"Expected broad strip-node coverage from real scene, found {len(supported)}"
+    )
+    mismatches = []
+    for header, expected_values in supported:
+        actual = shlex.split(_node_response(simulator, header).strip())
+        expected = ["/" + header, *expected_values]
+        if actual != expected:
+            mismatches.append((header, expected, actual))
+
+    assert not mismatches, (
+        "Real Jared.scn strip-node values did not round-trip; first mismatches: "
+        + repr(mismatches[:20])
+    )
+    assert not simulator.snapshot(outcome="unhandled_set")["events"], (
+        "Scene import produced unhandled SET records"
+    )
