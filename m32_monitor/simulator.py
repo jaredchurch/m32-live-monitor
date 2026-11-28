@@ -1214,15 +1214,38 @@ class Simulator:
         return int(token[1:], 2) if token.startswith("%") else int(token, 0)
 
     @staticmethod
-    def _format_strip_node_value(spec, value):
+    def _format_strip_node_value(spec, value, field=None, fader_db=False):
         default, minimum, maximum, step, kind, labels = spec
         if kind == "enum":
             return labels[int(value)]
         if kind == "string":
             return json.dumps(value, ensure_ascii=False)
         if kind == "float":
-            return "%.3f" % float(value)
+            numeric = float(value)
+            if fader_db and field in ("fader", "level", "mlevel"):
+                if numeric <= 0.0:
+                    return "-oo"
+                if numeric < 0.0625:
+                    numeric = numeric * 480.0 - 90.0
+                elif numeric < 0.25:
+                    numeric = numeric * 160.0 - 70.0
+                elif numeric < 0.5:
+                    numeric = numeric * 80.0 - 50.0
+                else:
+                    numeric = numeric * 40.0 - 30.0
+            return "%.3f" % numeric
         return str(int(value))
+
+    @staticmethod
+    def _strip_node_fader_db(prefix, node, field):
+        return (
+            (prefix.startswith(("/ch/", "/auxin/", "/fxrtn/", "/bus/")) and
+             ((node == "mix" and field in ("fader", "mlevel")) or
+              (node.startswith("mix/") and field == "level"))) or
+            (prefix in ("/main/st", "/main/m") and
+             ((node == "mix" and field == "fader") or
+              (node.startswith("mix/") and field == "level")))
+        )
 
     def _strip_node_response(self, prefix, node, fields):
         family = prefix.strip("/")
@@ -1235,7 +1258,7 @@ class Simulator:
             value = self.state.get(address)
             if value is None:
                 value = specs[field][0]
-            values.append(self._format_strip_node_value(specs[field], value))
+            values.append(self._format_strip_node_value(\n                specs[field], value, field, self._strip_node_fader_db(prefix, node, field)))
         return "%s %s\n" % (prefix + "/" + node, " ".join(values))
 
     def _handle_node(self, client, args):
