@@ -45,3 +45,12 @@ def test_osc_catalogue_endpoint_lists_categories_and_commands(client):
     assert "Input channels" in names
     assert "Meters and subscriptions" in names
     assert any(command["address"] == "/node" for command in data["commands"])
+
+
+def test_channel_endpoint_preserves_off_strips_and_reports_dca_state(client):
+    response = client.get("/api/channels")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 48
+    assert all("active" in item for item in data)
+    assert all("mutedDcas" in item and "dcaMuteUnknown" in item for item in data)
