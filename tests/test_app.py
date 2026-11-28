@@ -104,3 +104,16 @@ def test_channel_endpoint_preserves_off_strips_and_reports_dca_state(client):
     assert channel["dcaNumbers"] == [1]
     assert channel["eqOn"] is True and channel["eqBands"][0]["gain"] == 5.0
     assert bus["dcaNumbers"] == [2] and bus["mutedDcas"] == [2]
+
+
+def test_simulator_log_export_can_return_all_retained_events(client):
+    from m32_monitor.main import runtime
+    runtime.clear_events()
+    for index in range(2105):
+        runtime.record("in", "received", address=f"/test/{index}")
+    response = client.get("/api/simulator/logs?all_events=true")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["event_count"] == 2105
+    assert data["retained_events"] == 2105
+    assert len(data["events"]) == 2105
