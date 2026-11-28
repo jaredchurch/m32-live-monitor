@@ -56,9 +56,24 @@ def status():
 @app.get("/api/channels")
 def channels():
     result=[]
-    for channel in state.visible_channels():
+    for channel in state.visible_channels(include_off=True):
         channel["sourceLabel"] = ("FX RETURN" if channel.get("stripType") == "fx_return"
                                 else state.source_label(channel["source"]))
+        masks = [channel.get("dca_mask", 0)]
+        if channel.get("stereoLinked"):
+            masks.append(channel.get("linkedDcaMask", 0))
+        assigned = sorted({n for mask in masks for n in range(1, 9) if mask & (1 << (n - 1))})
+        channel["dcaNumbers"] = assigned
+        muted_dcas = []
+        uncertain_dcas = []
+        for number in assigned:
+            known = state._known("/dca/%d/on" % number)
+            if state.dca_mutes_enabled is True and known and not state.dcas[number]["on"]:
+                muted_dcas.append(number)
+            elif state.dca_mutes_enabled is None or not known:
+                uncertain_dcas.append(number)
+        channel["mutedDcas"] = muted_dcas
+        channel["dcaMuteUnknown"] = uncertain_dcas
         result.append(channel)
     return result
 
