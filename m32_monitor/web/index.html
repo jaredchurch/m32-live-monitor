@@ -399,7 +399,9 @@ async function loadStripDetail(family,number,linkedNumber){
    }).join('');
    const dcas=Array.from({length:8},(_,n)=>dca&(1<<n)?'DCA '+(n+1):null).filter(Boolean);
    const muteGroups=Array.from({length:6},(_,n)=>muteMask&(1<<n)?'Mute '+(n+1):null).filter(Boolean);
-   const summary='<div class="detail-hero"><div><h2>'+esc(heading)+'</h2><div class="muted">Fader '+formatStripValue(strip.fader)+' · '+(strip.muted?'MUTED':'Not muted')+' · '+(item.mode==='simulator'?'Simulator values':'Hardware snapshot')+'</div><div class="muted">DCA: '+esc(dcas.join(', ')||'None')+' · Mute groups: '+esc(muteGroups.join(', ')||'None')+'</div></div><div>'+eqSvg({eqBands:(item.groups.find(g=>g.name==='eq')?.values||[]).length?[]:[],eqOn:false})+'</div></div>';
+   const eqBands=item.groups.filter(g=>g.name.startsWith('eq/')).map(g=>{const v=Object.fromEntries(g.values.map(x=>[x.name,x.value]));return {type:v.type,frequency:v.f,gain:v.g,q:v.q};});
+   const eqOn=Boolean((item.groups.find(g=>g.name==='eq')?.values||[]).find(v=>v.name==='on')?.value);
+   const summary='<div class="detail-hero"><div><h2>'+esc(heading)+'</h2><div class="muted">Fader '+formatStripValue(strip.fader)+' · '+(strip.muted?'MUTED':'Not muted')+' · '+(item.mode==='simulator'?'Simulator values':'Hardware snapshot')+'</div><div class="muted">DCA: '+esc(dcas.join(', ')||'None')+' · Mute groups: '+esc(muteGroups.join(', ')||'None')+'</div></div><div>'+eqSvg({eqBands,eqOn})+'</div></div>';
    return summary+'<div class="detail-grid">'+sections+'</div>';
   }).join('<div class="muted">Stereo-linked partner</div>');
  }catch(e){root.innerHTML='<div class="empty">Could not load the complete strip settings. '+esc(e.message)+'</div>';}
