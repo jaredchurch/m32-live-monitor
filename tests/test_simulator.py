@@ -626,9 +626,9 @@ def test_individual_mute_mono_and_empty_dp48_groupname_node_sets():
         ("/config/mute/3", "ON"),
         ("/config/mono/mode", "LCR"),
         ("/config/mono/link", "ON"),
-        ('/config/dp48/grpname/09', '""'),
+        ('/config/dp48/grpname/09', ''),
     ):
-        simulator.handle(client, packet("/", address.lstrip("/") + " " + value))
+        simulator.handle(client, packet("/", address.lstrip("/") + (" " + value if value else "")))
 
     assert state.mute_groups[3] is True
     assert state.mono_config == {"mode": 1, "link": 1}
