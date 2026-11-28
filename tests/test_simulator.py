@@ -2238,6 +2238,33 @@ def test_all_eight_dca_nodes_and_config_nodes_are_discoverable_and_writable():
     ("/dca/1/config/icon", 0), ("/dca/1/config/icon", 75),
     ("/dca/1/config/color", 16), ("/dca/9/on", 1),
 ])
+def test_dca_grouped_live_update_accepts_on_and_db_fader_without_changing_config():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+    before = dict(simulator.state.dcas[1])
+
+    simulator.handle(client, packet("/", "dca/1 ON -15.0"))
+
+    assert simulator.state.dcas[1]["on"] is True
+    assert simulator.state.dcas[1]["fader"] == pytest.approx((-15.0 + 50.0) / 80.0)
+    for field in ("name", "icon", "colour"):
+        assert simulator.state.dcas[1][field] == before[field]
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
+def test_dca_grouped_live_update_accepts_silent_fader():
+    simulator = Simulator(ConsoleState())
+    simulator.transport = FakeTransport()
+    client = ("127.0.0.1", 50123)
+
+    simulator.handle(client, packet("/", "dca/1 OFF -oo"))
+
+    assert simulator.state.dcas[1]["on"] is False
+    assert simulator.state.dcas[1]["fader"] == 0.0
+    assert simulator.snapshot(outcome="unhandled_set")["events"] == []
+
+
 def test_dca_individual_values_reject_invalid_inputs(address, value):
     assert not ConsoleState().update(address, value)
 
