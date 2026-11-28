@@ -75,8 +75,9 @@ def test_default_surface_all_processing_nodes_match_declared_defaults():
             if value is None:
                 value = spec[0]
             expected.append(simulator._format_strip_node_value(spec, value))
-        assert tokens[1:] == expected, (
-            f"Default values differ for {header}: expected {expected}, got {tokens[1:]}"
+        expected_tokens = shlex.split(" ".join(expected))
+        assert tokens[1:] == expected_tokens, (
+            f"Default values differ for {header}: expected {expected_tokens}, got {tokens[1:]}"
         )
 
     assert not simulator.snapshot(outcome="unhandled_command")["events"]
