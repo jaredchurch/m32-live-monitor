@@ -2051,17 +2051,24 @@ def test_main_output_matrix_sends_are_discoverable_readable_and_writable():
             simulator.handle(client, packet("/node", header))
             response = OscMessage(simulator.transport.sent[-1][0])
             assert response.address == "/node"
-            assert response.params == ["/%s ON 0.000\n" % header]
-
-            simulator.handle(client, packet("/", header + " OFF 0.65"))
-            assert state.get("/%s/on" % header) == 0
-            assert state.get("/%s/level" % header) == 0.65
+            if matrix % 2:
+                assert response.params == ["/%s ON 0.000 0.0 4 OFF\n" % header]
+                simulator.handle(client, packet("/", header + " ON +10.0 +0 POST 0"))
+                assert state.get("/%s/on" % header) == 1
+                assert state.get("/%s/level" % header) == pytest.approx(1.0)
+                assert state.get("/%s/pan" % header) == 0.0
+                assert state.get("/%s/type" % header) == 4
+                assert state.get("/%s/panFollow" % header) == 0
+                expected_send = {"on": 1, "level": 1.0, "pan": 0.0, "type": 4, "panFollow": 0}
+            else:
+                assert response.params == ["/%s ON 0.000\\n" % header]
+                simulator.handle(client, packet("/", header + " OFF 0.65"))
+                assert state.get("/%s/on" % header) == 0
+                assert state.get("/%s/level" % header) == 0.65
+                expected_send = {"on": 0, "level": 0.65}
             output_key = "main_st" if prefix == "main/st" else "main_mono"
-            assert state.outputs[output_key]["sends"][matrix] == {"on": 0, "level": 0.65}
-
-            simulator.handle(client, packet("/node", header))
-            response = OscMessage(simulator.transport.sent[-1][0])
-            assert response.params == ["/%s OFF 0.650\n" % header]
+            assert state.outputs[output_key]["sends"][matrix] == expected_send
+            assert simulator.snapshot(outcome="unhandled_set")["events"] == []
 
 
 @pytest.mark.parametrize(("address", "value"), [
