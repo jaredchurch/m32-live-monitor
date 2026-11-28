@@ -878,8 +878,9 @@ class Simulator:
                     fader_db=((prefix.startswith(("/ch/", "/auxin/", "/fxrtn/")) and
                                ((node == "mix" and field in ("fader", "mlevel")) or
                                 (node.startswith("mix/") and field == "level"))) or
-                              (prefix.startswith("/bus/") and node == "mix" and
-                               field in ("fader", "mlevel"))))
+                              (prefix.startswith("/bus/") and
+                               ((node == "mix" and field in ("fader", "mlevel")) or
+                                (node.startswith("mix/") and field == "level")))))
                           for field, token in zip(fields, values)]
                 for path, value in zip(paths, parsed):
                     valid = (self.state._valid_main_node_value(path, value)
