@@ -251,7 +251,7 @@ async function renderSimulatorLogs(){
  }catch(e){summary.innerHTML='<span class="pill">Simulator logging is available in simulator mode</span>';root.innerHTML='<div class="empty">Switch M32_MODE to simulator to inspect M32-Edit OSC traffic.</div>';}
 }
 async function exportSimulatorLog(format){
- const q=new URLSearchParams({limit:'2000'}),filter=document.querySelector('#sim-filter').value.trim(),exceptionsOnly=document.querySelector('#sim-exceptions-only').checked;
+ const q=new URLSearchParams({all_events:'true'}),filter=document.querySelector('#sim-filter').value.trim(),exceptionsOnly=document.querySelector('#sim-exceptions-only').checked;
  if(filter)q.set('search',filter);
  if(exceptionsOnly)q.set('exceptions_only','true');
  const response=await fetch('/api/simulator/logs?'+q.toString());
