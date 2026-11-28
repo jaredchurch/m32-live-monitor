@@ -1997,7 +1997,10 @@ def test_main_output_config_and_processing_nodes_for_stereo_and_mono():
         assert state.get("/" + prefix + "/insert/sel") == 5
         assert state.get("/" + prefix + "/eq/6/g") == -3.0
         assert state.get("/" + prefix + "/mix/fader") == 0.65
-        assert state.get("/" + prefix + "/mix/pan") == 0.0
+        if prefix == "main/st":
+            assert state.get("/" + prefix + "/mix/pan") == 0.0
+        else:
+            assert state.get("/" + prefix + "/mix/pan") is None
         assert state.get("/" + prefix + "/grp/mute") == 5
 
 
@@ -2046,7 +2049,7 @@ def test_main_mono_mix_node_accepts_two_fields_and_silent_fader():
     client = ("127.0.0.1", 50123)
 
     simulator.handle(client, packet("/node", "main/m/mix"))
-    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/main/m/mix ON 0.750\\n"]
+    assert OscMessage(simulator.transport.sent[-1][0]).params == ["/main/m/mix ON 0.750\n"]
 
     simulator.handle(client, packet("/", "main/m/mix ON -oo"))
     assert state.get("/main/m/mix/on") == 1
