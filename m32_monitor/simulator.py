@@ -866,9 +866,12 @@ class Simulator:
                 else:
                     raise ValueError("Unsupported DCA node")
                 if len(parts) == 2:
-                    valid = (parsed[0] in (0, 1) and 0.0 <= parsed[1] <= 1.0
-                             and len(parsed[2]) <= 12 and 1 <= parsed[3] <= 74
-                             and 0 <= parsed[4] <= 15)
+                    if len(parsed) == 2:
+                        valid = parsed[0] in (0, 1) and 0.0 <= parsed[1] <= 1.0
+                    else:
+                        valid = (parsed[0] in (0, 1) and 0.0 <= parsed[1] <= 1.0
+                                 and len(parsed[2]) <= 12 and 1 <= parsed[3] <= 74
+                                 and 0 <= parsed[4] <= 15)
                 elif len(parts) == 3 and parts[2] == "config":
                     valid = (len(parsed[0]) <= 12 and 1 <= parsed[1] <= 74
                              and 0 <= parsed[2] <= 15)
