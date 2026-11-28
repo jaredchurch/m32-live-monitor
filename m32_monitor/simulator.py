@@ -1766,10 +1766,14 @@ class Simulator:
             self._handle_node_set(client, args)
             return
         if address == "/showdump":
-            show_response = '/-showfile/show "" 0 0 0 0 0 0 0 0 0 "4.06"'
+            # The X32/M32 showdump reply always includes the show name and
+            # eleven integer metadata fields before the firmware version.
+            # An empty show still returns metadata; an empty name and a
+            # truncated field list are not a valid empty-show response.
+            show_response = '/-showfile/show "M32 Simulator" 0 0 0 0 0 0 0 0 0 0 0 "4.06"'
             self.send(client, "/node", show_response, outcome="showdump_response")
             self.record("in", "handled_showdump", address, args, client,
-                        "Returned empty show metadata (no stored show data is modelled)")
+                        "Returned valid empty-show metadata (no cues, scenes or snippets are stored)")
             return
 
         # Scene files send routing patch banks as ordered multi-value OSC
